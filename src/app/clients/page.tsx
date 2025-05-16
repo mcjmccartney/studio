@@ -4,8 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-// CardHeader, CardDescription removed
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X } from 'lucide-react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -57,7 +56,7 @@ import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirest
 import { mockSessions } from '@/lib/mockData';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'; // Re-added Card for ClientDetailView
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 
@@ -74,262 +73,7 @@ const internalClientFormSchema = z.object({
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
 
-interface ClientDetailViewProps {
-  client: Client;
-  sessions: Session[];
-  onBack: () => void;
-  onEdit: (client: Client) => void;
-  onDelete: (client: Client) => void;
-}
-
-function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: ClientDetailViewProps) {
-  const [behaviouralBrief, setBehaviouralBrief] = useState<BehaviouralBrief | null>(null);
-  const [isLoadingBrief, setIsLoadingBrief] = useState<boolean>(false);
-  const [behaviourQuestionnaire, setBehaviourQuestionnaire] = useState<BehaviourQuestionnaire | null>(null);
-  const [isLoadingQuestionnaire, setIsLoadingQuestionnaire] = useState<boolean>(false);
-
-  useEffect(() => {
-    const fetchBrief = async () => {
-      if (client.behaviouralBriefId) {
-        setIsLoadingBrief(true);
-        try {
-          const brief = await getBehaviouralBriefByBriefId(client.behaviouralBriefId);
-          setBehaviouralBrief(brief);
-        } catch (error) {
-          console.error("Error fetching behavioural brief:", error);
-          setBehaviouralBrief(null);
-        } finally {
-          setIsLoadingBrief(false);
-        }
-      } else {
-        setBehaviouralBrief(null);
-      }
-    };
-    fetchBrief();
-  }, [client.behaviouralBriefId]);
-
-  useEffect(() => {
-    const fetchQuestionnaire = async () => {
-      if (client.behaviourQuestionnaireId) {
-        setIsLoadingQuestionnaire(true);
-        try {
-          const questionnaire = await getBehaviourQuestionnaireById(client.behaviourQuestionnaireId);
-          setBehaviourQuestionnaire(questionnaire);
-        } catch (error) {
-          console.error("Error fetching behaviour questionnaire:", error);
-          setBehaviourQuestionnaire(null);
-        } finally {
-          setIsLoadingQuestionnaire(false);
-        }
-      } else {
-        setBehaviourQuestionnaire(null);
-      }
-    };
-    fetchQuestionnaire();
-  }, [client.behaviourQuestionnaireId]);
-
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-            {client.isMember && (
-                 <Image
-                    src="https://iili.io/34300ox.md.jpg"
-                    alt="Member Icon"
-                    width={40}
-                    height={40}
-                    className="rounded-md"
-                    data-ai-hint="company logo"
-                  />
-            )}
-            <h2 className="text-2xl font-bold tracking-tight">
-            {client.ownerFirstName} {client.ownerLastName}
-            </h2>
-        </div>
-        <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onEdit(client)}>
-                <Edit className="mr-2 h-4 w-4" /> Edit Client
-            </Button>
-            <Button variant="destructive" onClick={() => onDelete(client)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Client
-            </Button>
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Client List
-            </Button>
-        </div>
-      </div>
-
-      <ScrollArea className="h-[calc(100vh-240px)] pr-4">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><strong>Owner:</strong> {client.ownerFirstName} {client.ownerLastName}</div>
-              {client.dogName && <div className="flex items-center"><PawPrint className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Dog:</strong> {client.dogName}</div>}
-              <div><strong>Membership:</strong> {client.isMember ? <Badge variant="default">Active Member</Badge> : <Badge variant="outline">Not a Member</Badge>}</div>
-              <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
-              <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
-              {client.address ? (
-                <>
-                  <div className="flex items-start"><MapPin className="mr-2 h-4 w-4 text-muted-foreground mt-0.5"/>
-                    <strong>Address:</strong>
-                    <div className="ml-1">
-                        {client.address.addressLine1} <br />
-                        {client.address.addressLine2 && <>{client.address.addressLine2} <br /></>}
-                        {client.address.city}, {client.postcode} <br />
-                        {client.address.country}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {client.postcode}</div>
-              )}
-               {client.howHeardAboutServices && (
-                 <div className="pt-2">
-                    <strong className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground"/>How heard about services:</strong>
-                    <p className="mt-1 text-muted-foreground">{client.howHeardAboutServices}</p>
-                </div>
-               )}
-               <div className="pt-2">
-                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Initial Submission Date:</strong>
-                  <p className="mt-1 text-muted-foreground">{client.submissionDate ? format(new Date(client.submissionDate), 'PPP p') : 'N/A'}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {isLoadingBrief && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Loading Behavioural Brief...</CardTitle></CardHeader>
-              <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
-            </Card>
-          )}
-          {!isLoadingBrief && behaviouralBrief && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief for {behaviouralBrief.dogName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div><strong>Dog's Name:</strong> {behaviouralBrief.dogName}</div>
-                <div><strong>Breed:</strong> {behaviouralBrief.dogBreed}</div>
-                <div><strong>Sex:</strong> {behaviouralBrief.dogSex}</div>
-                {behaviouralBrief.lifeWithDogAndHelpNeeded && (
-                  <div>
-                    <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
-                    <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviouralBrief.lifeWithDogAndHelpNeeded}</p>
-                  </div>
-                )}
-                {behaviouralBrief.bestOutcome && (
-                  <div className="pt-2">
-                    <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
-                    <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviouralBrief.bestOutcome}</p>
-                  </div>
-                )}
-                {behaviouralBrief.idealSessionTypes && behaviouralBrief.idealSessionTypes.length > 0 && (
-                   <div className="pt-2">
-                    <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
-                    <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                      {behaviouralBrief.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
-                    </ul>
-                  </div>
-                )}
-                 <div className="pt-2">
-                    <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
-                    <p className="mt-1 text-muted-foreground">{behaviouralBrief.submissionDate ? format(new Date(behaviouralBrief.submissionDate), 'PPP p') : 'N/A'}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {!isLoadingBrief && !behaviouralBrief && client.behaviouralBriefId && (
-             <Card>
-                <CardHeader><CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded.</p></CardContent>
-             </Card>
-          )}
-
-          {isLoadingQuestionnaire && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
-              <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
-            </Card>
-          )}
-          {!isLoadingQuestionnaire && behaviourQuestionnaire && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire for {behaviourQuestionnaire.dogName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div><strong>Dog's Name:</strong> {behaviourQuestionnaire.dogName} ({behaviourQuestionnaire.dogAge}, {behaviourQuestionnaire.dogSex})</div>
-                <div><strong>Breed:</strong> {behaviourQuestionnaire.dogBreed}</div>
-                <div><strong>Neutered/Spayed Details:</strong> {behaviourQuestionnaire.neuteredSpayedDetails}</div>
-                {behaviourQuestionnaire.mainProblem && <div><strong>Main Problem:</strong> <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviourQuestionnaire.mainProblem}</p></div>}
-                {behaviourQuestionnaire.idealTrainingOutcome && <div className="pt-2"><strong>Ideal Outcome:</strong> <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviourQuestionnaire.idealTrainingOutcome}</p></div>}
-                {behaviourQuestionnaire.sociabilityWithDogs && <div className="pt-2"><strong>Sociability with Dogs:</strong> {behaviourQuestionnaire.sociabilityWithDogs}</div>}
-                {behaviourQuestionnaire.sociabilityWithPeople && <div className="pt-2"><strong>Sociability with People:</strong> {behaviourQuestionnaire.sociabilityWithPeople}</div>}
-                 <div className="pt-2">
-                    <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
-                    <p className="mt-1 text-muted-foreground">{behaviourQuestionnaire.submissionDate ? format(new Date(behaviourQuestionnaire.submissionDate), 'PPP p') : 'N/A'}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-           {!isLoadingQuestionnaire && !behaviourQuestionnaire && client.behaviourQuestionnaireId && (
-             <Card>
-                <CardHeader><CardTitle className="text-lg">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">The associated behaviour questionnaire could not be loaded.</p></CardContent>
-             </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Activity className="mr-2 h-5 w-5 text-primary" /> Session History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {sessions.length > 0 ? (
-                <ul className="space-y-3">
-                  {sessions.map(session => (
-                    <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-semibold">
-                            {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
-                          </span>
-                          <span className="text-muted-foreground"> with {session.dogName} at {session.time}</span>
-                        </div>
-                        <Badge
-                          variant={
-                            session.status === 'Scheduled' ? 'default' :
-                            session.status === 'Completed' ? 'secondary' : 'outline'
-                          }
-                        >
-                          {session.status}
-                        </Badge>
-                      </div>
-                      {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">No session history found for this client.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
-    </div>
-  );
-}
+type SheetViewMode = 'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire';
 
 
 export default function ClientsPage() {
@@ -343,11 +87,21 @@ export default function ClientsPage() {
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clientSessions, setClientSessions] = useState<Session[]>([]);
-
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // State for the new View Sheet
+  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
+  const [clientForViewSheet, setClientForViewSheet] = useState<Client | null>(null);
+  const [sheetViewMode, setSheetViewMode] = useState<SheetViewMode>('clientInfo');
+  
+  const [briefForSheet, setBriefForSheet] = useState<BehaviouralBrief | null>(null);
+  const [isLoadingBriefForSheet, setIsLoadingBriefForSheet] = useState<boolean>(false);
+  
+  const [questionnaireForSheet, setQuestionnaireForSheet] = useState<BehaviourQuestionnaire | null>(null);
+  const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
+  
+  const [clientSessions, setClientSessions] = useState<Session[]>([]); // Used for session history in view sheet
 
   const { toast } = useToast();
 
@@ -410,10 +164,8 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    if (!selectedClient) {
-      fetchClients();
-    }
-  }, [selectedClient]);
+    fetchClients();
+  }, []);
 
   useEffect(() => {
     if (clientToEdit) {
@@ -488,8 +240,8 @@ export default function ClientsPage() {
       toast({ title: "Client Updated", description: `${data.ownerFirstName} ${data.ownerLastName} has been successfully updated.` });
       setIsEditSheetOpen(false);
 
-      if (selectedClient && selectedClient.id === clientToEdit.id) {
-        setSelectedClient(updatedClients.find(c => c.id === clientToEdit.id) || null);
+      if (clientForViewSheet && clientForViewSheet.id === clientToEdit.id) {
+        setClientForViewSheet(updatedClients.find(c => c.id === clientToEdit.id) || null);
       }
       setClientToEdit(null);
 
@@ -500,18 +252,6 @@ export default function ClientsPage() {
     } finally {
       setIsSubmittingForm(false);
     }
-  };
-
-  const handleRowClick = (client: Client) => {
-    setSelectedClient(client);
-    const sessions = mockSessions.filter(session => session.clientId === client.id)
-                                .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-    setClientSessions(sessions);
-  };
-
-  const handleBackToList = () => {
-    setSelectedClient(null);
-    setClientSessions([]);
   };
 
   const openEditSheet = (client: Client) => {
@@ -532,8 +272,9 @@ export default function ClientsPage() {
       await deleteClientFromFirestore(clientToDelete.id);
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
       toast({ title: "Client Deleted", description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.` });
-      if (selectedClient && selectedClient.id === clientToDelete.id) {
-         setSelectedClient(null);
+      if (clientForViewSheet && clientForViewSheet.id === clientToDelete.id) {
+         setClientForViewSheet(null);
+         setIsViewSheetOpen(false);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
@@ -545,9 +286,90 @@ export default function ClientsPage() {
     }
   };
 
-  if (selectedClient) {
-    return <ClientDetailView client={selectedClient} sessions={clientSessions} onBack={handleBackToList} onEdit={openEditSheet} onDelete={handleDeleteRequest} />;
-  }
+  const handleClientRowClick = (client: Client) => {
+    setClientForViewSheet(client);
+    setSheetViewMode('clientInfo');
+    setIsViewSheetOpen(true);
+    // Fetch sessions for this client
+    const sessions = mockSessions.filter(session => session.clientId === client.id)
+                                .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    setClientSessions(sessions);
+    // Reset brief and questionnaire for the new client
+    setBriefForSheet(null);
+    setQuestionnaireForSheet(null);
+  };
+
+  useEffect(() => {
+    const fetchBriefForSheet = async () => {
+      if (clientForViewSheet?.behaviouralBriefId && sheetViewMode === 'clientInfo' && !briefForSheet) { // Fetch only if moving to client info or initially
+        setIsLoadingBriefForSheet(true);
+        try {
+          const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
+          setBriefForSheet(brief);
+        } catch (error) {
+          console.error("Error fetching behavioural brief for sheet:", error);
+          setBriefForSheet(null);
+        } finally {
+          setIsLoadingBriefForSheet(false);
+        }
+      }
+    };
+    fetchBriefForSheet();
+  }, [clientForViewSheet, sheetViewMode, briefForSheet]);
+
+  useEffect(() => {
+    const fetchQuestionnaireForSheet = async () => {
+      if (clientForViewSheet?.behaviourQuestionnaireId && sheetViewMode === 'clientInfo' && !questionnaireForSheet) { // Fetch only if moving to client info or initially
+        setIsLoadingQuestionnaireForSheet(true);
+        try {
+          const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
+          setQuestionnaireForSheet(q);
+        } catch (error) {
+          console.error("Error fetching behaviour questionnaire for sheet:", error);
+          setQuestionnaireForSheet(null);
+        } finally {
+          setIsLoadingQuestionnaireForSheet(false);
+        }
+      }
+    };
+    fetchQuestionnaireForSheet();
+  }, [clientForViewSheet, sheetViewMode, questionnaireForSheet]);
+
+
+  const handleViewBriefInSheet = async () => {
+    if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
+    if (!briefForSheet) setIsLoadingBriefForSheet(true); // Show loader if brief not yet loaded
+    try {
+        if (!briefForSheet) { // Fetch only if not already fetched
+            const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
+            setBriefForSheet(brief);
+        }
+        setSheetViewMode('behaviouralBrief');
+    } catch (error) {
+        toast({ title: "Error", description: "Could not load behavioural brief.", variant: "destructive" });
+        console.error("Error fetching brief for sheet:", error);
+    } finally {
+        setIsLoadingBriefForSheet(false);
+    }
+  };
+
+  const handleViewQuestionnaireInSheet = async () => {
+    if (!clientForViewSheet || !clientForViewSheet.behaviourQuestionnaireId) return;
+    if (!questionnaireForSheet) setIsLoadingQuestionnaireForSheet(true);
+    try {
+        if (!questionnaireForSheet) {
+            const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
+            setQuestionnaireForSheet(q);
+        }
+        setSheetViewMode('behaviourQuestionnaire');
+    } catch (error) {
+        toast({ title: "Error", description: "Could not load behaviour questionnaire.", variant: "destructive" });
+        console.error("Error fetching questionnaire for sheet:", error);
+    } finally {
+        setIsLoadingQuestionnaireForSheet(false);
+    }
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -643,8 +465,8 @@ export default function ClientsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      {/* Removed outer Card and CardContent for the list */}
-      <div className="mt-0"> {/* Added mt-0 or adjust as needed if Add button feels too close */}
+      
+      <div className="mt-0">
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -664,17 +486,17 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <div className="space-y-0"> {/* space-y-0 to make borders contiguous */}
+            <div className="space-y-0">
               {clients.map((client) => (
                 <div
                   key={client.id}
-                  onClick={() => handleRowClick(client)}
-                  className="p-4 border-b hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center" // Updated classes
+                  onClick={() => handleClientRowClick(client)}
+                  className="p-4 border-b hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
                 >
                   <div className="flex items-center gap-3">
                     {client.isMember && (
                       <Image
-                        src="https://iili.io/34300ox.md.jpg" // Your member icon
+                        src="https://iili.io/34300ox.md.jpg"
                         alt="Member Icon"
                         width={32}
                         height={32}
@@ -685,7 +507,8 @@ export default function ClientsPage() {
                     <div>
                       <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
                       {client.dogName && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground flex items-center">
+                          <PawPrint className="mr-1.5 h-4 w-4 text-muted-foreground" />
                           {client.dogName}
                         </p>
                       )}
@@ -726,8 +549,8 @@ export default function ClientsPage() {
 
 
       {/* Edit Client Sheet */}
-      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent className="sm:max-w-md">
+      <Sheet open={isEditSheetOpen} onOpenChange={(isOpen) => { setIsEditSheetOpen(isOpen); if(!isOpen) setClientToEdit(null);}}>
+        <SheetContent className="sm:max-w-md w-[90vw] max-w-[500px]">
           <SheetHeader>
             <SheetTitle>Edit Client: {clientToEdit?.ownerFirstName} {clientToEdit?.ownerLastName}</SheetTitle>
             <SheetDescription>
@@ -735,6 +558,7 @@ export default function ClientsPage() {
             </SheetDescription>
           </SheetHeader>
           {clientToEdit && (
+            <ScrollArea className="h-[calc(100vh-150px)] pr-3">
             <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-ownerFirstName">First Name</Label>
@@ -791,9 +615,223 @@ export default function ClientsPage() {
                 </Button>
               </SheetFooter>
             </form>
+            </ScrollArea>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* View Client Sheet */}
+      <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
+        <SheetContent className="sm:max-w-lg w-[90vw] max-w-[600px] p-0">
+          {clientForViewSheet && (
+            <>
+              <SheetHeader className="p-6 border-b">
+                <SheetTitle className="flex items-center">
+                   {clientForViewSheet.isMember && (
+                      <Image
+                        src="https://iili.io/34300ox.md.jpg"
+                        alt="Member Icon"
+                        width={32}
+                        height={32}
+                        className="rounded-md mr-3"
+                        data-ai-hint="company logo"
+                      />
+                    )}
+                  {clientForViewSheet.ownerFirstName} {clientForViewSheet.ownerLastName}
+                </SheetTitle>
+                {clientForViewSheet.dogName && <SheetDescription>Dog: {clientForViewSheet.dogName}</SheetDescription>}
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-70px)]"> {/* Adjust height based on header */}
+                <div className="p-6 space-y-6">
+                  {sheetViewMode === 'clientInfo' && (
+                    <>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center"><IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> <a href={`mailto:${clientForViewSheet.contactEmail}`} className="ml-1 hover:underline">{clientForViewSheet.contactEmail}</a></div>
+                          <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Number:</strong> <a href={`tel:${clientForViewSheet.contactNumber}`} className="ml-1 hover:underline">{clientForViewSheet.contactNumber}</a></div>
+                          {clientForViewSheet.address ? (
+                            <div className="flex items-start"><MapPin className="mr-2 h-4 w-4 text-muted-foreground mt-0.5"/>
+                              <strong>Address:</strong>
+                              <div className="ml-1">
+                                  {clientForViewSheet.address.addressLine1} <br />
+                                  {clientForViewSheet.address.addressLine2 && <>{clientForViewSheet.address.addressLine2} <br /></>}
+                                  {clientForViewSheet.address.city}, {clientForViewSheet.postcode} <br />
+                                  {clientForViewSheet.address.country}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {clientForViewSheet.postcode}</div>
+                          )}
+                          {clientForViewSheet.howHeardAboutServices && (
+                            <div className="pt-2">
+                                <strong className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground"/>How heard about services:</strong>
+                                <p className="mt-1 text-muted-foreground">{clientForViewSheet.howHeardAboutServices}</p>
+                            </div>
+                          )}
+                           <div className="pt-2">
+                              <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Initial Submission:</strong>
+                              <p className="mt-1 text-muted-foreground">{clientForViewSheet.submissionDate ? format(new Date(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                          </div>
+                          <div className="pt-2">
+                              <strong className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Membership:</strong>
+                              <Badge variant={clientForViewSheet.isMember ? "default" : "outline"} className="ml-1">{clientForViewSheet.isMember ? "Active Member" : "Not a Member"}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {clientForViewSheet.behaviouralBriefId && (
+                        <Button variant="outline" className="w-full" onClick={handleViewBriefInSheet} disabled={isLoadingBriefForSheet}>
+                          {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          View Behavioural Brief
+                        </Button>
+                      )}
+                      {clientForViewSheet.behaviourQuestionnaireId && (
+                        <Button variant="outline" className="w-full" onClick={handleViewQuestionnaireInSheet} disabled={isLoadingQuestionnaireForSheet}>
+                           {isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          View Behaviour Questionnaire
+                        </Button>
+                      )}
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" /> Session History</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {clientSessions.length > 0 ? (
+                            <ul className="space-y-3">
+                              {clientSessions.map(session => (
+                                <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-semibold">
+                                        {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
+                                      </span>
+                                      <span className="text-muted-foreground"> at {session.time}</span>
+                                    </div>
+                                    <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'}>
+                                      {session.status}
+                                    </Badge>
+                                  </div>
+                                  {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No session history found for this client.</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+
+                  {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="text-lg flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief</CardTitle>
+                        <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Back to Client Info</span>
+                        </Button>
+                      </CardHeader>
+                      <CardContent className="space-y-3 text-sm">
+                        <div><strong>Dog's Name:</strong> {briefForSheet.dogName}</div>
+                        <div><strong>Breed:</strong> {briefForSheet.dogBreed}</div>
+                        <div><strong>Sex:</strong> {briefForSheet.dogSex}</div>
+                        {briefForSheet.lifeWithDogAndHelpNeeded && (
+                          <div>
+                            <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
+                            <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{briefForSheet.lifeWithDogAndHelpNeeded}</p>
+                          </div>
+                        )}
+                        {briefForSheet.bestOutcome && (
+                          <div className="pt-2">
+                            <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
+                            <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{briefForSheet.bestOutcome}</p>
+                          </div>
+                        )}
+                        {briefForSheet.idealSessionTypes && briefForSheet.idealSessionTypes.length > 0 && (
+                          <div className="pt-2">
+                            <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
+                            <ul className="list-disc list-inside mt-1 text-muted-foreground">
+                              {briefForSheet.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="pt-2">
+                            <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
+                            <p className="mt-1 text-muted-foreground">{briefForSheet.submissionDate ? format(new Date(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                   {sheetViewMode === 'behaviouralBrief' && !briefForSheet && !isLoadingBriefForSheet && (
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle>
+                           <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Back to Client Info</span>
+                            </Button>
+                        </CardHeader>
+                        <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded or does not exist.</p></CardContent>
+                     </Card>
+                  )}
+                  {sheetViewMode === 'behaviouralBrief' && isLoadingBriefForSheet && (
+                    <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Brief...</p></div>
+                  )}
+
+
+                  {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle className="text-lg flex items-center"><IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire</CardTitle>
+                            <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Back to Client Info</span>
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
+                            <div><strong>Dog's Name:</strong> {questionnaireForSheet.dogName} ({questionnaireForSheet.dogAge}, {questionnaireForSheet.dogSex})</div>
+                            <div><strong>Breed:</strong> {questionnaireForSheet.dogBreed}</div>
+                            <div><strong>Neutered/Spayed Details:</strong> {questionnaireForSheet.neuteredSpayedDetails}</div>
+                            {questionnaireForSheet.mainProblem && <div className="pt-1"><strong>Main Problem:</strong> <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{questionnaireForSheet.mainProblem}</p></div>}
+                            {questionnaireForSheet.idealTrainingOutcome && <div className="pt-1"><strong>Ideal Outcome:</strong> <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{questionnaireForSheet.idealTrainingOutcome}</p></div>}
+                            {questionnaireForSheet.sociabilityWithDogs && <div className="pt-1"><strong>Sociability with Dogs:</strong> {questionnaireForSheet.sociabilityWithDogs}</div>}
+                            {questionnaireForSheet.sociabilityWithPeople && <div className="pt-1"><strong>Sociability with People:</strong> {questionnaireForSheet.sociabilityWithPeople}</div>}
+                            {/* Add more questionnaire fields here as needed */}
+                            <div className="pt-2">
+                                <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
+                                <p className="mt-1 text-muted-foreground">{questionnaireForSheet.submissionDate ? format(new Date(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                            </div>
+                        </CardContent>
+                     </Card>
+                  )}
+                  {sheetViewMode === 'behaviourQuestionnaire' && !questionnaireForSheet && !isLoadingQuestionnaireForSheet && (
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <CardTitle className="text-lg">Behaviour Questionnaire Not Found</CardTitle>
+                           <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Back to Client Info</span>
+                            </Button>
+                        </CardHeader>
+                        <CardContent><p className="text-muted-foreground">The associated behaviour questionnaire could not be loaded or does not exist.</p></CardContent>
+                     </Card>
+                  )}
+                  {sheetViewMode === 'behaviourQuestionnaire' && isLoadingQuestionnaireForSheet && (
+                    <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Questionnaire...</p></div>
+                  )}
+
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
