@@ -19,7 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-// Schema based on the provided Squarespace form structure
+// Schema based on the Squarespace form structure
 const behaviouralBriefSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
@@ -50,6 +50,7 @@ export default function BehaviouralBriefPage() {
   const { toast } = useToast();
   
   useEffect(() => {
+    // Set initial date on client-side to avoid hydration mismatch
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   }, []);
 
@@ -60,12 +61,12 @@ export default function BehaviouralBriefPage() {
     contactNumber: '',
     postcode: '',
     dogName: '',
-    dogSex: undefined as 'Male' | 'Female' | undefined,
+    dogSex: undefined as 'Male' | 'Female' | undefined, // Ensure Select's placeholder shows initially
     dogBreed: '',
     lifeWithDogAndHelpNeeded: '',
     bestOutcome: '',
     idealSessionTypes: [],
-    submissionDate: '',
+    submissionDate: '', // Will be set by useEffect and currentSubmissionDate
   }), []);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
@@ -74,6 +75,7 @@ export default function BehaviouralBriefPage() {
   });
 
   useEffect(() => {
+    // Sync the form's submissionDate field with the client-side generated date
     if (currentSubmissionDate) {
       setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
     }
@@ -163,7 +165,7 @@ export default function BehaviouralBriefPage() {
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
         <CardContent className="p-6 sm:p-8">
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0"> 
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0"> {/* Reduced global form spacing, manage with FormFieldWrapper mb */}
             
             <SectionTitle title="CONTACT INFORMATION" />
             
@@ -181,7 +183,7 @@ export default function BehaviouralBriefPage() {
                     {...register("ownerFirstName")} 
                     className={cn(
                       errors.ownerFirstName ? "border-destructive" : "border-input",
-                      "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                      "bg-[#ebeadf] focus-visible:ring-black" 
                     )} 
                     disabled={isSubmitting} />
                   {errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{errors.ownerFirstName.message}</p>}
@@ -193,7 +195,7 @@ export default function BehaviouralBriefPage() {
                     {...register("ownerLastName")} 
                     className={cn(
                       errors.ownerLastName ? "border-destructive" : "border-input",
-                      "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                      "bg-[#ebeadf] focus-visible:ring-black"
                     )} 
                     disabled={isSubmitting} />
                   {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
@@ -208,7 +210,7 @@ export default function BehaviouralBriefPage() {
                 {...register("contactEmail")} 
                 className={cn(
                   errors.contactEmail ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting} />
             </FormFieldWrapper>
@@ -219,7 +221,7 @@ export default function BehaviouralBriefPage() {
                 {...register("contactNumber")} 
                 className={cn(
                   errors.contactNumber ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting}/>
             </FormFieldWrapper>
@@ -229,7 +231,7 @@ export default function BehaviouralBriefPage() {
                 {...register("postcode")} 
                 className={cn(
                   errors.postcode ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting}/>
             </FormFieldWrapper>
@@ -241,7 +243,7 @@ export default function BehaviouralBriefPage() {
                 {...register("dogName")} 
                 className={cn(
                   errors.dogName ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting} />
             </FormFieldWrapper>
@@ -254,12 +256,12 @@ export default function BehaviouralBriefPage() {
                     <SelectTrigger 
                       className={cn(
                         errors.dogSex ? "border-destructive" : "border-input",
-                        "bg-background focus-visible:ring-black"
+                        "bg-[#ebeadf] focus-visible:ring-black"
                       )}
                     >
                       <SelectValue placeholder="Please Select" />
                     </SelectTrigger>
-                    <SelectContent className="bg-background">
+                    <SelectContent className="bg-[#ebeadf]"> {/* Also style SelectContent if needed */}
                       <SelectItem value="Male">Male</SelectItem>
                       <SelectItem value="Female">Female</SelectItem>
                     </SelectContent>
@@ -273,7 +275,7 @@ export default function BehaviouralBriefPage() {
                 {...register("dogBreed")} 
                 className={cn(
                   errors.dogBreed ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting} />
             </FormFieldWrapper>
@@ -283,7 +285,7 @@ export default function BehaviouralBriefPage() {
                 {...register("lifeWithDogAndHelpNeeded")} 
                 className={cn(
                   errors.lifeWithDogAndHelpNeeded ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting} 
                 rows={4}/>
@@ -294,7 +296,7 @@ export default function BehaviouralBriefPage() {
                 {...register("bestOutcome")} 
                 className={cn(
                   errors.bestOutcome ? "border-destructive" : "border-input",
-                  "bg-background placeholder:text-[#ebeadf] focus-visible:ring-black"
+                  "bg-[#ebeadf] focus-visible:ring-black"
                 )} 
                 disabled={isSubmitting} 
                 rows={4}/>
@@ -345,5 +347,3 @@ export default function BehaviouralBriefPage() {
     </div>
   );
 }
-
-    
