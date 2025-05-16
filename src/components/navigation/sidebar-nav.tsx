@@ -3,15 +3,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  Users,
-  CalendarDays,
-  DollarSign,
-  ClipboardPlus, 
-  FileQuestion, // Added new icon
-  type LucideIcon,
-} from 'lucide-react';
+import { navItems } from '@/lib/nav-items'; // Updated import
+import type { LucideIcon } from 'lucide-react';
+
 
 import {
   SidebarMenu,
@@ -20,21 +14,6 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  isPublic?: boolean; 
-}
-
-const navItems: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/clients', label: 'Clients', icon: Users },
-  { href: '/sessions', label: 'Sessions', icon: CalendarDays },
-  { href: '/finance', label: 'Finance', icon: DollarSign },
-  { href: '/public-intake', label: 'Behavioural Brief', icon: ClipboardPlus },
-  { href: '/behaviour-questionnaire', label: 'Behaviour Questionnaire', icon: FileQuestion },
-];
 
 export function SidebarNav() {
   const pathname = usePathname();
