@@ -5,8 +5,7 @@ import { useState, useEffect } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +27,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
+import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +36,7 @@ import { getClients, addClientToFirestore as fbAddClient, getBehaviouralBriefByB
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 const internalClientFormSchema = z.object({
@@ -45,6 +45,8 @@ const internalClientFormSchema = z.object({
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
   postcode: z.string().min(3, { message: "Postcode is required." }),
+  dogName: z.string().optional(),
+  isMember: z.boolean().optional(),
   submissionDate: z.string().optional(), 
 });
 
@@ -106,11 +108,12 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {client.ownerFirstName} {client.ownerLastName}
-          {behaviouralBrief && ` & ${behaviouralBrief.dogName}`}
-          {!behaviouralBrief && behaviourQuestionnaire && ` & ${behaviourQuestionnaire.dogName}`}
-        </h2>
+        <div className="flex items-center gap-2">
+            {client.isMember && <ShieldCheck className="h-7 w-7 text-primary" />}
+            <h2 className="text-2xl font-bold tracking-tight">
+            {client.ownerFirstName} {client.ownerLastName}
+            </h2>
+        </div>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Client List
@@ -127,6 +130,8 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Owner:</strong> {client.ownerFirstName} {client.ownerLastName}</div>
+              {client.dogName && <div className="flex items-center"><PawPrint className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Dog:</strong> {client.dogName}</div>}
+              <div><strong>Membership:</strong> {client.isMember ? <Badge variant="default">Active</Badge> : <Badge variant="outline">Not Active</Badge>}</div>
               <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
               <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
               {client.address ? (
@@ -208,7 +213,6 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
              </Card>
           )}
 
-          {/* Behaviour Questionnaire Display */}
           {isLoadingQuestionnaire && (
             <Card>
               <CardHeader><CardTitle className="text-lg">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
@@ -223,7 +227,6 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {/* Display some key fields from the questionnaire. Add more as needed. */}
                 <div><strong>Dog's Name:</strong> {behaviourQuestionnaire.dogName} ({behaviourQuestionnaire.dogAge}, {behaviourQuestionnaire.dogSex})</div>
                 <div><strong>Breed:</strong> {behaviourQuestionnaire.dogBreed}</div>
                 <div><strong>Neutered/Spayed Details:</strong> {behaviourQuestionnaire.neuteredSpayedDetails}</div>
@@ -235,7 +238,6 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
                     <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
                     <p className="mt-1 text-muted-foreground">{behaviourQuestionnaire.submissionDate ? format(new Date(behaviourQuestionnaire.submissionDate), 'PPP p') : 'N/A'}</p>
                 </div>
-                {/* Add more fields from BehaviourQuestionnaire as needed */}
               </CardContent>
             </Card>
           )}
@@ -300,7 +302,7 @@ export default function ClientsPage() {
 
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<InternalClientFormValues>({
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<InternalClientFormValues>({
     resolver: zodResolver(internalClientFormSchema),
      defaultValues: {
       ownerFirstName: '',
@@ -308,6 +310,8 @@ export default function ClientsPage() {
       contactEmail: '',
       contactNumber: '',
       postcode: '',
+      dogName: '',
+      isMember: false,
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
@@ -358,8 +362,14 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> = {
-        ...data, // This includes ownerFirstName, ownerLastName, contactEmail, contactNumber, postcode
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean } = {
+        ownerFirstName: data.ownerFirstName,
+        ownerLastName: data.ownerLastName,
+        contactEmail: data.contactEmail,
+        contactNumber: data.contactNumber,
+        postcode: data.postcode,
+        dogName: data.dogName || undefined,
+        isMember: data.isMember || false,
         submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       };
       const newClient = await fbAddClient(clientDataForFirestore);
@@ -368,7 +378,7 @@ export default function ClientsPage() {
         title: "Client Added",
         description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.`,
       });
-      reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientModalOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
@@ -414,7 +424,7 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle>Add New Client (Quick Add)</DialogTitle>
               <DialogDescription>
-                Add essential contact information. Full details can be submitted via public forms.
+                Add essential contact and dog information. Full details can be submitted via public forms.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddClient)} className="grid gap-4 py-4">
@@ -430,6 +440,13 @@ export default function ClientsPage() {
                 <div className="col-span-3">
                   <Input id="ownerLastName" {...register("ownerLastName")} className={errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmitting} />
                   {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
+                </div>
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="dogName" className="text-right">Dog's Name</Label>
+                <div className="col-span-3">
+                  <Input id="dogName" {...register("dogName")} className={errors.dogName ? "border-destructive" : ""} disabled={isSubmitting}/>
+                  {errors.dogName && <p className="text-xs text-destructive mt-1">{errors.dogName.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -453,6 +470,25 @@ export default function ClientsPage() {
                   {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                 </div>
               </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="isMember" className="text-right pt-2">Is Member?</Label>
+                <div className="col-span-3 flex items-center">
+                   <Controller
+                    name="isMember"
+                    control={control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="isMember"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmitting}
+                        className="mr-2"
+                      />
+                    )}
+                  />
+                  <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
+                </div>
+              </div>
               <input type="hidden" {...register("submissionDate")} />
               <DialogFooter>
                 <DialogClose asChild>
@@ -470,7 +506,7 @@ export default function ClientsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Client List</CardTitle>
-          <CardDescription>Manage your clients. Click a row to view details and associated forms.</CardDescription>
+          <CardDescription>Manage your clients. Click an item to view details.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading && (
@@ -492,50 +528,27 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Owner Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Postcode</TableHead>
-                  <TableHead>Next Session</TableHead>
-                  <TableHead>Brief</TableHead>
-                  <TableHead>Questionnaire</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id} onClick={() => handleRowClick(client)} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">{client.ownerFirstName} {client.ownerLastName}</TableCell>
-                    <TableCell>
-                      <div>{client.contactEmail}</div>
-                      <div className="text-xs text-muted-foreground">{client.contactNumber}</div>
-                    </TableCell>
-                    <TableCell>{client.postcode}</TableCell>
-                    <TableCell>
-                      {client.nextSession !== 'Not Scheduled' ? (
-                        <Badge variant="default">{client.nextSession}</Badge>
-                      ) : (
-                        <Badge variant="secondary">{client.nextSession}</Badge>
+            <div className="space-y-4">
+              {clients.map((client) => (
+                <div 
+                  key={client.id} 
+                  onClick={() => handleRowClick(client)} 
+                  className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        {client.isMember && <ShieldCheck className="h-5 w-5 text-primary" />}
+                        <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
+                      </div>
+                      {client.dogName && (
+                        <p className="text-sm text-muted-foreground flex items-center mt-1">
+                          <PawPrint className="inline-block mr-1.5 h-4 w-4" />
+                          {client.dogName}
+                        </p>
                       )}
-                    </TableCell>
-                     <TableCell>
-                      {client.behaviouralBriefId ? (
-                        <Badge variant="default">Yes</Badge>
-                      ) : (
-                        <Badge variant="outline">No</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {client.behaviourQuestionnaireId ? (
-                        <Badge variant="default">Yes</Badge>
-                      ) : (
-                        <Badge variant="outline">No</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
+                    </div>
+                    <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <span className="sr-only">Open menu</span>
@@ -544,26 +557,37 @@ export default function ClientsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit client functionality to be implemented.');}}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Contact
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
                             <IconCalendarDays className="mr-2 h-4 w-4" />
                             Schedule Session
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => {e.stopPropagation(); alert('Delete client functionality to be implemented.');}}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Client
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                      <span className="mr-4">Email: {client.contactEmail}</span>
+                      <span>Phone: {client.contactNumber}</span>
+                  </div>
+                   <div className="mt-1 text-xs">
+                        <Badge variant={client.behaviouralBriefId ? "default" : "outline"} className="mr-2">
+                            Brief: {client.behaviouralBriefId ? "Yes" : "No"}
+                        </Badge>
+                        <Badge variant={client.behaviourQuestionnaireId ? "default" : "outline"}>
+                            Questionnaire: {client.behaviourQuestionnaireId ? "Yes" : "No"}
+                        </Badge>
+                   </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

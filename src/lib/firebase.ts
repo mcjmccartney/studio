@@ -8,9 +8,6 @@ import {
   doc, 
   getDoc, 
   updateDoc,
-  // query, 
-  // where,
-  // limit,
   serverTimestamp, 
   Timestamp, 
   type DocumentData, 
@@ -36,10 +33,7 @@ export interface BehaviouralBriefFormValues {
   submissionDate: string;
 }
 
-// This type is for the full form data coming from behaviour-questionnaire/page.tsx
-// It's extensive, mirroring the Zod schema there.
 export interface BehaviourQuestionnaireFormValues {
-  // Owner Info
   ownerFirstName: string;
   ownerLastName: string;
   contactEmail: string;
@@ -48,10 +42,8 @@ export interface BehaviourQuestionnaireFormValues {
   addressLine2?: string;
   city: string;
   country: string;
-  postcode: string; // Part of address, but also useful standalone
+  postcode: string;
   howHeardAboutServices?: string;
-
-  // Dog Info
   dogName: string;
   dogAge: string;
   dogSex: 'Male' | 'Female' | '';
@@ -66,24 +58,16 @@ export interface BehaviourQuestionnaireFormValues {
   problemAddressingAttempts?: string;
   idealTrainingOutcome?: string;
   otherHelpNeeded?: string;
-
-  // Health and Veterinary Information
   medicalHistory?: string;
   vetConsultationDetails?: string;
-
-  // Background Information
   dogOrigin?: string;
   rescueBackground?: string;
   dogAgeWhenAcquired?: string;
-
-  // Diet and Feeding
   dietDetails?: string;
-  foodMotivationLevel?: string; // "1" - "10"
+  foodMotivationLevel?: string;
   mealtimeRoutine?: string;
   treatRoutine?: string;
   externalTreatsConsent?: string;
-
-  // Routines
   playEngagement?: string;
   affectionResponse?: string;
   exerciseRoutine?: string;
@@ -92,12 +76,8 @@ export interface BehaviourQuestionnaireFormValues {
   reactionToUnfamiliarPeople?: string;
   housetrainedStatus?: string;
   activitiesAsideFromWalks?: string;
-
-  // Temperament
   dogLikes?: string;
   dogChallenges?: string;
-
-  // Training
   positiveReinforcementMethods?: string;
   favoriteRewards?: string;
   correctionMethods?: string;
@@ -105,13 +85,10 @@ export interface BehaviourQuestionnaireFormValues {
   previousProfessionalTraining?: string;
   previousTrainingMethodsUsed?: string;
   previousTrainingExperienceResults?: string;
-
-  // Sociability
   sociabilityWithDogs?: 'Sociable' | 'Nervous' | 'Reactive' | 'Disinterested' | '';
   sociabilityWithPeople?: 'Sociable' | 'Nervous' | 'Reactive' | 'Disinterested' | '';
   additionalInformation?: string;
   timeDedicatedToTraining?: string;
-  
   submissionDate: string;
 }
 
@@ -134,7 +111,6 @@ if (!getApps().length) {
 
 const db = getFirestore(app);
 
-// Firestore data converter for Client
 const clientConverter: FirestoreDataConverter<Client> = {
   toFirestore(client: Omit<Client, 'id'>): DocumentData {
     const { behaviouralBriefId, behaviourQuestionnaireId, address, ...contactData } = client;
@@ -144,6 +120,8 @@ const clientConverter: FirestoreDataConverter<Client> = {
       submissionDate: client.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
+      dogName: client.dogName || null, // Save null if undefined
+      isMember: client.isMember === undefined ? false : client.isMember, // Default to false
     };
     if (behaviouralBriefId) dataToSave.behaviouralBriefId = behaviouralBriefId;
     if (behaviourQuestionnaireId) dataToSave.behaviourQuestionnaireId = behaviourQuestionnaireId;
@@ -151,7 +129,10 @@ const clientConverter: FirestoreDataConverter<Client> = {
     
      Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key] === undefined) {
-        delete dataToSave[key]; 
+        // dogName will be null, isMember will be false if undefined
+        if (key !== 'dogName' && key !== 'isMember') {
+          delete dataToSave[key]; 
+        }
       }
     });
     return dataToSave;
@@ -167,6 +148,8 @@ const clientConverter: FirestoreDataConverter<Client> = {
       postcode: data.postcode || '',
       address: data.address || undefined,
       howHeardAboutServices: data.howHeardAboutServices || undefined,
+      dogName: data.dogName || undefined,
+      isMember: data.isMember === undefined ? false : data.isMember,
       behaviouralBriefId: data.behaviouralBriefId || undefined,
       behaviourQuestionnaireId: data.behaviourQuestionnaireId || undefined,
       submissionDate: data.submissionDate || '',
@@ -177,10 +160,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
   }
 };
 
-// Firestore data converter for BehaviouralBrief
 const behaviouralBriefConverter: FirestoreDataConverter<BehaviouralBrief> = {
   toFirestore(brief: Omit<BehaviouralBrief, 'id'>): DocumentData {
-    const dataToSave = { 
+    const dataToSave: any = { 
         ...brief, 
         createdAt: brief.createdAt instanceof Date || brief.createdAt instanceof Timestamp ? brief.createdAt : serverTimestamp(),
         submissionDate: brief.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
@@ -211,18 +193,15 @@ const behaviouralBriefConverter: FirestoreDataConverter<BehaviouralBrief> = {
   }
 };
 
-// Firestore data converter for BehaviourQuestionnaire
 const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionnaire> = {
   toFirestore(questionnaire: Omit<BehaviourQuestionnaire, 'id'>): DocumentData {
-    const dataToSave = {
+    const dataToSave: any = {
       ...questionnaire,
       createdAt: questionnaire.createdAt instanceof Date || questionnaire.createdAt instanceof Timestamp ? questionnaire.createdAt : serverTimestamp(),
       submissionDate: questionnaire.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     };
      Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key] === undefined) {
-        // For optional fields, if they are undefined, don't save them.
-        // For specific fields like sociability, ensure empty string if not provided, if that's the desired DB state.
         if (['sociabilityWithDogs', 'sociabilityWithPeople'].includes(key)) {
             dataToSave[key] = '';
         } else {
@@ -234,7 +213,6 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<DocumentData>): BehaviourQuestionnaire {
     const data = snapshot.data();
-    // Ensure all fields from BehaviourQuestionnaire type are mapped
     return {
       id: snapshot.id,
       clientId: data.clientId,
@@ -308,15 +286,20 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
-// For internal "Add Client" modal - creates a client without a brief or questionnaire initially
-export const addClientToFirestore = async (clientContactData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'>): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
   
   const dataToSave: Omit<Client, 'id'> = {
-    ...clientContactData, // ownerFirstName, ownerLastName, contactEmail, contactNumber, postcode
-    submissionDate: clientContactData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+    ownerFirstName: clientData.ownerFirstName,
+    ownerLastName: clientData.ownerLastName,
+    contactEmail: clientData.contactEmail,
+    contactNumber: clientData.contactNumber,
+    postcode: clientData.postcode,
+    dogName: clientData.dogName || undefined,
+    isMember: clientData.isMember || false,
+    submissionDate: clientData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
     nextSession: 'Not Scheduled',
@@ -330,7 +313,6 @@ export const addClientToFirestore = async (clientContactData: Omit<Client, 'id' 
   } as Client; 
 };
 
-// For the public Behavioural Brief form
 export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFormValues): Promise<{client: Client, brief: BehaviouralBrief}> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client and brief.");
@@ -343,7 +325,9 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     ownerLastName: formData.ownerLastName,
     contactEmail: formData.contactEmail,
     contactNumber: formData.contactNumber,
-    postcode: formData.postcode, // From Behavioural Brief form
+    postcode: formData.postcode,
+    dogName: formData.dogName, // Populate dogName on Client
+    isMember: false, // Default to false for new brief submissions
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -376,20 +360,20 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
   return { client: finalClientData, brief: finalBriefData };
 };
 
-// For the public Behaviour Questionnaire form
 export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: BehaviourQuestionnaireFormValues): Promise<{client: Client, questionnaire: BehaviourQuestionnaire}> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client and questionnaire.");
   }
   const submissionTimestamp = formData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss");
 
-  // Create Client document
   const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
     ownerFirstName: formData.ownerFirstName,
     ownerLastName: formData.ownerLastName,
     contactEmail: formData.contactEmail,
     contactNumber: formData.contactNumber,
-    postcode: formData.postcode, // From the address object in this form
+    postcode: formData.postcode,
+    dogName: formData.dogName, // Populate dogName on Client
+    isMember: false, // Default to false for new questionnaire submissions
     address: {
       addressLine1: formData.addressLine1,
       addressLine2: formData.addressLine2,
@@ -397,16 +381,14 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
       country: formData.country,
     },
     howHeardAboutServices: formData.howHeardAboutServices,
-    submissionDate: submissionTimestamp, // This client record gets a submission date too
+    submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
     nextSession: 'Not Scheduled',
   };
-  // For now, assume new client. Could add find-or-create logic later.
   const clientDocRef = await addDoc(clientsCollectionRef, clientRecord);
   const newClientId = clientDocRef.id;
 
-  // Create BehaviourQuestionnaire document
   const questionnaireRecord: Omit<BehaviourQuestionnaire, 'id'> = {
     clientId: newClientId,
     dogName: formData.dogName,
@@ -460,7 +442,6 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
   const questionnaireDocRef = await addDoc(behaviourQuestionnairesCollectionRef, questionnaireRecord);
   const newQuestionnaireId = questionnaireDocRef.id;
 
-  // Update Client document with behaviourQuestionnaireId
   await updateDoc(clientDocRef, {
     behaviourQuestionnaireId: newQuestionnaireId,
   });
@@ -509,10 +490,5 @@ export const getBehaviourQuestionnaireById = async (questionnaireId: string): Pr
     return null;
   }
 };
-
-
-// Placeholder for other Firestore functions (Sessions, Finance)
-// export const getSessions = async (): Promise<Session[]> => { ... };
-// export const addSessionToFirestore = async (sessionData: Omit<Session, 'id'>): Promise<Session> => { ... };
 
 export { db, app, Timestamp, serverTimestamp };

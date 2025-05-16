@@ -2,7 +2,6 @@
 import type { Client, Session, BehaviouralBrief } from './types';
 import { format } from 'date-fns';
 
-// Updated Mock Data to reflect the new Client & BehaviouralBrief type structure
 export let mockClients: Client[] = [
   { 
     id: '1', 
@@ -11,7 +10,9 @@ export let mockClients: Client[] = [
     contactEmail: 'alice@example.com', 
     contactNumber: '555-0101', 
     postcode: 'EC1A 1BB',
-    behaviouralBriefId: 'brief1', // Link to mock brief
+    dogName: 'Cheshire',
+    isMember: true,
+    behaviouralBriefId: 'brief1',
     submissionDate: format(new Date('2024-07-01'), "yyyy-MM-dd HH:mm:ss"),
     lastSession: '2024-07-15', 
     nextSession: '2024-07-29',
@@ -24,7 +25,9 @@ export let mockClients: Client[] = [
     contactEmail: 'bob@example.com', 
     contactNumber: '555-0102', 
     postcode: 'SW1A 0AA',
-    behaviouralBriefId: 'brief2', // Link to mock brief
+    dogName: 'Scoop',
+    isMember: false,
+    behaviouralBriefId: 'brief2',
     submissionDate: format(new Date('2024-07-05'), "yyyy-MM-dd HH:mm:ss"),
     lastSession: '2024-07-10', 
     nextSession: '2024-07-24',
@@ -37,7 +40,8 @@ export let mockClients: Client[] = [
     contactEmail: 'charlie@example.com', 
     contactNumber: '555-0103', 
     postcode: 'W1A 0AX',
-    // No behaviouralBriefId, simulating an internally added client
+    dogName: 'Snoopy',
+    isMember: true,
     submissionDate: format(new Date('2024-07-10'), "yyyy-MM-dd HH:mm:ss"),
     lastSession: '2024-07-18', 
     nextSession: '2024-08-01',
@@ -81,15 +85,9 @@ export let mockSessions: Session[] = [
   { id: '5', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-08-07', time: '02:00 PM', status: 'Completed' },
 ];
 
-
-// This function is now more for client selection in "Add Session" modal if it uses mock data
-// It's not for adding clients to the main list anymore if Firestore is primary.
-export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName'>, clientDetails: {id: string, ownerFirstName: string, ownerLastName: string, dogName?: string}): Session => {
+export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName'>, clientDetails: Client ): Session => {
   const clientName = `${clientDetails.ownerFirstName} ${clientDetails.ownerLastName}`;
-  // Attempt to find a linked brief for the dog name, or use a placeholder if clientDetails.dogName is not directly available
-  // This part might need adjustment based on how dogName is passed or if sessions should always link to a specific brief's dog.
-  const briefForClient = mockBehaviouralBriefs.find(b => b.clientId === clientDetails.id);
-  const dogNameForSession = clientDetails.dogName || (briefForClient ? briefForClient.dogName : 'N/A');
+  const dogNameForSession = clientDetails.dogName || 'N/A';
 
   const newSession: Session = { 
     ...session, 
@@ -100,12 +98,10 @@ export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName'
   };
   mockSessions = [...mockSessions, newSession];
   
-  // Update client's nextSession if this is the most recent
   const clientIndex = mockClients.findIndex(c => c.id === clientDetails.id);
   if (clientIndex > -1) {
-    // Basic logic for updating next session, can be made more robust
     if (mockClients[clientIndex].nextSession === 'Not Scheduled' || 
-        new Date(session.date) < new Date(mockClients[clientIndex].nextSession!)) {
+        (mockClients[clientIndex].nextSession && new Date(session.date) < new Date(mockClients[clientIndex].nextSession!))) { // Added null check for nextSession
         mockClients[clientIndex] = { ...mockClients[clientIndex], nextSession: session.date };
     }
   }
