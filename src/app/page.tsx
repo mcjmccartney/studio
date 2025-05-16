@@ -1,27 +1,49 @@
+"use client";
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, CalendarDays, DollarSign } from "lucide-react";
+import { Users, CalendarDays, DollarSign as IconDollarSign } from "lucide-react"; // Renamed DollarSign to avoid conflict
+import { Calendar } from "@/components/ui/calendar";
+import type { Session } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { format, parseISO, isValid } from 'date-fns';
+import { mockSessions } from '@/lib/mockData'; // Assuming mockSessions is available for dashboard
 
 export default function HomePage() {
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
+  const [currentSessions, setCurrentSessions] = useState<Session[]>([]);
+
+  useEffect(() => {
+    // In a real app, fetch sessions, for now using mock.
+    setCurrentSessions(mockSessions);
+  }, []);
+
+  const selectedDateString = selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'yyyy-MM-dd') : null;
+  const sessionsOnSelectedDate = selectedDateString 
+    ? currentSessions.filter(s => s.date === selectedDateString)
+    : [];
+  
+  const allSessionDates = currentSessions.map(s => parseISO(s.date)).filter(isValid);
+
+  // Calculate stats (these are placeholders, you'd fetch real data)
+  const activeClientsCount = 12; 
+  const upcomingSessionsCount = currentSessions.filter(s => parseISO(s.date) >= new Date() && s.status === 'Scheduled').length;
+  const incomeThisMonth = 2350.00;
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to PawsitiveTracker!</h1>
-      <p className="text-muted-foreground">
-        Manage your clients, sessions, and finances efficiently. Let's get started!
-      </p>
-      
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 columns */}
+    <div className="flex flex-col gap-8"> {/* Increased gap */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clients</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12 Active</div>
+            <div className="text-2xl font-bold">{activeClientsCount} Active</div>
             <p className="text-xs text-muted-foreground">
-              +2 this month
+              Manage your client base
             </p>
             <Button asChild variant="outline" size="sm" className="mt-4">
               <Link href="/clients">Manage Clients</Link>
@@ -34,7 +56,7 @@ export default function HomePage() {
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5 This Week</div>
+            <div className="text-2xl font-bold">{upcomingSessionsCount} This Week</div>
             <p className="text-xs text-muted-foreground">
               View your schedule
             </p>
@@ -46,10 +68,10 @@ export default function HomePage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Finance Overview</CardTitle>
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <IconDollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£2,350.00</div>
+            <div className="text-2xl font-bold">£{incomeThisMonth.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Income this month
             </p>
@@ -59,6 +81,56 @@ export default function HomePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Calendar Section */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Session Calendar Overview</CardTitle>
+          <CardDescription>Quick view of your scheduled sessions. For detailed management, go to the Sessions page.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2 shadow-md">
+              <CardContent className="p-2 md:p-4 flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedCalendarDate}
+                  onSelect={setSelectedCalendarDate}
+                  className="rounded-md"
+                  modifiers={{ 
+                    scheduled: allSessionDates
+                  }}
+                  modifiersStyles={{ 
+                    scheduled: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
+                  }}
+                />
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>
+                  {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sessionsOnSelectedDate.length > 0 ? (
+                  <ul className="space-y-3">
+                    {sessionsOnSelectedDate.map(session => (
+                      <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
+                        <div className="font-semibold">{session.clientName} & {session.dogName}</div>
+                        <div className="text-sm text-muted-foreground">{session.time}</div>
+                        <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1">{session.status}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No sessions scheduled for this day.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

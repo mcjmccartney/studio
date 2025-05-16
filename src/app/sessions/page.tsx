@@ -4,13 +4,11 @@
 import { useState, useEffect } from 'react';
 import type { Session, Client } from '@/lib/types';
 import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession } from '@/lib/mockData';
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid } from 'date-fns';
-import { PlusCircle, Clock } from 'lucide-react';
+import { format, parseISO, isValid, getYear, getMonth } from 'date-fns';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide } from 'lucide-react'; // Renamed CalendarIcon to avoid conflict
 import {
   Dialog,
   DialogContent,
@@ -37,13 +35,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Calendar as ShadCalendar } from "@/components/ui/calendar"; // Renamed Calendar to avoid conflict
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
@@ -53,23 +56,26 @@ const sessionFormSchema = z.object({
 
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
 
+interface GroupedSessions {
+  [monthYear: string]: Session[];
+}
+
 export default function SessionsPage() {
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
   const [sessions, setSessions] = useState<Session[]>(initialMockSessions);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
       time: format(new Date(), "hh:mm a")
     }
   });
-  const watchedDate = watch("date");
 
   useEffect(() => {
-    setSessions(initialMockSessions);
+    // In a real app, fetch sessions from Firestore or API
+    setSessions(initialMockSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
   }, []);
 
   const handleAddSession: SubmitHandler<SessionFormValues> = (data) => {
@@ -86,7 +92,7 @@ export default function SessionsPage() {
     };
 
     const newSession = apiAddSession(sessionData, selectedClient);
-    setSessions(prevSessions => [...prevSessions, newSession]);
+    setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
     
     toast({
       title: "Session Added",
@@ -96,18 +102,31 @@ export default function SessionsPage() {
     setIsAddSessionModalOpen(false);
   };
 
-  const selectedDateString = selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'yyyy-MM-dd') : null;
-  const sessionsOnSelectedDate = selectedDateString 
-    ? sessions.filter(s => s.date === selectedDateString)
-    : [];
-  
-  const allSessionDates = sessions.map(s => parseISO(s.date)).filter(isValid);
+  const groupSessionsByMonth = (sessionsToGroup: Session[]): GroupedSessions => {
+    return sessionsToGroup.reduce((acc, session) => {
+      const sessionDate = parseISO(session.date);
+      if (!isValid(sessionDate)) return acc;
+      const monthYear = format(sessionDate, 'MMMM yyyy');
+      if (!acc[monthYear]) {
+        acc[monthYear] = [];
+      }
+      acc[monthYear].push(session);
+      return acc;
+    }, {} as GroupedSessions);
+  };
+
+  const groupedSessions = groupSessionsByMonth(sessions);
+  const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
+    const dateA = parseISO(`01 ${a}`); // e.g. "01 July 2024"
+    const dateB = parseISO(`01 ${b}`);
+    return dateB.getTime() - dateA.getTime(); // Sort descending by month
+  });
 
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Sessions</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
         <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -168,12 +187,12 @@ export default function SessionsPage() {
                               errors.date ? "border-destructive" : ""
                             )}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            <CalendarIconLucide className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar
+                          <ShadCalendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
@@ -226,67 +245,54 @@ export default function SessionsPage() {
         </Dialog>
       </div>
       
-      <Tabs defaultValue="month" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="day">Day</TabsTrigger>
-          <TabsTrigger value="week">Week</TabsTrigger>
-          <TabsTrigger value="month">Month</TabsTrigger>
-        </TabsList>
-        <TabsContent value="month">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-2 shadow-lg">
-              <CardContent className="p-2 md:p-4 flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedCalendarDate}
-                  onSelect={setSelectedCalendarDate}
-                  className="rounded-md"
-                  modifiers={{ 
-                    scheduled: allSessionDates
-                  }}
-                  modifiersStyles={{ 
-                    scheduled: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
-                  }}
-                />
-              </CardContent>
-            </Card>
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>
-                  {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {sessionsOnSelectedDate.length > 0 ? (
-                  <ul className="space-y-3">
-                    {sessionsOnSelectedDate.map(session => (
-                      <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="font-semibold">{session.clientName} & {session.dogName}</div>
-                        <div className="text-sm text-muted-foreground">{session.time}</div>
-                        <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1">{session.status}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No sessions scheduled for this day.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="day">
-          <Card className="shadow-lg">
-            <CardHeader><CardTitle>Day View (Placeholder)</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">Detailed day view will be implemented here.</p></CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="week">
-          <Card className="shadow-lg">
-            <CardHeader><CardTitle>Week View (Placeholder)</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">Detailed week view will be implemented here.</p></CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>All Sessions</CardTitle>
+          <CardDescription>Browse sessions organized by month.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sortedMonthKeys.length > 0 ? (
+            <Accordion type="multiple" className="w-full">
+              {sortedMonthKeys.map((monthYear) => (
+                <AccordionItem value={monthYear} key={monthYear}>
+                  <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                    {monthYear} ({groupedSessions[monthYear].length} sessions)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ul className="space-y-4 pt-2">
+                      {groupedSessions[monthYear]
+                        .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) // Sort by day within month
+                        .map(session => (
+                        <li key={session.id} className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
+                                {format(parseISO(session.date), 'EEEE, MMMM do, yyyy')}
+                                <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
+                                {session.time}
+                              </p>
+                            </div>
+                            <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
+                              {session.status}
+                            </Badge>
+                          </div>
+                          {session.notes && (
+                            <p className="mt-2 text-sm text-muted-foreground border-t pt-2">Notes: {session.notes}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

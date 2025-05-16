@@ -27,7 +27,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center gap-2">
             <Logo className="text-sidebar-primary w-8 h-8" />
             <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              PawsitiveTracker
+              Raising My Rescue
             </h1>
           </div>
         </SidebarHeader>

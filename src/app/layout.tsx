@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PawsitiveTracker',
+  title: 'Raising My Rescue',
   description: 'Track clients, sessions, and finances for your dog behaviorist practice.',
 };
 

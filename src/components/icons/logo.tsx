@@ -8,7 +8,7 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       fill="currentColor"
       width="40"
       height="40"
-      aria-label="PawsitiveTracker Logo"
+      aria-label="Raising My Rescue Logo"
       {...props}
     >
       <path d="M50 10C27.9 10 10 27.9 10 50s17.9 40 40 40 40-17.9 40-40S72.1 10 50 10zm0 72c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32z" />
