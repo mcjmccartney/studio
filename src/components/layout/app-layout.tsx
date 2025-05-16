@@ -12,7 +12,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger, // Re-added SidebarTrigger
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -43,14 +43,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {mounted && !isMobile && (
         <Sidebar variant="sidebar" collapsible="icon" side="left">
           <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-            <Image
-              src="https://placehold.co/40x40.png"
-              alt="Raising My Rescue Logo"
-              width={40}
-              height={40}
-              className="rounded-md"
-              data-ai-hint="dog paw"
-            />
+            {/* Image logo removed from here */}
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarNav />
@@ -80,8 +73,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             // Styles applied *after* client-side mount
             mounted && (
               useSpecialBackground 
-                ? "bg-[#4f6749]" // For special pages, green bg. Page itself handles padding.
-                : "bg-background p-6" // For other pages, theme default bg with p-6 from layout.
+                ? "bg-[#4f6749]" 
+                : "bg-[#fafafa] p-6" 
             ),
             
             // Mobile-specific padding, applied only after mount when isMobile is reliable
