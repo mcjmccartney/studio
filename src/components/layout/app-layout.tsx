@@ -9,6 +9,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarTrigger, // Added import for SidebarTrigger
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -39,9 +40,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      {/* Apply padding directly to SidebarInset, which renders the main content <main> tag */}
-      <SidebarInset className="px-6 pb-6 pt-8 overflow-auto">
-        {children}
+      {/* SidebarInset renders the <main> tag. Padding is removed from here and handled internally. */}
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+          <SidebarTrigger className="md:hidden" />
+          <div className="flex-1"></div> {/* Placeholder for potential future header content */}
+        </header>
+        <div className="flex-1 overflow-auto p-6"> {/* This div now handles padding and scrolling for the main content */}
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
