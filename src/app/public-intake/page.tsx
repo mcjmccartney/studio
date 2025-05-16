@@ -14,8 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientToFirestore } from '@/lib/firebase';
-import type { Client } from '@/lib/types';
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Updated import
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -26,16 +25,16 @@ const behaviouralBriefSchema = z.object({
   contactEmail: z.string().email({ message: "Please enter a valid email address." }),
   contactNumber: z.string().min(1, { message: "Contact Number is required." }),
   postcode: z.string().min(1, { message: "Postcode is required." }),
+  
   dogName: z.string().min(1, { message: "Dog Name is required." }),
   dogSex: z.enum(['Male', 'Female'], { required_error: "Sex is required." }),
   dogBreed: z.string().min(1, { message: "Dog breed is required." }),
   lifeWithDogAndHelpNeeded: z.string().min(1, { message: "This field is required." }),
   bestOutcome: z.string().min(1, { message: "This field is required." }),
-  idealSessionTypes: z.array(z.string()).optional(),
-  submissionDate: z.string().min(1, {message: "Submission date is required."}), // Will be auto-filled client-side
+  idealSessionTypes: z.array(z.string()).optional(), // Optional as per Squarespace form structure
+  submissionDate: z.string().min(1, {message: "Submission date is required."}),
 });
 
-type BehaviouralBriefFormValues = z.infer<typeof behaviouralBriefSchema>;
 
 const sessionTypeOptions = [
   { id: "online", label: "Online Session" },
@@ -50,38 +49,10 @@ export default function BehaviouralBriefPage() {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Set currentSubmissionDate on client mount to avoid hydration mismatch
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   }, []);
 
-  const memoizedDefaultValues = useMemo(() => ({
-    ownerFirstName: '',
-    ownerLastName: '',
-    contactEmail: '',
-    contactNumber: '',
-    postcode: '',
-    dogName: '',
-    dogSex: undefined as 'Male' | 'Female' | undefined, // Explicitly type for Select placeholder
-    dogBreed: '',
-    lifeWithDogAndHelpNeeded: '',
-    bestOutcome: '',
-    idealSessionTypes: [],
-    submissionDate: '', // Will be updated by useEffect below
-  }), []);
-
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
-    resolver: zodResolver(behaviouralBriefSchema),
-    defaultValues: memoizedDefaultValues
-  });
-
-  // Effect to update form's internal submissionDate value when currentSubmissionDate state changes
-  useEffect(() => {
-    if (currentSubmissionDate) {
-      setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
-    }
-  }, [currentSubmissionDate, setValue]);
-
-  const memoizedResetValues = useMemo(() => ({
+  const memoizedDefaultValues = useMemo<BehaviouralBriefFormValues>(() => ({
     ownerFirstName: '',
     ownerLastName: '',
     contactEmail: '',
@@ -93,8 +64,19 @@ export default function BehaviouralBriefPage() {
     lifeWithDogAndHelpNeeded: '',
     bestOutcome: '',
     idealSessionTypes: [],
+    submissionDate: '',
   }), []);
 
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
+    resolver: zodResolver(behaviouralBriefSchema),
+    defaultValues: memoizedDefaultValues
+  });
+
+  useEffect(() => {
+    if (currentSubmissionDate) {
+      setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
+    }
+  }, [currentSubmissionDate, setValue]);
 
   const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -107,27 +89,23 @@ export default function BehaviouralBriefPage() {
     }
     setIsSubmitting(true);
     try {
-      // Ensure submissionDate is current at the time of submission, overriding form field if necessary for precision
       const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
       const submissionDataWithPreciseTimestamp = {
         ...data,
         submissionDate: submissionTimestamp,
       };
-
-      // Cast to Omit as per addClientToFirestore signature, id, lastSession, etc. are handled by backend/defaults
-      const clientDataForFirestore = submissionDataWithPreciseTimestamp as Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'>;
       
-      await addClientToFirestore(clientDataForFirestore);
+      await addClientAndBriefToFirestore(submissionDataWithPreciseTimestamp); // Use the new function
       toast({
         title: "Submission Successful!",
         description: "Thank you for submitting your Behavioural Brief. We will be in touch shortly.",
       });
       
       const newDateForNextForm = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      setCurrentSubmissionDate(newDateForNextForm); // Update state for hidden input's next value
-      reset({ // Reset form to initial state but with new submission date for RHF state
-        ...memoizedResetValues,
-        submissionDate: newDateForNextForm, 
+      setCurrentSubmissionDate(newDateForNextForm); 
+      reset({ 
+        ...memoizedDefaultValues, // Reset to base empty values
+        submissionDate: newDateForNextForm, // Only set the new submissionDate for RHF
       });
     } catch (err) {
       console.error("Error submitting behavioural brief to Firestore:", err);
@@ -150,7 +128,7 @@ export default function BehaviouralBriefPage() {
     </>
   );
   
-  const FormField: React.FC<{ label: string; htmlForProp?: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlForProp, error, children, required, description }) => (
+  const FormFieldWrapper: React.FC<{ label: string; htmlForProp?: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlForProp, error, children, required, description }) => (
     <div className="space-y-2 mb-4">
       <Label htmlFor={htmlForProp as string | undefined}>{label}{required && <span className="text-destructive">*</span>}</Label>
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
@@ -158,6 +136,7 @@ export default function BehaviouralBriefPage() {
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-8 bg-muted/20">
@@ -172,7 +151,7 @@ export default function BehaviouralBriefPage() {
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             
             <SectionTitle title="CONTACT INFORMATION" />
-            <FormField label="Owner Name" error={errors.ownerFirstName?.message || errors.ownerLastName?.message} required>
+            <FormFieldWrapper label="Owner Name" error={errors.ownerFirstName?.message || errors.ownerLastName?.message} required>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ownerFirstName" className="text-xs text-muted-foreground">First Name</Label>
@@ -183,22 +162,22 @@ export default function BehaviouralBriefPage() {
                   <Input id="ownerLastName" {...register("ownerLastName")} className={errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmitting} />
                 </div>
               </div>
-            </FormField>
-            <FormField label="Email" htmlForProp="contactEmail" error={errors.contactEmail?.message} required>
+            </FormFieldWrapper>
+            <FormFieldWrapper label="Email" htmlForProp="contactEmail" error={errors.contactEmail?.message} required>
               <Input id="contactEmail" type="email" {...register("contactEmail")} className={errors.contactEmail ? "border-destructive" : ""} disabled={isSubmitting} />
-            </FormField>
-            <FormField label="Contact Number" htmlForProp="contactNumber" error={errors.contactNumber?.message} required>
+            </FormFieldWrapper>
+            <FormFieldWrapper label="Contact Number" htmlForProp="contactNumber" error={errors.contactNumber?.message} required>
               <Input id="contactNumber" type="tel" {...register("contactNumber")} className={errors.contactNumber ? "border-destructive" : ""} disabled={isSubmitting}/>
-            </FormField>
-            <FormField label="Postcode" htmlForProp="postcode" error={errors.postcode?.message} required>
+            </FormFieldWrapper>
+            <FormFieldWrapper label="Postcode" htmlForProp="postcode" error={errors.postcode?.message} required>
               <Input id="postcode" {...register("postcode")} className={errors.postcode ? "border-destructive" : ""} disabled={isSubmitting}/>
-            </FormField>
+            </FormFieldWrapper>
 
             <SectionTitle title="DOG INFORMATION" description="If you are inquiring about more than one dog please complete an additional form." />
-            <FormField label="Dog Name" htmlForProp="dogName" error={errors.dogName?.message} required>
+            <FormFieldWrapper label="Dog Name" htmlForProp="dogName" error={errors.dogName?.message} required>
               <Input id="dogName" {...register("dogName")} className={errors.dogName ? "border-destructive" : ""} disabled={isSubmitting} />
-            </FormField>
-            <FormField label="Sex" htmlForProp="dogSex" error={errors.dogSex?.message} required>
+            </FormFieldWrapper>
+            <FormFieldWrapper label="Sex" htmlForProp="dogSex" error={errors.dogSex?.message} required>
               <Controller
                 name="dogSex"
                 control={control}
@@ -214,17 +193,17 @@ export default function BehaviouralBriefPage() {
                   </Select>
                 )}
               />
-            </FormField>
-            <FormField label="What breed is your dog?" htmlForProp="dogBreed" error={errors.dogBreed?.message} required description="Unknown/mixed is fine :-)">
+            </FormFieldWrapper>
+            <FormFieldWrapper label="What breed is your dog?" htmlForProp="dogBreed" error={errors.dogBreed?.message} required description="Unknown/mixed is fine :-)">
               <Input id="dogBreed" {...register("dogBreed")} className={errors.dogBreed ? "border-destructive" : ""} disabled={isSubmitting} />
-            </FormField>
-            <FormField label="In general, how is life with your dog, and what would you like help with?" htmlForProp="lifeWithDogAndHelpNeeded" error={errors.lifeWithDogAndHelpNeeded?.message} required description="New puppy, new dog, new rescue, general training, behaviour concern, etc.">
+            </FormFieldWrapper>
+            <FormFieldWrapper label="In general, how is life with your dog, and what would you like help with?" htmlForProp="lifeWithDogAndHelpNeeded" error={errors.lifeWithDogAndHelpNeeded?.message} required description="New puppy, new dog, new rescue, general training, behaviour concern, etc.">
               <Textarea id="lifeWithDogAndHelpNeeded" {...register("lifeWithDogAndHelpNeeded")} className={errors.lifeWithDogAndHelpNeeded ? "border-destructive" : ""} disabled={isSubmitting} rows={4}/>
-            </FormField>
-            <FormField label="What would be the best outcome for you and your dog?" htmlForProp="bestOutcome" error={errors.bestOutcome?.message} required description="E.g. a better relationship, a happier dog, an easier home life, more relaxed walks, etc.">
+            </FormFieldWrapper>
+            <FormFieldWrapper label="What would be the best outcome for you and your dog?" htmlForProp="bestOutcome" error={errors.bestOutcome?.message} required description="E.g. a better relationship, a happier dog, an easier home life, more relaxed walks, etc.">
               <Textarea id="bestOutcome" {...register("bestOutcome")} className={errors.bestOutcome ? "border-destructive" : ""} disabled={isSubmitting} rows={4}/>
-            </FormField>
-            <FormField label="Which type of session would you ideally like?" htmlForProp="idealSessionTypes" error={errors.idealSessionTypes?.message}>
+            </FormFieldWrapper>
+            <FormFieldWrapper label="Which type of session would you ideally like?" htmlForProp="idealSessionTypes" error={errors.idealSessionTypes?.message}>
               <Controller
                 name="idealSessionTypes"
                 control={control}
@@ -253,9 +232,8 @@ export default function BehaviouralBriefPage() {
                   </div>
                 )}
               />
-            </FormField>
+            </FormFieldWrapper>
             
-            {/* Hidden input to carry the submissionDate, value driven by currentSubmissionDate state, registered with RHF */}
             <input type="hidden" {...register("submissionDate")} />
             
             <div className="pt-4">

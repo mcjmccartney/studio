@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Client, Session } from '@/lib/types';
+import type { Client, Session, BehaviouralBrief } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,32 +28,26 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+// Textarea removed as internal add form is simpler
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient } from '@/lib/firebase'; 
+import { getClients, addClientToFirestore as fbAddClient, getBehaviouralBriefByBriefId } from '@/lib/firebase'; 
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft } from 'lucide-react';
 
-// Simplified Zod schema for internal "Add New Client" modal
-// This can be simpler than the public behavioural brief.
+
+// Zod schema for internal "Add New Client" modal (only contact info)
 const internalClientFormSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First name is required." }),
   ownerLastName: z.string().min(1, { message: "Last name is required." }),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
   postcode: z.string().min(3, { message: "Postcode is required." }),
-  dogName: z.string().min(1, { message: "Dog's name is required." }),
-  dogBreed: z.string().min(1, { message: "Dog's breed is required." }),
-  dogSex: z.enum(['Male', 'Female', ''], { required_error: "Dog's sex is required."}).refine(val => val !== '', { message: "Dog's sex is required." }),
-  // Optional fields for quick add, can be expanded later via detailed view/edit
-  lifeWithDogAndHelpNeeded: z.string().optional(),
-  bestOutcome: z.string().optional(),
-  idealSessionTypes: z.array(z.string()).optional(),
+  submissionDate: z.string().optional(), // For internal consistency
 });
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
@@ -65,11 +59,36 @@ interface ClientDetailViewProps {
 }
 
 function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
+  const [behaviouralBrief, setBehaviouralBrief] = useState<BehaviouralBrief | null>(null);
+  const [isLoadingBrief, setIsLoadingBrief] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchBrief = async () => {
+      if (client.behaviouralBriefId) {
+        setIsLoadingBrief(true);
+        try {
+          const brief = await getBehaviouralBriefByBriefId(client.behaviouralBriefId);
+          setBehaviouralBrief(brief);
+        } catch (error) {
+          console.error("Error fetching behavioural brief:", error);
+          setBehaviouralBrief(null);
+        } finally {
+          setIsLoadingBrief(false);
+        }
+      } else {
+        setBehaviouralBrief(null); // No brief ID associated
+      }
+    };
+    fetchBrief();
+  }, [client.behaviouralBriefId]);
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">
-          {client.ownerFirstName} {client.ownerLastName} &amp; {client.dogName}
+          {client.ownerFirstName} {client.ownerLastName}
+          {behaviouralBrief && ` & ${behaviouralBrief.dogName}`}
         </h2>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -77,7 +96,7 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
         </Button>
       </div>
       
-      <ScrollArea className="h-[calc(100vh-240px)] pr-4"> {/* Adjusted height */}
+      <ScrollArea className="h-[calc(100vh-240px)] pr-4">
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -90,55 +109,68 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
               <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
               <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
               <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {client.postcode}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Dog className="mr-2 h-5 w-5 text-primary" /> Dog Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><strong>Name:</strong> {client.dogName}</div>
-              <div><strong>Breed:</strong> {client.dogBreed}</div>
-              <div><strong>Sex:</strong> {client.dogSex}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Info className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {client.lifeWithDogAndHelpNeeded && (
-                <div>
-                  <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
-                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.lifeWithDogAndHelpNeeded}</p>
-                </div>
-              )}
-              {client.bestOutcome && (
-                <div className="pt-2">
-                  <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
-                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.bestOutcome}</p>
-                </div>
-              )}
-              {client.idealSessionTypes && client.idealSessionTypes.length > 0 && (
-                 <div className="pt-2">
-                  <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
-                  <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                    {client.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
-                  </ul>
-                </div>
-              )}
-              <div className="pt-2">
-                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Submission Date:</strong>
+               <div className="pt-2">
+                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
                   <p className="mt-1 text-muted-foreground">{client.submissionDate ? format(new Date(client.submissionDate), 'PPP p') : 'N/A'}</p>
               </div>
             </CardContent>
           </Card>
+
+          {isLoadingBrief && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Loading Behavioural Brief...</CardTitle></CardHeader>
+              <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
+            </Card>
+          )}
+
+          {!isLoadingBrief && behaviouralBrief && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief for {behaviouralBrief.dogName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div><strong>Dog's Name:</strong> {behaviouralBrief.dogName}</div>
+                <div><strong>Breed:</strong> {behaviouralBrief.dogBreed}</div>
+                <div><strong>Sex:</strong> {behaviouralBrief.dogSex}</div>
+                {behaviouralBrief.lifeWithDogAndHelpNeeded && (
+                  <div>
+                    <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
+                    <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviouralBrief.lifeWithDogAndHelpNeeded}</p>
+                  </div>
+                )}
+                {behaviouralBrief.bestOutcome && (
+                  <div className="pt-2">
+                    <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
+                    <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviouralBrief.bestOutcome}</p>
+                  </div>
+                )}
+                {behaviouralBrief.idealSessionTypes && behaviouralBrief.idealSessionTypes.length > 0 && (
+                   <div className="pt-2">
+                    <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
+                    <ul className="list-disc list-inside mt-1 text-muted-foreground">
+                      {behaviouralBrief.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {!isLoadingBrief && !behaviouralBrief && client.behaviouralBriefId && (
+             <Card>
+                <CardHeader><CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle></CardHeader>
+                <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded.</p></CardContent>
+             </Card>
+          )}
+           {!isLoadingBrief && !client.behaviouralBriefId && (
+             <Card>
+                <CardHeader><CardTitle className="text-lg">No Behavioural Brief Submitted</CardTitle></CardHeader>
+                <CardContent><p className="text-muted-foreground">This client was likely added internally, or the brief has not been submitted yet.</p></CardContent>
+             </Card>
+          )}
+
 
           <Card>
             <CardHeader>
@@ -156,7 +188,8 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
                           <span className="font-semibold">
                             {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
                           </span>
-                          <span className="text-muted-foreground"> at {session.time}</span>
+                           {/* Display dog name for the session, as client might have multiple dogs over time */}
+                          <span className="text-muted-foreground"> with {session.dogName} at {session.time}</span>
                         </div>
                         <Badge 
                           variant={
@@ -202,12 +235,7 @@ export default function ClientsPage() {
       contactEmail: '',
       contactNumber: '',
       postcode: '',
-      dogName: '',
-      dogBreed: '',
-      dogSex: '', // Initialize select to empty string
-      lifeWithDogAndHelpNeeded: '',
-      bestOutcome: '',
-      idealSessionTypes: [],
+      submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
 
@@ -257,17 +285,18 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt' | 'submissionDate'> = {
+      // Data for internal add matches the simplified Client type now
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'lastSession' | 'nextSession' | 'createdAt'> = {
         ...data,
-        submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"), // Add submission date for internal adds too
+        submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       };
-      const newClient = await fbAddClient(clientDataForFirestore);
+      const newClient = await fbAddClient(clientDataForFirestore); // fbAddClient now handles simplified client
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
       toast({
         title: "Client Added",
         description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.`,
       });
-      reset();
+      reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientModalOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
@@ -284,6 +313,8 @@ export default function ClientsPage() {
 
   const handleRowClick = (client: Client) => {
     setSelectedClient(client);
+    // Fetch sessions for this client - assuming mockSessions for now.
+    // In a real app, this would be a Firestore query for sessions where session.clientId === client.id
     const sessions = mockSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     setClientSessions(sessions);
@@ -311,9 +342,9 @@ export default function ClientsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
+              <DialogTitle>Add New Client (Quick Add)</DialogTitle>
               <DialogDescription>
-                Fill in the details below to add a new client. More details can be added from the client's page.
+                Add essential contact information. A full behavioural brief can be submitted via the public form.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddClient)} className="grid gap-4 py-4">
@@ -352,31 +383,8 @@ export default function ClientsPage() {
                   {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dogName" className="text-right">Dog's Name</Label>
-                 <div className="col-span-3">
-                  <Input id="dogName" {...register("dogName")} className={errors.dogName ? "border-destructive" : ""} disabled={isSubmitting} />
-                  {errors.dogName && <p className="text-xs text-destructive mt-1">{errors.dogName.message}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dogBreed" className="text-right">Dog's Breed</Label>
-                 <div className="col-span-3">
-                  <Input id="dogBreed" {...register("dogBreed")} className={errors.dogBreed ? "border-destructive" : ""} disabled={isSubmitting} />
-                  {errors.dogBreed && <p className="text-xs text-destructive mt-1">{errors.dogBreed.message}</p>}
-                </div>
-              </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dogSex" className="text-right">Dog's Sex</Label>
-                 <div className="col-span-3">
-                    <select id="dogSex" {...register("dogSex")} className={`w-full p-2 border rounded-md ${errors.dogSex ? "border-destructive" : "border-input"}`} disabled={isSubmitting}>
-                        <option value="">Select Sex</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                    {errors.dogSex && <p className="text-xs text-destructive mt-1">{errors.dogSex.message}</p>}
-                </div>
-              </div>
+               {/* Hidden submission date for internal tracking */}
+              <input type="hidden" {...register("submissionDate")} />
               <DialogFooter>
                 <DialogClose asChild>
                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
@@ -393,7 +401,7 @@ export default function ClientsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Client List</CardTitle>
-          <CardDescription>Manage your clients and their dogs. Click a row to view details.</CardDescription>
+          <CardDescription>Manage your clients. Click a row to view details and associated behavioural brief.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading && (
@@ -410,7 +418,7 @@ export default function ClientsPage() {
           )}
           {!isLoading && !error && clients.length === 0 && (
             <p className="text-muted-foreground text-center py-10">
-              No clients found. Add a new client to get started.
+              No clients found. Add a new client to get started or submit a Behavioural Brief.
               {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && " (Firebase may not be configured)"}
             </p>
           )}
@@ -419,10 +427,10 @@ export default function ClientsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Owner Name</TableHead>
-                  <TableHead>Dog Name</TableHead>
-                  <TableHead>Dog Breed</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Postcode</TableHead>
                   <TableHead>Next Session</TableHead>
+                  <TableHead>Brief Submitted</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -430,17 +438,23 @@ export default function ClientsPage() {
                 {clients.map((client) => (
                   <TableRow key={client.id} onClick={() => handleRowClick(client)} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium">{client.ownerFirstName} {client.ownerLastName}</TableCell>
-                    <TableCell>{client.dogName}</TableCell>
-                    <TableCell>{client.dogBreed}</TableCell>
                     <TableCell>
                       <div>{client.contactEmail}</div>
                       <div className="text-xs text-muted-foreground">{client.contactNumber}</div>
                     </TableCell>
+                    <TableCell>{client.postcode}</TableCell>
                     <TableCell>
                       {client.nextSession !== 'Not Scheduled' ? (
                         <Badge variant="default">{client.nextSession}</Badge>
                       ) : (
                         <Badge variant="secondary">{client.nextSession}</Badge>
+                      )}
+                    </TableCell>
+                     <TableCell>
+                      {client.behaviouralBriefId ? (
+                        <Badge variant="default">Yes</Badge>
+                      ) : (
+                        <Badge variant="outline">No</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -453,16 +467,17 @@ export default function ClientsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Edit */}>
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Edit Client Contact */}>
                             <Edit className="mr-2 h-4 w-4" />
-                            Edit Client
+                            Edit Contact
                           </DropdownMenuItem>
+                           {/* TODO: Add "Edit Behavioural Brief" if brief exists */}
                           <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Schedule */}>
                             <IconCalendarDays className="mr-2 h-4 w-4" />
                             Schedule Session
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => e.stopPropagation() /* TODO: Implement Delete */}>
+                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => e.stopPropagation() /* TODO: Implement Delete Client & Brief */}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Client
                           </DropdownMenuItem>

@@ -1,6 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
+// Primarily contact information and a link to the behavioural brief
 export interface Client {
   id: string; // System managed
 
@@ -11,20 +12,34 @@ export interface Client {
   contactNumber: string;
   postcode: string;
 
-  // DOG INFORMATION
-  dogName: string;
-  dogSex: 'Male' | 'Female' | ''; // Allow '' for initial state of select
-  dogBreed: string; // "What breed is your dog?"
-  lifeWithDogAndHelpNeeded: string; // "In general, how is life with your dog, and what would you like help with?"
-  bestOutcome: string; // "What would be the best outcome for you and your dog?"
-  idealSessionTypes?: string[]; // "Which type of session would you ideally like?" (array of selected checkbox values) - Optional field
+  // Link to the Behavioural Brief
+  behaviouralBriefId?: string; // ID of the associated BehaviouralBrief document in Firestore
 
   // System Fields
-  submissionDate: string; // Auto-filled on public form submission
+  submissionDate: string; // Date the original brief/contact was submitted
   lastSession?: string; // Date of last session as YYYY-MM-DD string or 'N/A'
   nextSession?: string; // Date of next session as YYYY-MM-DD string or 'Not Scheduled'
-  createdAt?: Timestamp | Date | string; // Firestore timestamp
+  createdAt?: Timestamp | Date | string; // Firestore timestamp for when client record was created
 }
+
+// Detailed dog and behavioural information
+export interface BehaviouralBrief {
+  id: string; // System managed, ID of this brief document
+  clientId: string; // ID of the Client this brief belongs to
+
+  // DOG INFORMATION from the form
+  dogName: string;
+  dogSex: 'Male' | 'Female' | '';
+  dogBreed: string;
+  lifeWithDogAndHelpNeeded: string;
+  bestOutcome: string;
+  idealSessionTypes?: string[]; // Optional array of selected session types
+
+  // System Fields
+  submissionDate: string; // Date this brief was submitted (copied from form)
+  createdAt?: Timestamp | Date | string; // Firestore timestamp for when brief was created
+}
+
 
 export interface Session {
   id: string;
