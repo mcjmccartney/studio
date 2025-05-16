@@ -139,7 +139,7 @@ export default function ClientsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
+              <DialogTitle className="font-serif">Add New Client</DialogTitle>
               <DialogDescription>
                 Fill in the details below to add a new client to your records.
               </DialogDescription>
@@ -201,7 +201,7 @@ export default function ClientsPage() {
       </div>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Client List</CardTitle>
+          <CardTitle className="font-serif">Client List</CardTitle>
           <CardDescription>Manage your clients and their dogs.</CardDescription>
         </CardHeader>
         <CardContent>

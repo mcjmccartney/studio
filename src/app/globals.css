@@ -2,11 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-}
-
 @layer base {
+  body {
+    font-family: theme('fontFamily.sans');
+    @apply text-foreground bg-background;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: theme('fontFamily.serif');
+  }
+
   :root {
     --background: 180 13% 95%; /* #F0F4F4 Very light grayish teal */
     --foreground: 0 0% 10%; /* Dark Gray for text */
@@ -111,7 +116,5 @@ body {
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+  /* body already styled above */
 }

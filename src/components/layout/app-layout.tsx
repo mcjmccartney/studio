@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
-import { Logo } from '@/components/icons/logo';
+// import { Logo } from '@/components/icons/logo'; // Logo component removed
 import { Button } from '@/components/ui/button';
 import { Settings, LogOut } from 'lucide-react';
 
@@ -26,7 +26,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <Sidebar variant="sidebar" collapsible="icon" side="left">
         <SidebarHeader className="p-4 flex flex-col items-center group-data-[collapsible=icon]:items-center">
           <div className="flex items-center gap-2">
-            <Logo className="text-sidebar-primary w-8 h-8" />
+            {/* <Logo className="text-sidebar-primary w-8 h-8" /> Removed Logo component */}
             <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               Raising My Rescue
             </h1>
@@ -53,7 +53,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {/* Breadcrumbs or page title can go here */}
           </div>
         </header>
-        <main className="flex-1 px-6 pb-6 pt-2 overflow-auto"> {/* Changed p-6 to px-6 pb-6 pt-2 */}
+        <main className="flex-1 px-6 pb-6 pt-2 overflow-auto">
           {children}
         </main>
       </SidebarInset>

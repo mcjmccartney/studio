@@ -136,7 +136,7 @@ export default function SessionsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add New Session</DialogTitle>
+              <DialogTitle className="font-serif">Add New Session</DialogTitle>
               <DialogDescription>
                 Schedule a new training session. Select a client, date, and time.
               </DialogDescription>
@@ -247,7 +247,7 @@ export default function SessionsPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>All Sessions</CardTitle>
+          <CardTitle className="font-serif">All Sessions</CardTitle>
           <CardDescription>Browse sessions organized by month.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -255,7 +255,7 @@ export default function SessionsPage() {
             <Accordion type="multiple" className="w-full">
               {sortedMonthKeys.map((monthYear) => (
                 <AccordionItem value={monthYear} key={monthYear}>
-                  <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                  <AccordionTrigger className="text-lg font-medium hover:no-underline font-serif">
                     {monthYear} ({groupedSessions[monthYear].length} sessions)
                   </AccordionTrigger>
                   <AccordionContent>
@@ -266,7 +266,7 @@ export default function SessionsPage() {
                         <li key={session.id} className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
+                              <h3 className="font-semibold text-base font-serif">{session.clientName} & {session.dogName}</h3>
                               <p className="text-sm text-muted-foreground">
                                 <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
                                 {format(parseISO(session.date), 'EEEE, MMMM do, yyyy')}
