@@ -28,7 +28,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider defaultOpen>
       <Sidebar variant="sidebar" collapsible="icon" side="left">
-        <SidebarHeader className="p-4 flex flex-col items-center group-data-[collapsible=icon]:items-center">
+        <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
           {/* RAISING MY RESCUE text removed, ensure this is intended */}
         </SidebarHeader>
         <SidebarContent className="p-2">
