@@ -8,7 +8,7 @@ import {
   Users,
   CalendarDays,
   DollarSign,
-  Sparkles, // Added Sparkles for AI Assistant if we re-add it
+  ClipboardPlus, // Changed from Sparkles
   type LucideIcon,
 } from 'lucide-react';
 
@@ -23,6 +23,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  isPublic?: boolean; // Optional flag for styling or different behavior
 }
 
 const navItems: NavItem[] = [
@@ -30,7 +31,7 @@ const navItems: NavItem[] = [
   { href: '/clients', label: 'Clients', icon: Users },
   { href: '/sessions', label: 'Sessions', icon: CalendarDays },
   { href: '/finance', label: 'Finance', icon: DollarSign },
-  // { href: '/ai-assistant', label: 'AI Assistant', icon: Sparkles }, // AI Assistant link removed
+  { href: '/public-intake', label: 'Public Intake', icon: ClipboardPlus },
 ];
 
 export function SidebarNav() {
