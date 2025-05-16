@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,14 +46,17 @@ const sessionTypeOptions = [
 
 export default function BehaviouralBriefPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  // currentSubmissionDate is used for the hidden field, not displayed
-  const [currentSubmissionDate, setCurrentSubmissionDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+  const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
   
+  useEffect(() => {
+    setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+  }, []);
+
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
     resolver: zodResolver(behaviouralBriefSchema),
     defaultValues: {
-      submissionDate: currentSubmissionDate,
+      submissionDate: '', // Initialize with empty or ensure it's updated by useEffect effect on currentSubmissionDate
       ownerFirstName: '',
       ownerLastName: '',
       contactEmail: '',
@@ -68,6 +71,14 @@ export default function BehaviouralBriefPage() {
     }
   });
 
+  // Effect to update form's submissionDate default value when currentSubmissionDate changes from initial mount
+  useEffect(() => {
+    if (currentSubmissionDate) {
+      reset({ ...control._defaultValues, submissionDate: currentSubmissionDate }, { keepValues: true });
+    }
+  }, [currentSubmissionDate, reset, control._defaultValues]);
+
+
   const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       toast({
@@ -79,10 +90,13 @@ export default function BehaviouralBriefPage() {
     }
     setIsSubmitting(true);
     try {
+      // Ensure submissionDate is current at the time of submission, taken from the hidden input
+      // The hidden input's value is driven by `currentSubmissionDate` state, which is fine.
+      // Or, if we want the exact moment of submission:
+      const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
       const submissionData = {
         ...data,
-        // Ensure submissionDate is current at the time of submission
-        submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        submissionDate: submissionTimestamp,
       };
 
       const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = submissionData;
@@ -92,13 +106,14 @@ export default function BehaviouralBriefPage() {
         title: "Submission Successful!",
         description: "Thank you for submitting your Behavioural Brief. We will be in touch shortly.",
       });
-      const newDate = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      setCurrentSubmissionDate(newDate); // Update for next potential form use, though not displayed
-      reset({
-        submissionDate: newDate, 
+      
+      const newDateForNextForm = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+      setCurrentSubmissionDate(newDateForNextForm); // Update for next potential form use
+      reset({ // Reset form to initial state but with new submission date for hidden field
         ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '',
         dogName: '', dogSex: undefined, dogBreed: '', lifeWithDogAndHelpNeeded: '', bestOutcome: '',
         idealSessionTypes: [],
+        submissionDate: newDateForNextForm, 
       });
     } catch (err) {
       console.error("Error submitting behavioural brief to Firestore:", err);
@@ -121,7 +136,6 @@ export default function BehaviouralBriefPage() {
     </>
   );
   
-  // Adjusted to handle keyof BehaviouralBriefFormValues for htmlForProp
   const FormField: React.FC<{ label: string; htmlForProp: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlForProp, error, children, required, description }) => (
     <div className="space-y-2 mb-4">
       <Label htmlFor={htmlForProp}>{label}{required && <span className="text-destructive">*</span>}</Label>
