@@ -1,7 +1,8 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, CalendarDays, DollarSign, Sparkles } from "lucide-react";
+import { Users, CalendarDays, DollarSign } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -11,7 +12,7 @@ export default function HomePage() {
         Manage your clients, sessions, and finances efficiently. Let's get started!
       </p>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 columns */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clients</CardTitle>
@@ -38,7 +39,7 @@ export default function HomePage() {
               View your schedule
             </p>
             <Button asChild variant="outline" size="sm" className="mt-4">
-              <Link href="/calendar">View Calendar</Link>
+              <Link href="/sessions">View Sessions</Link>
             </Button>
           </CardContent>
         </Card>
@@ -48,26 +49,12 @@ export default function HomePage() {
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,350.00</div>
+            <div className="text-2xl font-bold">£2,350.00</div>
             <p className="text-xs text-muted-foreground">
               Income this month
             </p>
             <Button asChild variant="outline" size="sm" className="mt-4">
               <Link href="/finance">Track Finances</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-primary/10 border-primary/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Assistant</CardTitle>
-            <Sparkles className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-sm text-muted-foreground mb-2">
-              Get help planning your next session.
-            </CardDescription>
-            <Button asChild variant="default" size="sm" className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link href="/ai-assistant">Get Suggestions</Link>
             </Button>
           </CardContent>
         </Card>

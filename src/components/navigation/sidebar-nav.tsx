@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -7,7 +8,6 @@ import {
   Users,
   CalendarDays,
   DollarSign,
-  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,9 +27,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clients', icon: Users },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/sessions', label: 'Sessions', icon: CalendarDays },
   { href: '/finance', label: 'Finance', icon: DollarSign },
-  { href: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
 ];
 
 export function SidebarNav() {

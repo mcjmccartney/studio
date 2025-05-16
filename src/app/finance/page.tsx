@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FinancialTransaction } from '@/lib/types';
@@ -45,7 +46,7 @@ export default function FinancePage() {
             <TrendingUp className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalIncome.toFixed(2)}</div>
+            <div className="text-2xl font-bold">£{totalIncome.toFixed(2)}</div>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -54,7 +55,7 @@ export default function FinancePage() {
             <TrendingDown className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalExpenses.toFixed(2)}</div>
+            <div className="text-2xl font-bold">£{totalExpenses.toFixed(2)}</div>
           </CardContent>
         </Card>
         <Card className="shadow-md">
@@ -63,7 +64,7 @@ export default function FinancePage() {
             <DollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${netProfit.toFixed(2)}</div>
+            <div className="text-2xl font-bold">£{netProfit.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
@@ -99,7 +100,7 @@ export default function FinancePage() {
                     </Badge>
                   </TableCell>
                   <TableCell className={transaction.type === 'Income' ? 'text-green-600' : 'text-red-600'}>
-                    ${transaction.amount.toFixed(2)}
+                    £{transaction.amount.toFixed(2)}
                   </TableCell>
                   <TableCell>
                      <Badge variant={

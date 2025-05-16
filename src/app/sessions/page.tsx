@@ -1,0 +1,292 @@
+
+"use client";
+
+import { useState, useEffect } from 'react';
+import type { Session, Client } from '@/lib/types';
+import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession } from '@/lib/mockData';
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
+import { format, parseISO, isValid } from 'date-fns';
+import { PlusCircle, Clock } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+
+
+const sessionFormSchema = z.object({
+  clientId: z.string().min(1, { message: "Client selection is required." }),
+  date: z.date({ required_error: "Session date is required." }),
+  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s(AM|PM)$/i, { message: "Invalid time format. Use HH:MM AM/PM." }),
+});
+
+type SessionFormValues = z.infer<typeof sessionFormSchema>;
+
+export default function SessionsPage() {
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
+  const [sessions, setSessions] = useState<Session[]>(initialMockSessions);
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const { toast } = useToast();
+
+  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<SessionFormValues>({
+    resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      date: new Date(),
+      time: format(new Date(), "hh:mm a")
+    }
+  });
+  const watchedDate = watch("date");
+
+  useEffect(() => {
+    setSessions(initialMockSessions);
+  }, []);
+
+  const handleAddSession: SubmitHandler<SessionFormValues> = (data) => {
+    const selectedClient = mockClients.find(c => c.id === data.clientId);
+    if (!selectedClient) {
+      toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
+      return;
+    }
+    
+    const sessionData = {
+      clientId: data.clientId,
+      date: format(data.date, 'yyyy-MM-dd'),
+      time: data.time,
+    };
+
+    const newSession = apiAddSession(sessionData, selectedClient);
+    setSessions(prevSessions => [...prevSessions, newSession]);
+    
+    toast({
+      title: "Session Added",
+      description: `Session with ${selectedClient.name} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
+    });
+    reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '' });
+    setIsAddSessionModalOpen(false);
+  };
+
+  const selectedDateString = selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'yyyy-MM-dd') : null;
+  const sessionsOnSelectedDate = selectedDateString 
+    ? sessions.filter(s => s.date === selectedDateString)
+    : [];
+  
+  const allSessionDates = sessions.map(s => parseISO(s.date)).filter(isValid);
+
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Sessions</h1>
+        <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add New Session
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Add New Session</DialogTitle>
+              <DialogDescription>
+                Schedule a new training session. Select a client, date, and time.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit(handleAddSession)} className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="clientId" className="text-right">Client</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="clientId"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
+                          <SelectValue placeholder="Select a client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Clients</SelectLabel>
+                            {mockClients.map(client => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name} (Dog: {client.dogName})
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.clientId && <p className="text-xs text-destructive mt-1">{errors.clientId.message}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">Date</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="date"
+                    control={control}
+                    render={({ field }) => (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                              errors.date ? "border-destructive" : ""
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  />
+                  {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time" className="text-right">Time</Label>
+                <div className="col-span-3">
+                   <Controller
+                    name="time"
+                    control={control}
+                    render={({ field }) => (
+                        <Input 
+                            id="time" 
+                            type="time" 
+                            value={field.value ? format(parseISO(`1970-01-01T${field.value.replace(/( AM| PM)/i, '')}`), 'HH:mm') : ''}
+                            onChange={(e) => {
+                                const time24 = e.target.value; // HH:mm
+                                if (time24) {
+                                    const [hours, minutes] = time24.split(':');
+                                    const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
+                                    field.onChange(format(dateForFormatting, "hh:mm a"));
+                                } else {
+                                    field.onChange('');
+                                }
+                            }}
+                            className={cn("w-full", errors.time ? "border-destructive" : "")}
+                        />
+                    )}
+                  />
+                  {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                   <Button type="button" variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button type="submit">Save Session</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <Tabs defaultValue="month" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="day">Day</TabsTrigger>
+          <TabsTrigger value="week">Week</TabsTrigger>
+          <TabsTrigger value="month">Month</TabsTrigger>
+        </TabsList>
+        <TabsContent value="month">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2 shadow-lg">
+              <CardContent className="p-2 md:p-4 flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedCalendarDate}
+                  onSelect={setSelectedCalendarDate}
+                  className="rounded-md"
+                  modifiers={{ 
+                    scheduled: allSessionDates
+                  }}
+                  modifiersStyles={{ 
+                    scheduled: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
+                  }}
+                />
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>
+                  {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sessionsOnSelectedDate.length > 0 ? (
+                  <ul className="space-y-3">
+                    {sessionsOnSelectedDate.map(session => (
+                      <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
+                        <div className="font-semibold">{session.clientName} & {session.dogName}</div>
+                        <div className="text-sm text-muted-foreground">{session.time}</div>
+                        <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1">{session.status}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">No sessions scheduled for this day.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="day">
+          <Card className="shadow-lg">
+            <CardHeader><CardTitle>Day View (Placeholder)</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground">Detailed day view will be implemented here.</p></CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="week">
+          <Card className="shadow-lg">
+            <CardHeader><CardTitle>Week View (Placeholder)</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground">Detailed week view will be implemented here.</p></CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
