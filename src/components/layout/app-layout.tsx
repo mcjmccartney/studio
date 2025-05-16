@@ -10,7 +10,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
+  SidebarTrigger, // Keep for potential future use or if something else depends on it
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -46,10 +46,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex-1"></div> {/* Placeholder for potential future header content */}
-        </header>
+        {/* The header element has been removed */}
         <div
           className={cn(
             "flex-1 overflow-auto", // Common classes for scrolling and flex growth
