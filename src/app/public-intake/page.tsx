@@ -117,14 +117,62 @@ type BehaviouralBriefFormValues = z.infer<typeof behaviouralBriefSchema>;
 
 export default function BehaviouralBriefPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [currentSubmissionDate, setCurrentSubmissionDate] = useState(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   const { toast } = useToast();
+  
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
     resolver: zodResolver(behaviouralBriefSchema),
     defaultValues: {
-      submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+      submissionDate: currentSubmissionDate,
       vetConsent: false,
       commitmentConsent: false,
       termsConsent: false,
+      // Initialize other fields to empty strings or default enum values to prevent uncontrolled component warnings
+      name: '',
+      contactEmail: '',
+      contactPhone: '',
+      address: '',
+      preferredContactMethod: undefined, // Or 'Email'/'Phone' if you want a default
+      referralSource: '',
+      dogName: '',
+      dogBreed: '',
+      dogAge: '',
+      dogSex: undefined,
+      dogNeutered: undefined,
+      dogOrigin: undefined,
+      dogOriginOther: '',
+      dogAcquisitionDuration: '',
+      livesWithOtherDogs: undefined,
+      otherDogsDetails: '',
+      livesWithCats: undefined,
+      catsDetails: '',
+      livesWithChildren: undefined,
+      childrenDetails: '',
+      visitingChildren: undefined,
+      visitingChildrenDetails: '',
+      otherHouseholdMembers: '',
+      behaviouralProblemsDescription: '',
+      problemStartDate: '',
+      problemFrequency: '',
+      problemSituations: '',
+      problemTriggers: '',
+      previousSolutions: '',
+      dogAggression: undefined,
+      dogAggressionDetails: '',
+      trainingGoals: '',
+      dailyRoutine: '',
+      dailyExercise: '',
+      exerciseType: '',
+      dogFoodType: '',
+      healthProblemsAllergies: '',
+      lastVetCheck: '',
+      currentMedication: '',
+      pastInjuriesSurgeries: '',
+      attendedTrainingClasses: undefined,
+      trainingClassesDetails: '',
+      socialisationWithDogs: '',
+      socialisationWithPeople: '',
+      signature: '',
     }
   });
 
@@ -147,66 +195,37 @@ export default function BehaviouralBriefPage() {
     }
     setIsSubmitting(true);
     try {
-      // Ensure all data conforms to Client type for Firestore
-      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = {
-        name: data.name,
-        contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone,
-        dogName: data.dogName,
-        dogBreed: data.dogBreed,
-        // Add all new fields here
-        address: data.address,
-        preferredContactMethod: data.preferredContactMethod,
-        referralSource: data.referralSource,
-        dogAge: data.dogAge,
-        dogSex: data.dogSex,
-        dogNeutered: data.dogNeutered,
-        dogOrigin: data.dogOrigin,
-        dogOriginOther: data.dogOriginOther,
-        dogAcquisitionDuration: data.dogAcquisitionDuration,
-        livesWithOtherDogs: data.livesWithOtherDogs,
-        otherDogsDetails: data.otherDogsDetails,
-        livesWithCats: data.livesWithCats,
-        catsDetails: data.catsDetails,
-        livesWithChildren: data.livesWithChildren,
-        childrenDetails: data.childrenDetails,
-        visitingChildren: data.visitingChildren,
-        visitingChildrenDetails: data.visitingChildrenDetails,
-        otherHouseholdMembers: data.otherHouseholdMembers,
-        behaviouralProblemsDescription: data.behaviouralProblemsDescription,
-        problemStartDate: data.problemStartDate,
-        problemFrequency: data.problemFrequency,
-        problemSituations: data.problemSituations,
-        problemTriggers: data.problemTriggers,
-        previousSolutions: data.previousSolutions,
-        dogAggression: data.dogAggression,
-        dogAggressionDetails: data.dogAggressionDetails,
-        trainingGoals: data.trainingGoals,
-        dailyRoutine: data.dailyRoutine,
-        dailyExercise: data.dailyExercise,
-        exerciseType: data.exerciseType,
-        dogFoodType: data.dogFoodType,
-        healthProblemsAllergies: data.healthProblemsAllergies,
-        lastVetCheck: data.lastVetCheck,
-        currentMedication: data.currentMedication,
-        pastInjuriesSurgeries: data.pastInjuriesSurgeries,
-        attendedTrainingClasses: data.attendedTrainingClasses,
-        trainingClassesDetails: data.trainingClassesDetails,
-        socialisationWithDogs: data.socialisationWithDogs,
-        socialisationWithPeople: data.socialisationWithPeople,
-        vetConsent: data.vetConsent,
-        commitmentConsent: data.commitmentConsent,
-        termsConsent: data.termsConsent,
-        signature: data.signature,
+      // Ensure submissionDate is current at the time of submission
+      const submissionData = {
+        ...data,
         submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       };
 
+      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt' | 'behaviorHistory'> = submissionData;
+      
       await addClientToFirestore(clientDataForFirestore);
       toast({
         title: "Submission Successful!",
         description: "Thank you for submitting your Behavioural Brief. We will be in touch shortly.",
       });
-      reset({submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"), vetConsent: false, commitmentConsent: false, termsConsent: false, name: '', contactEmail: '', contactPhone: '', address: '', dogName: '', dogBreed: '', dogAge: '' /* reset other fields as needed */});
+      const newDate = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+      setCurrentSubmissionDate(newDate);
+      reset({
+        submissionDate: newDate, 
+        vetConsent: false, 
+        commitmentConsent: false, 
+        termsConsent: false, 
+        name: '', contactEmail: '', contactPhone: '', address: '', preferredContactMethod: undefined, referralSource: '',
+        dogName: '', dogBreed: '', dogAge: '', dogSex: undefined, dogNeutered: undefined, dogOrigin: undefined, dogOriginOther: '', dogAcquisitionDuration: '',
+        livesWithOtherDogs: undefined, otherDogsDetails: '', livesWithCats: undefined, catsDetails: '', livesWithChildren: undefined, childrenDetails: '',
+        visitingChildren: undefined, visitingChildrenDetails: '', otherHouseholdMembers: '',
+        behaviouralProblemsDescription: '', problemStartDate: '', problemFrequency: '', problemSituations: '', problemTriggers: '', previousSolutions: '',
+        dogAggression: undefined, dogAggressionDetails: '', trainingGoals: '',
+        dailyRoutine: '', dailyExercise: '', exerciseType: '', dogFoodType: '',
+        healthProblemsAllergies: '', lastVetCheck: '', currentMedication: '', pastInjuriesSurgeries: '',
+        attendedTrainingClasses: undefined, trainingClassesDetails: '', socialisationWithDogs: '', socialisationWithPeople: '',
+        signature: ''
+      });
     } catch (err) {
       console.error("Error submitting behavioural brief to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -227,19 +246,20 @@ export default function BehaviouralBriefPage() {
     </>
   );
   
-  const FormField: React.FC<{ label: string; htmlFor: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean }> = ({ label, htmlFor, error, children, required }) => (
+  const FormField: React.FC<{ label: string; htmlFor: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlFor, error, children, required, description }) => (
     <div className="space-y-2 mb-4">
       <Label htmlFor={htmlFor}>{label}{required && <span className="text-destructive">*</span>}</Label>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
       {children}
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-8">
+    <div className="flex flex-col items-center justify-center min-h-screen py-8 bg-muted/20">
       <Card className="w-full max-w-3xl shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl">Behavioural Brief</CardTitle>
+          <CardTitle className="text-3xl font-semibold">Behavioural Brief</CardTitle>
           <CardDescription>
             Please fill out the form below so we can learn more about you and your dog. Fields marked with <span className="text-destructive">*</span> are required.
           </CardDescription>
@@ -248,16 +268,16 @@ export default function BehaviouralBriefPage() {
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             
             <SectionTitle title="Your Details" />
-            <FormField label="Full Name" htmlFor="name" error={errors.name?.message} required>
+            <FormField label="Your Full Name" htmlFor="name" error={errors.name?.message} required>
               <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="Email Address" htmlFor="contactEmail" error={errors.contactEmail?.message} required>
+            <FormField label="Your Email" htmlFor="contactEmail" error={errors.contactEmail?.message} required>
               <Input id="contactEmail" type="email" {...register("contactEmail")} className={errors.contactEmail ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="Phone Number" htmlFor="contactPhone" error={errors.contactPhone?.message} required>
+            <FormField label="Your Phone Number" htmlFor="contactPhone" error={errors.contactPhone?.message} required>
               <Input id="contactPhone" type="tel" {...register("contactPhone")} className={errors.contactPhone ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="Address" htmlFor="address" error={errors.address?.message} required>
+            <FormField label="Your Address" htmlFor="address" error={errors.address?.message} required>
               <Textarea id="address" {...register("address")} className={errors.address ? "border-destructive" : ""} disabled={isSubmitting} rows={3} />
             </FormField>
             <FormField label="Best way to contact you?" htmlFor="preferredContactMethod" error={errors.preferredContactMethod?.message} required>
@@ -265,7 +285,7 @@ export default function BehaviouralBriefPage() {
                 name="preferredContactMethod"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Email" id="contactEmailRadio" /><Label htmlFor="contactEmailRadio">Email</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Phone" id="contactPhoneRadio" /><Label htmlFor="contactPhoneRadio">Phone</Label></div>
                   </RadioGroup>
@@ -291,7 +311,7 @@ export default function BehaviouralBriefPage() {
                 name="dogSex"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Male" id="sexMale" /><Label htmlFor="sexMale">Male</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Female" id="sexFemale" /><Label htmlFor="sexFemale">Female</Label></div>
                   </RadioGroup>
@@ -303,7 +323,7 @@ export default function BehaviouralBriefPage() {
                 name="dogNeutered"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="neuteredYes" /><Label htmlFor="neuteredYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="neuteredNo" /><Label htmlFor="neuteredNo">No</Label></div>
                   </RadioGroup>
@@ -315,11 +335,11 @@ export default function BehaviouralBriefPage() {
                 name="dogOrigin"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-2">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-2" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Breeder" id="originBreeder" /><Label htmlFor="originBreeder">Breeder</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Rescue (UK)" id="originRescueUK" /><Label htmlFor="originRescueUK">Rescue (UK)</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Rescue (Abroad)" id="originRescueAbroad" /><Label htmlFor="originRescueAbroad">Rescue (Abroad)</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="Other" id="originOther" /><Label htmlFor="originOther">Other</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="Other" id="originOtherRadio" /><Label htmlFor="originOtherRadio">Other</Label></div>
                   </RadioGroup>
                 )}
               />
@@ -335,7 +355,7 @@ export default function BehaviouralBriefPage() {
 
             <FormField label="Does your dog live with other dogs?" htmlFor="livesWithOtherDogs" error={errors.livesWithOtherDogs?.message} required>
                <Controller name="livesWithOtherDogs" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="dogsYes" /><Label htmlFor="dogsYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="dogsNo" /><Label htmlFor="dogsNo">No</Label></div>
                   </RadioGroup> )} />
@@ -347,7 +367,7 @@ export default function BehaviouralBriefPage() {
             )}
              <FormField label="Does your dog live with cats?" htmlFor="livesWithCats" error={errors.livesWithCats?.message} required>
                <Controller name="livesWithCats" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="catsYes" /><Label htmlFor="catsYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="catsNo" /><Label htmlFor="catsNo">No</Label></div>
                   </RadioGroup> )} />
@@ -359,7 +379,7 @@ export default function BehaviouralBriefPage() {
             )}
             <FormField label="Does your dog live with children?" htmlFor="livesWithChildren" error={errors.livesWithChildren?.message} required>
                <Controller name="livesWithChildren" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="childrenYes" /><Label htmlFor="childrenYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="childrenNo" /><Label htmlFor="childrenNo">No</Label></div>
                   </RadioGroup> )} />
@@ -371,7 +391,7 @@ export default function BehaviouralBriefPage() {
             )}
             <FormField label="Are there any visiting children?" htmlFor="visitingChildren" error={errors.visitingChildren?.message} required>
                <Controller name="visitingChildren" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="visitingChildrenYes" /><Label htmlFor="visitingChildrenYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="visitingChildrenNo" /><Label htmlFor="visitingChildrenNo">No</Label></div>
                   </RadioGroup> )} />
@@ -392,21 +412,21 @@ export default function BehaviouralBriefPage() {
             <FormField label="When did the problem behaviour(s) start?" htmlFor="problemStartDate" error={errors.problemStartDate?.message} required>
               <Input id="problemStartDate" {...register("problemStartDate")} className={errors.problemStartDate ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="How often does the problem behaviour(s) occur? (e.g. daily, weekly, x times per walk)" htmlFor="problemFrequency" error={errors.problemFrequency?.message} required>
+            <FormField label="How often does the problem behaviour(s) occur?" description="e.g. daily, weekly, x times per walk" htmlFor="problemFrequency" error={errors.problemFrequency?.message} required>
               <Input id="problemFrequency" {...register("problemFrequency")} className={errors.problemFrequency ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="In what situations does the behaviour occur? (e.g. on walks, in the home, when visitors arrive)" htmlFor="problemSituations" error={errors.problemSituations?.message} required>
+            <FormField label="In what situations does the behaviour occur?" description="e.g. on walks, in the home, when visitors arrive" htmlFor="problemSituations" error={errors.problemSituations?.message} required>
               <Textarea id="problemSituations" {...register("problemSituations")} className={errors.problemSituations ? "border-destructive" : ""} disabled={isSubmitting} rows={3} />
             </FormField>
-            <FormField label="Are there any triggers for the behaviour? (e.g. loud noises, other dogs, specific people)" htmlFor="problemTriggers" error={errors.problemTriggers?.message}>
+            <FormField label="Are there any triggers for the behaviour?" description="e.g. loud noises, other dogs, specific people" htmlFor="problemTriggers" error={errors.problemTriggers?.message}>
               <Textarea id="problemTriggers" {...register("problemTriggers")} disabled={isSubmitting} rows={3} />
             </FormField>
-            <FormField label="What have you tried so far to address the behaviour? (e.g. training classes, advice from friends)" htmlFor="previousSolutions" error={errors.previousSolutions?.message}>
+            <FormField label="What have you tried so far to address the behaviour?" description="e.g. training classes, advice from friends" htmlFor="previousSolutions" error={errors.previousSolutions?.message}>
               <Textarea id="previousSolutions" {...register("previousSolutions")} disabled={isSubmitting} rows={3} />
             </FormField>
-            <FormField label="Has your dog shown any aggression? (e.g. growling, snapping, biting)" htmlFor="dogAggression" error={errors.dogAggression?.message} required>
+            <FormField label="Has your dog shown any aggression?" description="e.g. growling, snapping, biting" htmlFor="dogAggression" error={errors.dogAggression?.message} required>
               <Controller name="dogAggression" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="aggressionYes" /><Label htmlFor="aggressionYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="aggressionNo" /><Label htmlFor="aggressionNo">No</Label></div>
                   </RadioGroup> )} />
@@ -427,10 +447,10 @@ export default function BehaviouralBriefPage() {
             <FormField label="How much exercise does your dog get per day?" htmlFor="dailyExercise" error={errors.dailyExercise?.message} required>
               <Input id="dailyExercise" {...register("dailyExercise")} className={errors.dailyExercise ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="What type of exercise does your dog get? (e.g. lead walks, off-lead runs, fetch)" htmlFor="exerciseType" error={errors.exerciseType?.message} required>
+            <FormField label="What type of exercise does your dog get?" description="e.g. lead walks, off-lead runs, fetch" htmlFor="exerciseType" error={errors.exerciseType?.message} required>
               <Input id="exerciseType" {...register("exerciseType")} className={errors.exerciseType ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <FormField label="What type of food is your dog fed? (e.g. kibble, raw, wet)" htmlFor="dogFoodType" error={errors.dogFoodType?.message} required>
+            <FormField label="What type of food is your dog fed?" description="e.g. kibble, raw, wet" htmlFor="dogFoodType" error={errors.dogFoodType?.message} required>
               <Input id="dogFoodType" {...register("dogFoodType")} className={errors.dogFoodType ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
             <FormField label="Does your dog have any known health problems or allergies?" htmlFor="healthProblemsAllergies" error={errors.healthProblemsAllergies?.message}>
@@ -449,7 +469,7 @@ export default function BehaviouralBriefPage() {
             <SectionTitle title="Training & Socialisation" />
             <FormField label="Has your dog attended any training classes?" htmlFor="attendedTrainingClasses" error={errors.attendedTrainingClasses?.message} required>
                <Controller name="attendedTrainingClasses" control={control} render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4" disabled={isSubmitting}>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="trainingYes" /><Label htmlFor="trainingYes">Yes</Label></div>
                     <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="trainingNo" /><Label htmlFor="trainingNo">No</Label></div>
                   </RadioGroup> )} />
@@ -470,19 +490,19 @@ export default function BehaviouralBriefPage() {
             <FormField label="" htmlFor="vetConsent" error={errors.vetConsent?.message} required>
                 <div className="flex items-start space-x-2">
                     <Controller name="vetConsent" control={control} render={({ field }) => <Checkbox id="vetConsent" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />} />
-                    <Label htmlFor="vetConsent" className="font-normal">I consent to Raising My Rescue contacting my vet if necessary.</Label>
+                    <Label htmlFor="vetConsent" className="font-normal text-sm">I consent to Raising My Rescue contacting my vet if necessary.</Label>
                 </div>
             </FormField>
              <FormField label="" htmlFor="commitmentConsent" error={errors.commitmentConsent?.message} required>
                 <div className="flex items-start space-x-2">
                     <Controller name="commitmentConsent" control={control} render={({ field }) => <Checkbox id="commitmentConsent" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />} />
-                    <Label htmlFor="commitmentConsent" className="font-normal">I understand that behavioural change takes time, consistency, and commitment.</Label>
+                    <Label htmlFor="commitmentConsent" className="font-normal text-sm">I understand that behavioural change takes time, consistency, and commitment.</Label>
                 </div>
             </FormField>
             <FormField label="" htmlFor="termsConsent" error={errors.termsConsent?.message} required>
                 <div className="flex items-start space-x-2">
                     <Controller name="termsConsent" control={control} render={({ field }) => <Checkbox id="termsConsent" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />} />
-                    <Label htmlFor="termsConsent" className="font-normal">
+                    <Label htmlFor="termsConsent" className="font-normal text-sm">
                         I agree to the <Link href="/terms-and-conditions" target="_blank" className="underline text-primary hover:text-primary/80">terms and conditions</Link>.
                     </Label>
                 </div>
@@ -490,11 +510,11 @@ export default function BehaviouralBriefPage() {
             <FormField label="Please type your full name to sign this form." htmlFor="signature" error={errors.signature?.message} required>
               <Input id="signature" {...register("signature")} className={errors.signature ? "border-destructive" : ""} disabled={isSubmitting} />
             </FormField>
-            <input type="hidden" {...register("submissionDate")} />
+            
+            <input type="hidden" {...register("submissionDate")} value={currentSubmissionDate} />
              <div className="text-sm text-muted-foreground">
-                Date of Submission: {format(new Date(), 'PPP p')}
+                Date of Submission: {format(new Date(currentSubmissionDate), 'PPP p')}
             </div>
-
 
             <div className="pt-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
