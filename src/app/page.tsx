@@ -1,15 +1,16 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, CalendarDays, DollarSign as IconDollarSign } from "lucide-react"; // Renamed DollarSign to avoid conflict
+import { Users, CalendarDays, DollarSign as IconDollarSign } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import type { Session } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
-import { mockSessions } from '@/lib/mockData'; // Assuming mockSessions is available for dashboard
+import { mockSessions } from '@/lib/mockData'; 
 
 export default function HomePage() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
@@ -33,8 +34,8 @@ export default function HomePage() {
   const incomeThisMonth = 2350.00;
 
   return (
-    <div className="flex flex-col gap-8"> {/* Increased gap */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-8"> 
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3"> {/* Changed md:grid-cols-2 to md:grid-cols-3 */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clients</CardTitle>

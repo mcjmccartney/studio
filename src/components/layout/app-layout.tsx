@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -52,7 +53,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {/* Breadcrumbs or page title can go here */}
           </div>
         </header>
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 px-6 pb-6 pt-2 overflow-auto"> {/* Changed p-6 to px-6 pb-6 pt-2 */}
           {children}
         </main>
       </SidebarInset>
