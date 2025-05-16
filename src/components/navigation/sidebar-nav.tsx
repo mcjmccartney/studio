@@ -8,7 +8,7 @@ import {
   Users,
   CalendarDays,
   DollarSign,
-  ClipboardPlus, // Changed from Sparkles
+  ClipboardPlus, 
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { href: '/clients', label: 'Clients', icon: Users },
   { href: '/sessions', label: 'Sessions', icon: CalendarDays },
   { href: '/finance', label: 'Finance', icon: DollarSign },
-  { href: '/public-intake', label: 'Public Intake', icon: ClipboardPlus },
+  { href: '/public-intake', label: 'Behavioural Brief', icon: ClipboardPlus },
 ];
 
 export function SidebarNav() {
