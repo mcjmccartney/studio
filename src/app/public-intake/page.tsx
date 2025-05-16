@@ -157,7 +157,7 @@ export default function BehaviouralBriefPage() {
 
   return (
     <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="text-4xl font-bold text-primary-foreground text-center mb-10">
+      <h1 className="text-4xl font-bold text-[#ebeadf] text-center mb-10">
         Behavioural Brief
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
@@ -333,9 +333,13 @@ export default function BehaviouralBriefPage() {
             <input type="hidden" {...register("submissionDate")} />
             
             <div className="pt-6">
-              <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base bg-[#4f6749] text-black hover:bg-[#4f6749]/90" 
+                disabled={isSubmitting}
+              >
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                Submit Questionnaire
+                Submit Behavioural Brief
               </Button>
             </div>
           </form>
