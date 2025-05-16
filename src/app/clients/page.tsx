@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardDescription
+// CardHeader, CardDescription removed
 import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import {
@@ -53,10 +53,11 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById, updateClientInFirestore, type EditableClientData } from '@/lib/firebase'; 
-import { mockSessions } from '@/lib/mockData'; 
+import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById, updateClientInFirestore, type EditableClientData } from '@/lib/firebase';
+import { mockSessions } from '@/lib/mockData';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'; // Re-added Card for ClientDetailView
 import { cn } from '@/lib/utils';
 
 
@@ -68,7 +69,7 @@ const internalClientFormSchema = z.object({
   postcode: z.string().min(3, { message: "Postcode is required." }),
   dogName: z.string().optional(),
   isMember: z.boolean().optional(),
-  submissionDate: z.string().optional(), 
+  submissionDate: z.string().optional(),
 });
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
@@ -139,6 +140,7 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
                     width={40}
                     height={40}
                     className="rounded-md"
+                    data-ai-hint="company logo"
                   />
             )}
             <h2 className="text-2xl font-bold tracking-tight">
@@ -158,7 +160,7 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
             </Button>
         </div>
       </div>
-      
+
       <ScrollArea className="h-[calc(100vh-240px)] pr-4">
         <div className="space-y-6">
           <Card>
@@ -305,9 +307,9 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
                           </span>
                           <span className="text-muted-foreground"> with {session.dogName} at {session.time}</span>
                         </div>
-                        <Badge 
+                        <Badge
                           variant={
-                            session.status === 'Scheduled' ? 'default' : 
+                            session.status === 'Scheduled' ? 'default' :
                             session.status === 'Completed' ? 'secondary' : 'outline'
                           }
                         >
@@ -335,15 +337,15 @@ export default function ClientsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
-  
+
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSessions, setClientSessions] = useState<Session[]>([]);
-  
+
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -385,7 +387,7 @@ export default function ClientsPage() {
         variant: "destructive",
       });
       setIsLoading(false);
-      setClients([]); 
+      setClients([]);
       return;
     }
     try {
@@ -411,7 +413,7 @@ export default function ClientsPage() {
     if (!selectedClient) {
       fetchClients();
     }
-  }, [selectedClient]); 
+  }, [selectedClient]);
 
   useEffect(() => {
     if (clientToEdit) {
@@ -423,7 +425,7 @@ export default function ClientsPage() {
         postcode: clientToEdit.postcode,
         dogName: clientToEdit.dogName || '',
         isMember: clientToEdit.isMember || false,
-        submissionDate: clientToEdit.submissionDate, 
+        submissionDate: clientToEdit.submissionDate,
       });
     }
   }, [clientToEdit, editClientForm]);
@@ -477,12 +479,12 @@ export default function ClientsPage() {
         isMember: data.isMember || false,
       };
       await updateClientInFirestore(clientToEdit.id, updatedData);
-      
-      const updatedClients = clients.map(c => 
+
+      const updatedClients = clients.map(c =>
         c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName } : c
       ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1));
       setClients(updatedClients);
-      
+
       toast({ title: "Client Updated", description: `${data.ownerFirstName} ${data.ownerLastName} has been successfully updated.` });
       setIsEditSheetOpen(false);
 
@@ -511,7 +513,7 @@ export default function ClientsPage() {
     setSelectedClient(null);
     setClientSessions([]);
   };
-  
+
   const openEditSheet = (client: Client) => {
     setClientToEdit(client);
     setIsEditSheetOpen(true);
@@ -525,13 +527,13 @@ export default function ClientsPage() {
 
   const handleConfirmDeleteClient = async () => {
     if (!clientToDelete) return;
-    setIsSubmittingForm(true); 
+    setIsSubmittingForm(true);
     try {
       await deleteClientFromFirestore(clientToDelete.id);
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
       toast({ title: "Client Deleted", description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.` });
       if (selectedClient && selectedClient.id === clientToDelete.id) {
-         setSelectedClient(null); 
+         setSelectedClient(null);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
@@ -542,7 +544,7 @@ export default function ClientsPage() {
       setIsSubmittingForm(false);
     }
   };
-  
+
   if (selectedClient) {
     return <ClientDetailView client={selectedClient} sessions={clientSessions} onBack={handleBackToList} onEdit={openEditSheet} onDelete={handleDeleteRequest} />;
   }
@@ -641,8 +643,8 @@ export default function ClientsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <Card className="shadow-lg">
-        <CardContent className="pt-6">
+      {/* Removed outer Card and CardContent for the list */}
+      <div className="mt-0"> {/* Added mt-0 or adjust as needed if Add button feels too close */}
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -662,28 +664,28 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-0"> {/* space-y-0 to make borders contiguous */}
               {clients.map((client) => (
-                <div 
-                  key={client.id} 
-                  onClick={() => handleRowClick(client)} 
-                  className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer flex justify-between items-center"
+                <div
+                  key={client.id}
+                  onClick={() => handleRowClick(client)}
+                  className="p-4 border-b hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center" // Updated classes
                 >
                   <div className="flex items-center gap-3">
                     {client.isMember && (
                       <Image
-                        src="https://iili.io/34300ox.md.jpg"
+                        src="https://iili.io/34300ox.md.jpg" // Your member icon
                         alt="Member Icon"
                         width={32}
                         height={32}
                         className="rounded-md"
+                        data-ai-hint="company logo"
                       />
                     )}
                     <div>
                       <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
                       {client.dogName && (
-                        <p className="text-sm text-muted-foreground flex items-center">
-                           <PawPrint className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
                           {client.dogName}
                         </p>
                       )}
@@ -707,7 +709,7 @@ export default function ClientsPage() {
                           Schedule Session
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
                           onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
                         >
@@ -720,8 +722,8 @@ export default function ClientsPage() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </div>
+
 
       {/* Edit Client Sheet */}
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
@@ -814,4 +816,5 @@ export default function ClientsPage() {
     </div>
   );
 }
+
     
