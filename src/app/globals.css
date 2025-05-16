@@ -20,7 +20,7 @@
     --popover: 0 0% 100%; /* White */
     --popover-foreground: 0 0% 10%; /* Dark Gray */
 
-    --primary: 108 17% 35%; /* #4F6749 Dark Green */
+    --primary: 11 64% 35%; /* #913520 Terracotta Brick */
     --primary-foreground: 0 0% 100%; /* White for text on primary */
 
     --secondary: 180 10% 88%; /* Lighter shade of background, or a complementary gray */
@@ -37,7 +37,7 @@
 
     --border: 180 10% 85%; /* Slightly darker than background for borders */
     --input: 180 10% 88%; /* Similar to border or secondary */
-    --ring: 108 17% 35%; /* Primary color for focus rings */
+    --ring: 11 64% 35%; /* Primary color (#913520) for focus rings */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -47,16 +47,16 @@
     --radius: 0.5rem;
 
     /* Sidebar specific theme */
-    --sidebar-background: 108 17% 35%; /* Primary Green */
-    --sidebar-foreground: 0 0% 98%;    /* White/Very Light Gray for text on green */
+    --sidebar-background: 11 64% 35%; /* Primary color #913520 */
+    --sidebar-foreground: 0 0% 98%;    /* White/Very Light Gray for text on new primary */
     
     --sidebar-primary: hsl(var(--accent)); /* Soft peach for active items */
     --sidebar-primary-foreground: 0 0% 10%; /* Dark Gray/Black for text on peach */
     
-    --sidebar-accent: 108 17% 45%;     /* Slightly Lighter Primary Green for hover */
+    --sidebar-accent: 11 64% 45%;     /* Slightly Lighter #913520 for hover */
     --sidebar-accent-foreground: 0 0% 98%; /* White/Very Light Gray for text on hover */
     
-    --sidebar-border: 108 17% 25%;     /* Slightly Darker Primary Green for borders */
+    --sidebar-border: 11 64% 25%;     /* Slightly Darker #913520 for borders */
     --sidebar-ring: hsl(var(--accent)); /* Soft peach for focus rings */
   }
 
@@ -70,8 +70,8 @@
     --popover: 0 0% 15%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 108 17% 35%; /* #4F6749 Dark Green */
-    --primary-foreground: 0 0% 100%; /* White for text on dark green */
+    --primary: 11 64% 35%; /* #913520 Terracotta Brick */
+    --primary-foreground: 0 0% 100%; /* White for text on dark primary */
 
     --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 90%;
@@ -79,15 +79,15 @@
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 27 65% 69%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 27 65% 69%; /* Soft peach */
+    --accent-foreground: 0 0% 10%; /* Dark text on peach */
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 25%;
     --input: 0 0% 25%;
-    --ring: 108 17% 35%; /* Primary color for focus rings */
+    --ring: 11 64% 35%; /* Primary color (#913520) for focus rings */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -96,16 +96,16 @@
     --chart-5: 340 75% 55%;
 
     /* Sidebar specific theme for dark mode */
-    --sidebar-background: 108 17% 35%; /* Primary Green */
+    --sidebar-background: 11 64% 35%; /* Primary color #913520 */
     --sidebar-foreground: 0 0% 98%;    /* White/Very Light Gray */
     
     --sidebar-primary: hsl(var(--accent)); /* Soft peach */
     --sidebar-primary-foreground: 0 0% 10%; /* Dark Gray/Black */
     
-    --sidebar-accent: 108 17% 45%;     /* Slightly Lighter Primary Green */
+    --sidebar-accent: 11 64% 45%;     /* Slightly Lighter #913520 */
     --sidebar-accent-foreground: 0 0% 98%; /* White/Very Light Gray */
     
-    --sidebar-border: 108 17% 25%;     /* Slightly Darker Primary Green */
+    --sidebar-border: 11 64% 25%;     /* Slightly Darker #913520 */
     --sidebar-ring: hsl(var(--accent)); /* Soft peach */
   }
 }
