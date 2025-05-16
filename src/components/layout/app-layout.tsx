@@ -39,12 +39,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col">
-        <main className="flex-1 px-6 pb-6 pt-6 overflow-auto"> {/* Increased pt-2 to pt-6 */}
-          {children}
-        </main>
+      {/* Apply padding directly to SidebarInset, which renders the main content <main> tag */}
+      <SidebarInset className="px-6 pb-6 pt-8 overflow-auto">
+        {children}
       </SidebarInset>
     </SidebarProvider>
   );
 }
-
