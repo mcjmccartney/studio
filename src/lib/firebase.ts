@@ -8,6 +8,7 @@ import {
   doc, 
   getDoc, 
   updateDoc,
+  deleteDoc, // Added deleteDoc
   serverTimestamp, 
   Timestamp, 
   type DocumentData, 
@@ -120,8 +121,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
       submissionDate: client.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
-      dogName: client.dogName || null, // Save null if undefined
-      isMember: client.isMember === undefined ? false : client.isMember, // Default to false
+      dogName: client.dogName || null,
+      isMember: client.isMember === undefined ? false : client.isMember,
+      postcode: address && address.postcode ? address.postcode : client.postcode, // Ensure postcode is at top level
     };
     if (behaviouralBriefId) dataToSave.behaviouralBriefId = behaviouralBriefId;
     if (behaviourQuestionnaireId) dataToSave.behaviourQuestionnaireId = behaviourQuestionnaireId;
@@ -129,8 +131,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
     
      Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key] === undefined) {
-        // dogName will be null, isMember will be false if undefined
-        if (key !== 'dogName' && key !== 'isMember') {
+        if (key === 'dogName') dataToSave[key] = null;
+        else if (key === 'isMember') dataToSave[key] = false;
+        else if (key !== 'address' && key !== 'behaviouralBriefId' && key !== 'behaviourQuestionnaireId') { // Don't delete address or IDs if they are meant to be optional
           delete dataToSave[key]; 
         }
       }
@@ -145,7 +148,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       ownerLastName: data.ownerLastName || '',
       contactEmail: data.contactEmail || '',
       contactNumber: data.contactNumber || '',
-      postcode: data.postcode || '',
+      postcode: data.postcode || (data.address ? data.address.postcode : ''),
       address: data.address || undefined,
       howHeardAboutServices: data.howHeardAboutServices || undefined,
       dogName: data.dogName || undefined,
@@ -310,7 +313,25 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   return { 
     id: docRef.id, 
     ...dataToSave,
+    createdAt: new Date().toISOString(), // Approximate createdAt for immediate use
   } as Client; 
+};
+
+export const deleteClientFromFirestore = async (clientId: string): Promise<void> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    throw new Error("Firebase project ID is not set. Cannot delete client.");
+  }
+  if (!clientId) {
+    throw new Error("Client ID is required to delete a client.");
+  }
+  try {
+    const clientDocRef = doc(clientsCollectionRef, clientId);
+    await deleteDoc(clientDocRef);
+    // Note: Consider deleting associated behavioural briefs and questionnaires here if needed (cascade delete)
+  } catch (error) {
+    console.error("Error deleting client from Firestore:", error);
+    throw error; // Re-throw the error to be handled by the caller
+  }
 };
 
 export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFormValues): Promise<{client: Client, brief: BehaviouralBrief}> => {
@@ -326,8 +347,8 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     contactEmail: formData.contactEmail,
     contactNumber: formData.contactNumber,
     postcode: formData.postcode,
-    dogName: formData.dogName, // Populate dogName on Client
-    isMember: false, // Default to false for new brief submissions
+    dogName: formData.dogName, 
+    isMember: false, 
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -354,8 +375,8 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     behaviouralBriefId: newBriefId,
   });
 
-  const finalClientData = { ...clientRecord, id: newClientId, behaviouralBriefId: newBriefId } as Client;
-  const finalBriefData = { ...briefRecord, id: newBriefId } as BehaviouralBrief;
+  const finalClientData = { ...clientRecord, id: newClientId, behaviouralBriefId: newBriefId, createdAt: new Date().toISOString() } as Client;
+  const finalBriefData = { ...briefRecord, id: newBriefId, createdAt: new Date().toISOString() } as BehaviouralBrief;
   
   return { client: finalClientData, brief: finalBriefData };
 };
@@ -366,20 +387,23 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
   }
   const submissionTimestamp = formData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss");
 
+  const clientAddress = {
+      addressLine1: formData.addressLine1,
+      addressLine2: formData.addressLine2 || '',
+      city: formData.city,
+      country: formData.country,
+      postcode: formData.postcode, // Postcode also stored in address object
+  };
+
   const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
     ownerFirstName: formData.ownerFirstName,
     ownerLastName: formData.ownerLastName,
     contactEmail: formData.contactEmail,
     contactNumber: formData.contactNumber,
-    postcode: formData.postcode,
-    dogName: formData.dogName, // Populate dogName on Client
-    isMember: false, // Default to false for new questionnaire submissions
-    address: {
-      addressLine1: formData.addressLine1,
-      addressLine2: formData.addressLine2,
-      city: formData.city,
-      country: formData.country,
-    },
+    postcode: formData.postcode, // Top-level postcode
+    dogName: formData.dogName, 
+    isMember: false, 
+    address: clientAddress,
     howHeardAboutServices: formData.howHeardAboutServices,
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
@@ -424,18 +448,18 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
     housetrainedStatus: formData.housetrainedStatus,
     activitiesAsideFromWalks: formData.activitiesAsideFromWalks,
     dogLikes: formData.dogLikes,
-    dogChallenges: formData.dogChallenges,
-    positiveReinforcementMethods: formData.positiveReinforcementMethods,
-    favoriteRewards: formData.favoriteRewards,
-    correctionMethods: formData.correctionMethods,
-    correctionEffects: formData.correctionEffects,
-    previousProfessionalTraining: formData.previousProfessionalTraining,
-    previousTrainingMethodsUsed: formData.previousTrainingMethodsUsed,
-    previousTrainingExperienceResults: formData.previousTrainingExperienceResults,
-    sociabilityWithDogs: formData.sociabilityWithDogs,
-    sociabilityWithPeople: formData.sociabilityWithPeople,
-    additionalInformation: formData.additionalInformation,
-    timeDedicatedToTraining: formData.timeDedicatedToTraining,
+    dogChallenges: data.dogChallenges,
+    positiveReinforcementMethods: data.positiveReinforcementMethods,
+    favoriteRewards: data.favoriteRewards,
+    correctionMethods: data.correctionMethods,
+    correctionEffects: data.correctionEffects,
+    previousProfessionalTraining: data.previousProfessionalTraining,
+    previousTrainingMethodsUsed: data.previousTrainingMethodsUsed,
+    previousTrainingExperienceResults: data.previousTrainingExperienceResults,
+    sociabilityWithDogs: data.sociabilityWithDogs,
+    sociabilityWithPeople: data.sociabilityWithPeople,
+    additionalInformation: data.additionalInformation,
+    timeDedicatedToTraining: data.timeDedicatedToTraining,
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
   };
@@ -446,8 +470,8 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
     behaviourQuestionnaireId: newQuestionnaireId,
   });
 
-  const finalClientData: Client = { ...clientRecord, id: newClientId, behaviourQuestionnaireId: newQuestionnaireId } as Client;
-  const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId } as BehaviourQuestionnaire;
+  const finalClientData: Client = { ...clientRecord, id: newClientId, behaviourQuestionnaireId: newQuestionnaireId, createdAt: new Date().toISOString() } as Client;
+  const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId, createdAt: new Date().toISOString() } as BehaviourQuestionnaire;
 
   return { client: finalClientData, questionnaire: finalQuestionnaireData };
 };
@@ -492,3 +516,5 @@ export const getBehaviourQuestionnaireById = async (questionnaireId: string): Pr
 };
 
 export { db, app, Timestamp, serverTimestamp };
+
+    

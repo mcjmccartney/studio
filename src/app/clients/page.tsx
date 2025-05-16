@@ -17,6 +17,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,12 +37,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById } from '@/lib/firebase'; 
+import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById } from '@/lib/firebase'; 
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -299,6 +309,8 @@ export default function ClientsPage() {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSessions, setClientSessions] = useState<Session[]>([]);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -316,37 +328,38 @@ export default function ClientsPage() {
     }
   });
 
+  const fetchClients = async () => {
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      toast({
+        title: "Firebase Not Configured",
+        description: "Firebase project ID is missing. Cannot fetch clients.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      setClients([]); 
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setError(null);
+      const firestoreClients = await getClients();
+      setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
+      setError(errorMessage);
+      toast({
+        title: "Error Loading Clients",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!selectedClient) {
-      const fetchClients = async () => {
-        if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-          toast({
-            title: "Firebase Not Configured",
-            description: "Firebase project ID is missing. Cannot fetch clients.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          setClients([]); 
-          return;
-        }
-        try {
-          setIsLoading(true);
-          setError(null);
-          const firestoreClients = await getClients();
-          setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
-        } catch (err) {
-          console.error("Error fetching clients:", err);
-          const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
-          setError(errorMessage);
-          toast({
-            title: "Error Loading Clients",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
       fetchClients();
     }
   }, [toast, selectedClient]);
@@ -403,6 +416,36 @@ export default function ClientsPage() {
   const handleBackToList = () => {
     setSelectedClient(null);
     setClientSessions([]);
+    // Optionally re-fetch clients if data might have changed while viewing details
+    // fetchClients(); 
+  };
+
+  const handleDeleteClient = async (client: Client | null) => {
+    if (!client) return;
+    setClientToDelete(client);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteClient = async () => {
+    if (!clientToDelete) return;
+    try {
+      await deleteClientFromFirestore(clientToDelete.id);
+      setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
+      toast({
+        title: "Client Deleted",
+        description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.`,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
+      toast({
+        title: "Error Deleting Client",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setClientToDelete(null);
+    }
   };
   
   if (selectedClient) {
@@ -566,7 +609,10 @@ export default function ClientsPage() {
                             Schedule Session
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => {e.stopPropagation(); alert('Delete client functionality to be implemented.');}}>
+                          <DropdownMenuItem 
+                            className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                            onClick={(e) => {e.stopPropagation(); handleDeleteClient(client);}}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Client
                           </DropdownMenuItem>
@@ -591,6 +637,25 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the client
+              "{clientToDelete?.ownerFirstName} {clientToDelete?.ownerLastName}" and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90">
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+    

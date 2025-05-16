@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import type { Session, Client } from '@/lib/types';
-import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession } from '@/lib/mockData';
+import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession, deleteSession as apiDeleteSession } from '@/lib/mockData'; // Added deleteSession
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'; // Added MoreHorizontal, Edit, Trash2
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,24 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"; // Added AlertDialog
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -65,17 +83,26 @@ interface GroupedSessions {
 interface SessionDetailViewProps {
   session: Session;
   onBack: () => void;
+  onDelete: (session: Session) => void; // Add onDelete prop
 }
 
-function SessionDetailView({ session, onBack }: SessionDetailViewProps) {
+function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Details</h1>
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Sessions
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => alert("Edit session functionality to be implemented.")}>
+            <Edit className="mr-2 h-4 w-4" /> Edit Session
+          </Button>
+           <Button variant="destructive" onClick={() => onDelete(session)}>
+            <Trash2 className="mr-2 h-4 w-4" /> Delete Session
+          </Button>
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Sessions
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[calc(100vh-200px)] pr-4">
@@ -116,7 +143,7 @@ function SessionDetailView({ session, onBack }: SessionDetailViewProps) {
                   session.status === 'Scheduled' ? 'default' :
                   session.status === 'Completed' ? 'secondary' : 'outline'
                 }
-                className="text-sm px-3 py-1" // Slightly larger badge
+                className="text-sm px-3 py-1"
               >
                 {session.status}
               </Badge>
@@ -146,9 +173,11 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>(initialMockSessions);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
@@ -178,7 +207,7 @@ export default function SessionsPage() {
     
     toast({
       title: "Session Added",
-      description: `Session with ${selectedClient.name} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
+      description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
     });
     reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '' });
     setIsAddSessionModalOpen(false);
@@ -204,14 +233,36 @@ export default function SessionsPage() {
   const handleBackToSessionList = () => {
     setSelectedSession(null);
   };
+  
+  const handleDeleteSession = (session: Session | null) => {
+    if (!session) return;
+    setSessionToDelete(session);
+    setIsSessionDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteSession = () => {
+    if (!sessionToDelete) return;
+    apiDeleteSession(sessionToDelete.id); // This will modify mockSessions in mockData.ts
+    setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
+    toast({
+      title: "Session Deleted",
+      description: `Session with ${sessionToDelete.clientName} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
+    });
+    setIsSessionDeleteDialogOpen(false);
+    setSessionToDelete(null);
+    if (selectedSession && selectedSession.id === sessionToDelete.id) {
+      setSelectedSession(null); // Go back to list if the detailed view session was deleted
+    }
+  };
+
 
   if (selectedSession) {
-    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} />;
+    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSession} />;
   }
 
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
-    const dateA = parseISO(`01 ${a}`); // parse "Month YYYY" string
+    const dateA = parseISO(`01 ${a}`); 
     const dateB = parseISO(`01 ${b}`);
     return dateB.getTime() - dateA.getTime(); 
   });
@@ -243,7 +294,7 @@ export default function SessionsPage() {
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
@@ -252,7 +303,7 @@ export default function SessionsPage() {
                             <SelectLabel>Clients</SelectLabel>
                             {mockClients.map(client => (
                               <SelectItem key={client.id} value={client.id}>
-                                {client.name} (Dog: {client.dogName})
+                                {client.ownerFirstName} {client.ownerLastName} (Dog: {client.dogName || 'N/A'})
                               </SelectItem>
                             ))}
                           </SelectGroup>
@@ -280,6 +331,7 @@ export default function SessionsPage() {
                               !field.value && "text-muted-foreground",
                               errors.date ? "border-destructive" : ""
                             )}
+                            disabled={isSubmitting}
                           >
                             <CalendarIconLucide className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -291,6 +343,7 @@ export default function SessionsPage() {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
+                            disabled={isSubmitting}
                           />
                         </PopoverContent>
                       </Popover>
@@ -322,6 +375,7 @@ export default function SessionsPage() {
                                 }
                             }}
                             className={cn("w-full", errors.time ? "border-destructive" : "")}
+                            disabled={isSubmitting}
                         />
                     )}
                   />
@@ -330,9 +384,12 @@ export default function SessionsPage() {
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                   <Button type="button" variant="outline">Cancel</Button>
+                   <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
                 </DialogClose>
-                <Button type="submit">Save Session</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Session
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -359,25 +416,53 @@ export default function SessionsPage() {
                         .map(session => (
                         <li 
                           key={session.id} 
-                          className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer"
-                          onClick={() => handleSessionClick(session)}
+                          className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm"
                         >
                           <div className="flex justify-between items-start">
-                            <div>
+                            <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
                               <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
                               <p className="text-sm text-muted-foreground">
                                 <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
-                                {format(parseISO(session.date), 'EEEE, MMMM do, yyyy')}
+                                {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
                                 <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
                                 {session.time}
                               </p>
                             </div>
-                            <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
-                              {session.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                                <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
+                                {session.status}
+                                </Badge>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleSessionClick(session)}}>
+                                        <Info className="mr-2 h-4 w-4" />
+                                        View Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit session functionality to be implemented.');}}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Session
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                        className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                                        onClick={(e) => {e.stopPropagation(); handleDeleteSession(session);}}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Session
+                                    </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                           </div>
                           {session.notes && (
-                            <p className="mt-2 text-sm text-muted-foreground border-t pt-2">Notes: {session.notes}</p>
+                            <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
                           )}
                         </li>
                       ))}
@@ -391,6 +476,24 @@ export default function SessionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the session
+              with {sessionToDelete?.clientName} on {sessionToDelete ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90">
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

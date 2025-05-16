@@ -78,32 +78,43 @@ export let mockBehaviouralBriefs: BehaviouralBrief[] = [
 
 
 export let mockSessions: Session[] = [
-  { id: '1', clientId: '1', clientName: 'Alice Wonderland', dogName: 'Cheshire', date: '2024-07-29', time: '10:00 AM', status: 'Scheduled' },
-  { id: '2', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-07-24', time: '02:00 PM', status: 'Scheduled' },
-  { id: '3', clientId: '3', clientName: 'Charlie Brown', dogName: 'Snoopy', date: '2024-08-01', time: '11:30 AM', status: 'Scheduled' },
-  { id: '4', clientId: '1', clientName: 'Alice Wonderland', dogName: 'Cheshire', date: '2024-08-05', time: '10:00 AM', status: 'Scheduled' },
-  { id: '5', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-08-07', time: '02:00 PM', status: 'Completed' },
+  { id: 's1', clientId: '1', clientName: 'Alice Wonderland', dogName: 'Cheshire', date: '2024-07-29', time: '10:00 AM', status: 'Scheduled' },
+  { id: 's2', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-07-24', time: '02:00 PM', status: 'Scheduled' },
+  { id: 's3', clientId: '3', clientName: 'Charlie Brown', dogName: 'Snoopy', date: '2024-08-01', time: '11:30 AM', status: 'Scheduled' },
+  { id: 's4', clientId: '1', clientName: 'Alice Wonderland', dogName: 'Cheshire', date: '2024-08-05', time: '10:00 AM', status: 'Scheduled' },
+  { id: 's5', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-08-07', time: '02:00 PM', status: 'Completed', notes: 'Scoop did well with recall. Needs more work on loose-leash walking.' },
 ];
 
-export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName'>, clientDetails: Client ): Session => {
-  const clientName = `${clientDetails.ownerFirstName} ${clientDetails.ownerLastName}`;
+// Function to add a session to mock data
+export const addSession = (sessionData: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName' >, clientDetails: Client ): Session => {
+  const clientFullName = `${clientDetails.ownerFirstName} ${clientDetails.ownerLastName}`;
   const dogNameForSession = clientDetails.dogName || 'N/A';
 
   const newSession: Session = { 
-    ...session, 
-    id: String(Date.now()), 
+    ...sessionData, 
+    id: `s${Date.now()}`, // Ensure unique ID
     status: 'Scheduled',
-    clientName: clientName,
+    clientName: clientFullName,
     dogName: dogNameForSession,
+    createdAt: new Date().toISOString(),
   };
-  mockSessions = [...mockSessions, newSession];
+  mockSessions.push(newSession); // Add to the main array
   
   const clientIndex = mockClients.findIndex(c => c.id === clientDetails.id);
   if (clientIndex > -1) {
     if (mockClients[clientIndex].nextSession === 'Not Scheduled' || 
-        (mockClients[clientIndex].nextSession && new Date(session.date) < new Date(mockClients[clientIndex].nextSession!))) { // Added null check for nextSession
-        mockClients[clientIndex] = { ...mockClients[clientIndex], nextSession: session.date };
+        (mockClients[clientIndex].nextSession && new Date(sessionData.date) < new Date(mockClients[clientIndex].nextSession!))) {
+        mockClients[clientIndex] = { ...mockClients[clientIndex], nextSession: sessionData.date };
     }
   }
   return newSession;
 };
+
+// Function to delete a session from mock data
+export const deleteSession = (sessionId: string): boolean => {
+  const initialLength = mockSessions.length;
+  mockSessions = mockSessions.filter(session => session.id !== sessionId);
+  return mockSessions.length < initialLength;
+};
+
+    
