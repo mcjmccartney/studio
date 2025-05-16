@@ -4,11 +4,10 @@
 import { useState, useEffect } from 'react';
 import type { Session, Client } from '@/lib/types';
 import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession, deleteSession as apiDeleteSession } from '@/lib/mockData'; // Added deleteSession
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'; // Added MoreHorizontal, Edit, Trash2
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Added AlertDialog
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // Added DropdownMenu
+} from "@/components/ui/dropdown-menu";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -66,6 +65,8 @@ import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
@@ -83,7 +84,7 @@ interface GroupedSessions {
 interface SessionDetailViewProps {
   session: Session;
   onBack: () => void;
-  onDelete: (session: Session) => void; // Add onDelete prop
+  onDelete: (session: Session) => void;
 }
 
 function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps) {
@@ -242,7 +243,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = () => {
     if (!sessionToDelete) return;
-    apiDeleteSession(sessionToDelete.id); // This will modify mockSessions in mockData.ts
+    apiDeleteSession(sessionToDelete.id); 
     setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
     toast({
       title: "Session Deleted",
@@ -251,7 +252,7 @@ export default function SessionsPage() {
     setIsSessionDeleteDialogOpen(false);
     setSessionToDelete(null);
     if (selectedSession && selectedSession.id === sessionToDelete.id) {
-      setSelectedSession(null); // Go back to list if the detailed view session was deleted
+      setSelectedSession(null); 
     }
   };
 
@@ -396,86 +397,79 @@ export default function SessionsPage() {
         </Dialog>
       </div>
       
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>All Sessions</CardTitle>
-          <CardDescription>Browse sessions organized by month. Click a session to view details.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sortedMonthKeys.length > 0 ? (
-            <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
-              {sortedMonthKeys.map((monthYear) => (
-                <AccordionItem value={monthYear} key={monthYear}>
-                  <AccordionTrigger className="text-lg font-medium hover:no-underline">
-                    {monthYear} ({groupedSessions[monthYear].length} sessions)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ul className="space-y-4 pt-2">
-                      {groupedSessions[monthYear]
-                        .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) 
-                        .map(session => (
-                        <li 
-                          key={session.id} 
-                          className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
-                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
-                                {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
-                                <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
-                                {session.time}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
-                                {session.status}
-                                </Badge>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <span className="sr-only">Open menu</span>
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleSessionClick(session)}}>
-                                        <Info className="mr-2 h-4 w-4" />
-                                        View Details
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit session functionality to be implemented.');}}>
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Edit Session
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                        className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                                        onClick={(e) => {e.stopPropagation(); handleDeleteSession(session);}}
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete Session
-                                    </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                          </div>
-                          {session.notes && (
-                            <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-            <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Outer Card removed, Accordion is now the main list container */}
+      {sortedMonthKeys.length > 0 ? (
+        <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
+          {sortedMonthKeys.map((monthYear) => (
+            <AccordionItem value={monthYear} key={monthYear} className="border-b bg-card shadow-sm rounded-md mb-2">
+              <AccordionTrigger className="text-lg font-medium hover:no-underline px-4 py-3">
+                {monthYear} ({groupedSessions[monthYear].length} sessions)
+              </AccordionTrigger>
+              <AccordionContent className="px-4">
+                <ul className="space-y-3 pt-2 pb-3">
+                  {groupedSessions[monthYear]
+                    .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) 
+                    .map(session => (
+                    <li 
+                      key={session.id} 
+                      className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors shadow-sm"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
+                          <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
+                            {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
+                            <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
+                            {session.time}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
+                            {session.status}
+                            </Badge>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleSessionClick(session)}}>
+                                    <Info className="mr-2 h-4 w-4" />
+                                    View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit session functionality to be implemented.');}}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Session
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                    className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                                    onClick={(e) => {e.stopPropagation(); handleDeleteSession(session);}}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Session
+                                </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                      </div>
+                      {session.notes && (
+                        <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      ) : (
+        <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+      )}
 
       <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
         <AlertDialogContent>
@@ -497,5 +491,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-    
