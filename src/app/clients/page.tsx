@@ -486,12 +486,12 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <div className="space-y-0">
+             <div className="space-y-0">
               {clients.map((client) => (
                 <div
                   key={client.id}
                   onClick={() => handleClientRowClick(client)}
-                  className="p-4 border-b hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
+                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center bg-card shadow-sm rounded-md mb-2"
                 >
                   <div className="flex items-center gap-3">
                     {client.isMember && (
