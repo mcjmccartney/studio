@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import * as React from 'react'; // Ensure React is imported for useState, useEffect
+import Image from 'next/image'; // Import next/image
 import {
   SidebarProvider,
   Sidebar,
@@ -11,7 +12,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  // SidebarTrigger, // No longer used in this version of header
+  SidebarTrigger, // Re-added SidebarTrigger
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {mounted && !isMobile && (
         <Sidebar variant="sidebar" collapsible="icon" side="left">
           <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-            {/* Removed RAISING MY RESCUE text */}
+            <Image
+              src="https://placehold.co/40x40.png"
+              alt="Raising My Rescue Logo"
+              width={40}
+              height={40}
+              className="rounded-md"
+              data-ai-hint="dog paw"
+            />
           </SidebarHeader>
           <SidebarContent className="p-2">
             <SidebarNav />
@@ -73,7 +81,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             mounted && (
               useSpecialBackground 
                 ? "bg-[#4f6749]" // For special pages, green bg. Page itself handles padding.
-                : "bg-[#fafafa] p-6" // For other pages, #fafafa bg with p-6 from layout.
+                : "bg-background p-6" // For other pages, theme default bg with p-6 from layout.
             ),
             
             // Mobile-specific padding, applied only after mount when isMobile is reliable
