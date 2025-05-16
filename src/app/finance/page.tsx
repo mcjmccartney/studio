@@ -4,7 +4,7 @@ import type { FinancialTransaction } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, TrendingUp, TrendingDown, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, TrendingUp, TrendingDown, MoreHorizontal, Edit, Trash2, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
