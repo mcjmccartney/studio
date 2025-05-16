@@ -6,7 +6,7 @@ import type { Client, Session } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays, Loader2, User, Dog, Mail, Phone, ClipboardList, History as HistoryIcon, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays, Loader2, User, Dog, Mail, Phone, ClipboardList, History as HistoryIcon, X, ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"; // Kept for Add Client Modal
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +33,8 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore } from '@/lib/firebase'; // Firebase functions
-import { mockSessions } from '@/lib/mockData'; // For displaying session history
+import { getClients, addClientToFirestore } from '@/lib/firebase'; 
+import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -49,13 +49,104 @@ const clientFormSchema = z.object({
 
 type ClientFormValues = z.infer<typeof clientFormSchema>;
 
+// Client Detail View Component (can be in the same file or separate)
+interface ClientDetailViewProps {
+  client: Client;
+  sessions: Session[];
+  onBack: () => void;
+}
+
+function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">
+          {client.name} &amp; {client.dogName}
+        </h2>
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Client List
+        </Button>
+      </div>
+      
+      <ScrollArea className="h-[calc(100vh-200px)] pr-4"> {/* Adjust height as needed */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <User className="mr-2 h-5 w-5 text-primary" /> Client & Dog Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div><strong>Client Name:</strong> {client.name}</div>
+                <div><strong>Dog's Name:</strong> {client.dogName}</div>
+                <div><strong>Dog's Breed:</strong> {client.dogBreed}</div>
+              </div>
+              <div className="text-sm pt-2">
+                <strong className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/>Email:</strong> {client.contactEmail}
+              </div>
+              <div className="text-sm">
+                <strong className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Phone:</strong> {client.contactPhone}
+              </div>
+              {client.behaviorHistory && (
+                <div className="text-sm pt-2">
+                  <strong className="flex items-center"><ClipboardList className="mr-2 h-4 w-4 text-muted-foreground"/>Behavior History:</strong>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.behaviorHistory}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <HistoryIcon className="mr-2 h-5 w-5 text-primary" /> Session History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sessions.length > 0 ? (
+                <ul className="space-y-3">
+                  {sessions.map(session => (
+                    <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-semibold">
+                            {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
+                          </span>
+                          <span className="text-muted-foreground"> at {session.time}</span>
+                        </div>
+                        <Badge 
+                          variant={
+                            session.status === 'Scheduled' ? 'default' : 
+                            session.status === 'Completed' ? 'secondary' : 'outline'
+                          }
+                        >
+                          {session.status}
+                        </Badge>
+                      </div>
+                      {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No session history found for this client.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
-  const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSessions, setClientSessions] = useState<Session[]>([]);
 
@@ -66,37 +157,39 @@ export default function ClientsPage() {
   });
 
   useEffect(() => {
-    const fetchClients = async () => {
-      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-        toast({
-          title: "Firebase Not Configured",
-          description: "Firebase project ID is missing. Cannot fetch clients.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        setClients([]); 
-        return;
-      }
-      try {
-        setIsLoading(true);
-        setError(null);
-        const firestoreClients = await getClients();
-        setClients(firestoreClients.sort((a, b) => (a.name > b.name) ? 1 : -1));
-      } catch (err) {
-        console.error("Error fetching clients:", err);
-        const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
-        setError(errorMessage);
-        toast({
-          title: "Error Loading Clients",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchClients();
-  }, [toast]);
+    if (!selectedClient) { // Only fetch clients if no client is selected (i.e., we are in list view)
+      const fetchClients = async () => {
+        if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+          toast({
+            title: "Firebase Not Configured",
+            description: "Firebase project ID is missing. Cannot fetch clients.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          setClients([]); 
+          return;
+        }
+        try {
+          setIsLoading(true);
+          setError(null);
+          const firestoreClients = await getClients();
+          setClients(firestoreClients.sort((a, b) => (a.name > b.name) ? 1 : -1));
+        } catch (err) {
+          console.error("Error fetching clients:", err);
+          const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
+          setError(errorMessage);
+          toast({
+            title: "Error Loading Clients",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchClients();
+    }
+  }, [toast, selectedClient]); // Add selectedClient to dependency array
 
   const handleAddClient: SubmitHandler<ClientFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -133,13 +226,20 @@ export default function ClientsPage() {
 
   const handleRowClick = (client: Client) => {
     setSelectedClient(client);
-    // Filter sessions for the selected client (using mockSessions for now)
     const sessions = mockSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     setClientSessions(sessions);
-    setIsClientDetailModalOpen(true);
+  };
+
+  const handleBackToList = () => {
+    setSelectedClient(null);
+    setClientSessions([]);
   };
   
+  if (selectedClient) {
+    return <ClientDetailView client={selectedClient} sessions={clientSessions} onBack={handleBackToList} />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -299,96 +399,6 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Client Detail Modal */}
-      {selectedClient && (
-        <Dialog open={isClientDetailModalOpen} onOpenChange={setIsClientDetailModalOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">Client Details: {selectedClient.name} &amp; {selectedClient.dogName}</DialogTitle>
-              <DialogDescription>
-                View detailed information and session history for this client.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <ScrollArea className="flex-grow pr-6 -mr-6">
-              <div className="grid gap-6 py-4 ">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                      <User className="mr-2 h-5 w-5 text-primary" /> Client & Dog Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <div><strong>Client Name:</strong> {selectedClient.name}</div>
-                      <div><strong>Dog's Name:</strong> {selectedClient.dogName}</div>
-                      <div><strong>Dog's Breed:</strong> {selectedClient.dogBreed}</div>
-                    </div>
-                    <div className="text-sm pt-2">
-                       <strong className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/>Email:</strong> {selectedClient.contactEmail}
-                    </div>
-                     <div className="text-sm">
-                       <strong className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Phone:</strong> {selectedClient.contactPhone}
-                    </div>
-                    {selectedClient.behaviorHistory && (
-                      <div className="text-sm pt-2">
-                        <strong className="flex items-center"><ClipboardList className="mr-2 h-4 w-4 text-muted-foreground"/>Behavior History:</strong>
-                        <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{selectedClient.behaviorHistory}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                       <HistoryIcon className="mr-2 h-5 w-5 text-primary" /> Session History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {clientSessions.length > 0 ? (
-                      <ul className="space-y-3">
-                        {clientSessions.map(session => (
-                          <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <span className="font-semibold">
-                                  {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
-                                </span>
-                                <span className="text-muted-foreground"> at {session.time}</span>
-                              </div>
-                              <Badge 
-                                variant={
-                                  session.status === 'Scheduled' ? 'default' : 
-                                  session.status === 'Completed' ? 'secondary' : 'outline' // Assuming 'secondary' for completed
-                                }
-                              >
-                                {session.status}
-                              </Badge>
-                            </div>
-                            {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No session history found for this client.</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </ScrollArea>
-
-            <DialogFooter className="mt-auto pt-4 border-t">
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Close</Button>
-              </DialogClose>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
-
-    

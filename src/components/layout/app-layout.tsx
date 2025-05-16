@@ -9,7 +9,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  // SidebarTrigger, // No longer needed as header bar is removed
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -24,12 +23,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider defaultOpen>
       <Sidebar variant="sidebar" collapsible="icon" side="left">
         <SidebarHeader className="p-4 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-          <div className="flex items-center gap-2">
-            {/* SVG Logo removed, text will use default sans-serif font */}
-            <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              RAISING MY RESCUE
-            </h1>
-          </div>
+          {/* RAISING MY RESCUE text removed */}
         </SidebarHeader>
         <SidebarContent className="p-2">
           <SidebarNav />
@@ -46,11 +40,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        {/* Header bar removed */}
-        <main className="flex-1 px-6 pb-6 pt-2 overflow-auto">
+        <main className="flex-1 px-6 pb-6 pt-6 overflow-auto"> {/* Increased pt-2 to pt-6 */}
           {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
