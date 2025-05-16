@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 // Schema based on the provided Squarespace form structure
 const behaviouralBriefSchema = z.object({
