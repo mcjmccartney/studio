@@ -1,7 +1,7 @@
 
 import type { Client, Session } from './types';
 
-// Initial Mock Data
+// Initial Mock Data - This will be gradually replaced by Firestore data
 export let mockClients: Client[] = [
   { id: '1', name: 'Alice Wonderland', dogName: 'Cheshire', dogBreed: 'British Shorthair', contactEmail: 'alice@example.com', contactPhone: '555-0101', behaviorHistory: 'Very curious, tends to disappear and reappear unexpectedly.', lastSession: '2024-07-15', nextSession: '2024-07-29' },
   { id: '2', name: 'Bob The Builder', dogName: 'Scoop', dogBreed: 'Labrador Retriever', contactEmail: 'bob@example.com', contactPhone: '555-0102', behaviorHistory: 'Good with tools, a bit clumsy.', lastSession: '2024-07-10', nextSession: '2024-07-24' },
@@ -17,17 +17,10 @@ export let mockSessions: Session[] = [
   { id: '5', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-08-07', time: '02:00 PM', status: 'Completed' },
 ];
 
-// Functions to modify mock data
-export const addClient = (client: Omit<Client, 'id' | 'lastSession' | 'nextSession'>): Client => {
-  const newClient: Client = { 
-    ...client, 
-    id: String(Date.now()),
-    lastSession: 'N/A',
-    nextSession: 'Not Scheduled' 
-  };
-  mockClients = [...mockClients, newClient];
-  return newClient;
-};
+// The addClient function is removed as client addition for the ClientsPage
+// is now handled by addClientToFirestore in src/lib/firebase.ts.
+// The mockClients array above might still be used by other parts of the app
+// (e.g., session creation dropdown) until they are also migrated to Firestore.
 
 export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName'>, client: Client): Session => {
   const newSession: Session = { 
@@ -38,5 +31,11 @@ export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName'
     dogName: client.dogName,
   };
   mockSessions = [...mockSessions, newSession];
+  // In a full Firestore integration, this would also update client.nextSession in Firestore.
+  // For now, we might also want to update the mockClient in mockClients array.
+  const clientIndex = mockClients.findIndex(c => c.id === client.id);
+  if (clientIndex > -1) {
+    mockClients[clientIndex] = { ...mockClients[clientIndex], nextSession: session.date };
+  }
   return newSession;
 };
