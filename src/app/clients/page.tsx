@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays } from 'lucide-react';
+import Image from 'next/image'; // Import next/image
 import {
   Dialog,
   DialogContent,
@@ -131,8 +132,17 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-            {client.isMember && <ShieldCheck className="h-7 w-7 text-primary" />}
-            <h2 className="text-2xl font-bold tracking-tight font-serif">
+            {client.isMember && (
+                 <Image
+                    src="https://placehold.co/40x40.png"
+                    alt="Member Icon"
+                    width={40}
+                    height={40}
+                    className="rounded-md"
+                    data-ai-hint="company logo"
+                  />
+            )}
+            <h2 className="text-2xl font-bold tracking-tight">
             {client.ownerFirstName} {client.ownerLastName}
             </h2>
         </div>
@@ -154,14 +164,14 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center font-serif">
+              <CardTitle className="text-lg flex items-center">
                 <IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Owner:</strong> {client.ownerFirstName} {client.ownerLastName}</div>
               {client.dogName && <div className="flex items-center"><PawPrint className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Dog:</strong> {client.dogName}</div>}
-              <div><strong>Membership:</strong> {client.isMember ? <Badge variant="default">Active</Badge> : <Badge variant="outline">Not Active</Badge>}</div>
+              <div><strong>Membership:</strong> {client.isMember ? <Badge variant="default">Active Member</Badge> : <Badge variant="outline">Not a Member</Badge>}</div>
               <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
               <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
               {client.address ? (
@@ -194,14 +204,14 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
 
           {isLoadingBrief && (
             <Card>
-              <CardHeader><CardTitle className="text-lg font-serif">Loading Behavioural Brief...</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">Loading Behavioural Brief...</CardTitle></CardHeader>
               <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
             </Card>
           )}
           {!isLoadingBrief && behaviouralBrief && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center font-serif">
+                <CardTitle className="text-lg flex items-center">
                   <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief for {behaviouralBrief.dogName}
                 </CardTitle>
               </CardHeader>
@@ -238,21 +248,21 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
           )}
           {!isLoadingBrief && !behaviouralBrief && client.behaviouralBriefId && (
              <Card>
-                <CardHeader><CardTitle className="text-lg font-serif">Behavioural Brief Not Found</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded.</p></CardContent>
              </Card>
           )}
 
           {isLoadingQuestionnaire && (
             <Card>
-              <CardHeader><CardTitle className="text-lg font-serif">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
               <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
             </Card>
           )}
           {!isLoadingQuestionnaire && behaviourQuestionnaire && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center font-serif">
+                <CardTitle className="text-lg flex items-center">
                   <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire for {behaviourQuestionnaire.dogName}
                 </CardTitle>
               </CardHeader>
@@ -273,14 +283,14 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
           )}
            {!isLoadingQuestionnaire && !behaviourQuestionnaire && client.behaviourQuestionnaireId && (
              <Card>
-                <CardHeader><CardTitle className="text-lg font-serif">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">The associated behaviour questionnaire could not be loaded.</p></CardContent>
              </Card>
           )}
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center font-serif">
+              <CardTitle className="text-lg flex items-center">
                 <Activity className="mr-2 h-5 w-5 text-primary" /> Session History
               </CardTitle>
             </CardHeader>
@@ -324,13 +334,11 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); // Renamed for clarity
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
-  // State for "Add New Client" Dialog
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   
-  // State for "Edit Client" Sheet
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
@@ -366,7 +374,6 @@ export default function ClientsPage() {
       postcode: '',
       dogName: '',
       isMember: false,
-      // submissionDate is not typically edited here, but schema requires it
     }
   });
 
@@ -405,7 +412,7 @@ export default function ClientsPage() {
     if (!selectedClient) {
       fetchClients();
     }
-  }, [selectedClient]); // Removed toast from dependency array as it's stable
+  }, [selectedClient]); 
 
   useEffect(() => {
     if (clientToEdit) {
@@ -417,7 +424,7 @@ export default function ClientsPage() {
         postcode: clientToEdit.postcode,
         dogName: clientToEdit.dogName || '',
         isMember: clientToEdit.isMember || false,
-        submissionDate: clientToEdit.submissionDate, // Keep original submission date
+        submissionDate: clientToEdit.submissionDate, 
       });
     }
   }, [clientToEdit, editClientForm]);
@@ -471,17 +478,19 @@ export default function ClientsPage() {
         isMember: data.isMember || false,
       };
       await updateClientInFirestore(clientToEdit.id, updatedData);
-      setClients(prevClients => 
-        prevClients.map(c => 
-          c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName } : c // Ensure dogName is updated or kept
-        ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1))
-      );
+      
+      const updatedClients = clients.map(c => 
+        c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName } : c
+      ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1));
+      setClients(updatedClients);
+      
       toast({ title: "Client Updated", description: `${data.ownerFirstName} ${data.ownerLastName} has been successfully updated.` });
       setIsEditSheetOpen(false);
-      setClientToEdit(null);
+
       if (selectedClient && selectedClient.id === clientToEdit.id) {
-        setSelectedClient(clients.find(c => c.id === clientToEdit.id) || null); // refresh selected client if it was the one being edited
+        setSelectedClient(updatedClients.find(c => c.id === clientToEdit.id) || null);
       }
+      setClientToEdit(null);
 
     } catch (err) {
       console.error("Error updating client in Firestore:", err);
@@ -517,13 +526,13 @@ export default function ClientsPage() {
 
   const handleConfirmDeleteClient = async () => {
     if (!clientToDelete) return;
-    setIsSubmittingForm(true); // Indicate an operation is in progress
+    setIsSubmittingForm(true); 
     try {
       await deleteClientFromFirestore(clientToDelete.id);
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
       toast({ title: "Client Deleted", description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.` });
       if (selectedClient && selectedClient.id === clientToDelete.id) {
-         setSelectedClient(null); // If the detailed view client was deleted, go back to list
+         setSelectedClient(null); 
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
@@ -542,7 +551,7 @@ export default function ClientsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground font-serif">Clients</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
         <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -552,7 +561,7 @@ export default function ClientsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle className="font-serif">Add New Client (Quick Add)</DialogTitle>
+              <DialogTitle>Add New Client (Quick Add)</DialogTitle>
               <DialogDescription>
                 Add essential contact and dog information. Full details can be submitted via public forms.
               </DialogDescription>
@@ -634,11 +643,8 @@ export default function ClientsPage() {
         </Dialog>
       </div>
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-serif">Client List</CardTitle>
-          <CardDescription>Manage your clients. Click an item to view details.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* CardHeader removed as per user request */}
+        <CardContent className="pt-6"> {/* Added pt-6 to compensate for removed CardHeader */}
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -658,66 +664,58 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-2"> {/* Reduced space-y for a tighter list */}
               {clients.map((client) => (
                 <div 
                   key={client.id} 
                   onClick={() => handleRowClick(client)} 
-                  className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer"
+                  className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer flex justify-between items-center"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    {client.isMember && (
+                      <Image
+                        src="https://placehold.co/32x32.png" // Using a 32x32 placeholder
+                        alt="Member Logo"
+                        width={32}
+                        height={32}
+                        className="rounded-md"
+                        data-ai-hint="company logo"
+                      />
+                    )}
                     <div>
-                      <div className="flex items-center gap-2">
-                        {client.isMember && <ShieldCheck className="h-5 w-5 text-primary" />}
-                        <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
-                      </div>
+                      <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
                       {client.dogName && (
-                        <p className="text-sm text-muted-foreground flex items-center mt-1">
-                          <PawPrint className="inline-block mr-1.5 h-4 w-4" />
-                          {client.dogName}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{client.dogName}</p>
                       )}
                     </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Contact
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
-                            <IconCalendarDays className="mr-2 h-4 w-4" />
-                            Schedule Session
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                            onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Client
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                      <span className="mr-4">Email: {client.contactEmail}</span>
-                      <span>Phone: {client.contactNumber}</span>
-                  </div>
-                   <div className="mt-1 text-xs">
-                        <Badge variant={client.behaviouralBriefId ? "default" : "outline"} className="mr-2">
-                            Brief: {client.behaviouralBriefId ? "Yes" : "No"}
-                        </Badge>
-                        <Badge variant={client.behaviourQuestionnaireId ? "default" : "outline"}>
-                            Questionnaire: {client.behaviourQuestionnaireId ? "Yes" : "No"}
-                        </Badge>
-                   </div>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Contact
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
+                          <IconCalendarDays className="mr-2 h-4 w-4" />
+                          Schedule Session
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                          onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Client
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
               ))}
             </div>
@@ -729,7 +727,7 @@ export default function ClientsPage() {
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
-            <SheetTitle className="font-serif">Edit Client: {clientToEdit?.ownerFirstName} {clientToEdit?.ownerLastName}</SheetTitle>
+            <SheetTitle>Edit Client: {clientToEdit?.ownerFirstName} {clientToEdit?.ownerLastName}</SheetTitle>
             <SheetDescription>
               Update the client's contact information and details.
             </SheetDescription>
@@ -798,7 +796,7 @@ export default function ClientsPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the client
               "{clientToDelete?.ownerFirstName} {clientToDelete?.ownerLastName}" and all associated data from Firestore.
@@ -816,5 +814,5 @@ export default function ClientsPage() {
     </div>
   );
 }
-
     
+
