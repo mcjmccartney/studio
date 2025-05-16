@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardDescription, CardHeader, CardTitle
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils'; // Added import for cn
+import { cn } from '@/lib/utils';
 
 // Schema based on the provided Squarespace form structure
 const behaviouralBriefSchema = z.object({
@@ -49,7 +49,7 @@ export default function BehaviouralBriefPage() {
   const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
   
-  useEffect(() => {
+ useEffect(() => {
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   }, []);
 
@@ -133,8 +133,8 @@ export default function BehaviouralBriefPage() {
   
   const FormFieldWrapper: React.FC<{ 
     label?: string; 
-    htmlForProp?: keyof BehaviouralBriefFormValues | string; // Allow string for split fields like ownerFirstName
-    error?: string | boolean; // Can be error message string or boolean for composite fields
+    htmlForProp?: keyof BehaviouralBriefFormValues | string; 
+    error?: string | boolean; 
     children: React.ReactNode; 
     required?: boolean; 
     description?: string;
@@ -155,19 +155,19 @@ export default function BehaviouralBriefPage() {
 
 
   return (
-    <div className="bg-primary min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+    <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <h1 className="text-4xl font-bold text-primary-foreground text-center mb-10">
         Behavioural Brief
       </h1>
-      <Card className="w-full max-w-3xl shadow-2xl bg-secondary">
+      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
         <CardContent className="p-6 sm:p-8">
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0"> {/* Reduced space-y for finer control */}
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0"> 
             
             <SectionTitle title="CONTACT INFORMATION" />
             
             <FormFieldWrapper 
               label="Owner Name" 
-              htmlForProp="ownerFirstName" // Points to the first field for accessibility
+              htmlForProp="ownerFirstName" 
               error={errors.ownerFirstName?.message || errors.ownerLastName?.message} 
               required
             >
