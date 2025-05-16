@@ -9,6 +9,7 @@ import {
   CalendarDays,
   DollarSign,
   ClipboardPlus, 
+  FileQuestion, // Added new icon
   type LucideIcon,
 } from 'lucide-react';
 
@@ -23,7 +24,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  isPublic?: boolean; // Optional flag for styling or different behavior
+  isPublic?: boolean; 
 }
 
 const navItems: NavItem[] = [
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { href: '/sessions', label: 'Sessions', icon: CalendarDays },
   { href: '/finance', label: 'Finance', icon: DollarSign },
   { href: '/public-intake', label: 'Behavioural Brief', icon: ClipboardPlus },
+  { href: '/behaviour-questionnaire', label: 'Behaviour Questionnaire', icon: FileQuestion },
 ];
 
 export function SidebarNav() {

@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Client, Session, BehaviouralBrief } from '@/lib/types';
+import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,26 +28,24 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Textarea removed as internal add form is simpler
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient, getBehaviouralBriefByBriefId } from '@/lib/firebase'; 
+import { getClients, addClientToFirestore as fbAddClient, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById } from '@/lib/firebase'; 
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft } from 'lucide-react';
 
 
-// Zod schema for internal "Add New Client" modal (only contact info)
 const internalClientFormSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First name is required." }),
   ownerLastName: z.string().min(1, { message: "Last name is required." }),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
   postcode: z.string().min(3, { message: "Postcode is required." }),
-  submissionDate: z.string().optional(), // For internal consistency
+  submissionDate: z.string().optional(), 
 });
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
@@ -61,6 +59,8 @@ interface ClientDetailViewProps {
 function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
   const [behaviouralBrief, setBehaviouralBrief] = useState<BehaviouralBrief | null>(null);
   const [isLoadingBrief, setIsLoadingBrief] = useState<boolean>(false);
+  const [behaviourQuestionnaire, setBehaviourQuestionnaire] = useState<BehaviourQuestionnaire | null>(null);
+  const [isLoadingQuestionnaire, setIsLoadingQuestionnaire] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchBrief = async () => {
@@ -76,11 +76,31 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
           setIsLoadingBrief(false);
         }
       } else {
-        setBehaviouralBrief(null); // No brief ID associated
+        setBehaviouralBrief(null);
       }
     };
     fetchBrief();
   }, [client.behaviouralBriefId]);
+
+  useEffect(() => {
+    const fetchQuestionnaire = async () => {
+      if (client.behaviourQuestionnaireId) {
+        setIsLoadingQuestionnaire(true);
+        try {
+          const questionnaire = await getBehaviourQuestionnaireById(client.behaviourQuestionnaireId);
+          setBehaviourQuestionnaire(questionnaire);
+        } catch (error) {
+          console.error("Error fetching behaviour questionnaire:", error);
+          setBehaviourQuestionnaire(null);
+        } finally {
+          setIsLoadingQuestionnaire(false);
+        }
+      } else {
+        setBehaviourQuestionnaire(null);
+      }
+    };
+    fetchQuestionnaire();
+  }, [client.behaviourQuestionnaireId]);
 
 
   return (
@@ -89,6 +109,7 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
         <h2 className="text-2xl font-bold tracking-tight">
           {client.ownerFirstName} {client.ownerLastName}
           {behaviouralBrief && ` & ${behaviouralBrief.dogName}`}
+          {!behaviouralBrief && behaviourQuestionnaire && ` & ${behaviourQuestionnaire.dogName}`}
         </h2>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -108,9 +129,29 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
               <div><strong>Owner:</strong> {client.ownerFirstName} {client.ownerLastName}</div>
               <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
               <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
-              <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {client.postcode}</div>
+              {client.address ? (
+                <>
+                  <div className="flex items-start"><MapPin className="mr-2 h-4 w-4 text-muted-foreground mt-0.5"/>
+                    <strong>Address:</strong>
+                    <div className="ml-1">
+                        {client.address.addressLine1} <br />
+                        {client.address.addressLine2 && <>{client.address.addressLine2} <br /></>}
+                        {client.address.city}, {client.postcode} <br />
+                        {client.address.country}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {client.postcode}</div>
+              )}
+               {client.howHeardAboutServices && (
+                 <div className="pt-2">
+                    <strong className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground"/>How heard about services:</strong>
+                    <p className="mt-1 text-muted-foreground">{client.howHeardAboutServices}</p>
+                </div>
+               )}
                <div className="pt-2">
-                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
+                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Initial Submission Date:</strong>
                   <p className="mt-1 text-muted-foreground">{client.submissionDate ? format(new Date(client.submissionDate), 'PPP p') : 'N/A'}</p>
               </div>
             </CardContent>
@@ -122,7 +163,6 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
               <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
             </Card>
           )}
-
           {!isLoadingBrief && behaviouralBrief && (
             <Card>
               <CardHeader>
@@ -154,23 +194,57 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
                     </ul>
                   </div>
                 )}
+                 <div className="pt-2">
+                    <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
+                    <p className="mt-1 text-muted-foreground">{behaviouralBrief.submissionDate ? format(new Date(behaviouralBrief.submissionDate), 'PPP p') : 'N/A'}</p>
+                </div>
               </CardContent>
             </Card>
           )}
-
           {!isLoadingBrief && !behaviouralBrief && client.behaviouralBriefId && (
              <Card>
                 <CardHeader><CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded.</p></CardContent>
              </Card>
           )}
-           {!isLoadingBrief && !client.behaviouralBriefId && (
+
+          {/* Behaviour Questionnaire Display */}
+          {isLoadingQuestionnaire && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
+              <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
+            </Card>
+          )}
+          {!isLoadingQuestionnaire && behaviourQuestionnaire && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire for {behaviourQuestionnaire.dogName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {/* Display some key fields from the questionnaire. Add more as needed. */}
+                <div><strong>Dog's Name:</strong> {behaviourQuestionnaire.dogName} ({behaviourQuestionnaire.dogAge}, {behaviourQuestionnaire.dogSex})</div>
+                <div><strong>Breed:</strong> {behaviourQuestionnaire.dogBreed}</div>
+                <div><strong>Neutered/Spayed Details:</strong> {behaviourQuestionnaire.neuteredSpayedDetails}</div>
+                {behaviourQuestionnaire.mainProblem && <div><strong>Main Problem:</strong> <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviourQuestionnaire.mainProblem}</p></div>}
+                {behaviourQuestionnaire.idealTrainingOutcome && <div className="pt-2"><strong>Ideal Outcome:</strong> <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{behaviourQuestionnaire.idealTrainingOutcome}</p></div>}
+                {behaviourQuestionnaire.sociabilityWithDogs && <div className="pt-2"><strong>Sociability with Dogs:</strong> {behaviourQuestionnaire.sociabilityWithDogs}</div>}
+                {behaviourQuestionnaire.sociabilityWithPeople && <div className="pt-2"><strong>Sociability with People:</strong> {behaviourQuestionnaire.sociabilityWithPeople}</div>}
+                 <div className="pt-2">
+                    <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
+                    <p className="mt-1 text-muted-foreground">{behaviourQuestionnaire.submissionDate ? format(new Date(behaviourQuestionnaire.submissionDate), 'PPP p') : 'N/A'}</p>
+                </div>
+                {/* Add more fields from BehaviourQuestionnaire as needed */}
+              </CardContent>
+            </Card>
+          )}
+           {!isLoadingQuestionnaire && !behaviourQuestionnaire && client.behaviourQuestionnaireId && (
              <Card>
-                <CardHeader><CardTitle className="text-lg">No Behavioural Brief Submitted</CardTitle></CardHeader>
-                <CardContent><p className="text-muted-foreground">This client was likely added internally, or the brief has not been submitted yet.</p></CardContent>
+                <CardHeader><CardTitle className="text-lg">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
+                <CardContent><p className="text-muted-foreground">The associated behaviour questionnaire could not be loaded.</p></CardContent>
              </Card>
           )}
-
 
           <Card>
             <CardHeader>
@@ -188,7 +262,6 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
                           <span className="font-semibold">
                             {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
                           </span>
-                           {/* Display dog name for the session, as client might have multiple dogs over time */}
                           <span className="text-muted-foreground"> with {session.dogName} at {session.time}</span>
                         </div>
                         <Badge 
@@ -285,12 +358,11 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
-      // Data for internal add matches the simplified Client type now
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'lastSession' | 'nextSession' | 'createdAt'> = {
-        ...data,
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> = {
+        ...data, // This includes ownerFirstName, ownerLastName, contactEmail, contactNumber, postcode
         submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       };
-      const newClient = await fbAddClient(clientDataForFirestore); // fbAddClient now handles simplified client
+      const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
       toast({
         title: "Client Added",
@@ -313,8 +385,6 @@ export default function ClientsPage() {
 
   const handleRowClick = (client: Client) => {
     setSelectedClient(client);
-    // Fetch sessions for this client - assuming mockSessions for now.
-    // In a real app, this would be a Firestore query for sessions where session.clientId === client.id
     const sessions = mockSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     setClientSessions(sessions);
@@ -344,7 +414,7 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle>Add New Client (Quick Add)</DialogTitle>
               <DialogDescription>
-                Add essential contact information. A full behavioural brief can be submitted via the public form.
+                Add essential contact information. Full details can be submitted via public forms.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddClient)} className="grid gap-4 py-4">
@@ -383,7 +453,6 @@ export default function ClientsPage() {
                   {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                 </div>
               </div>
-               {/* Hidden submission date for internal tracking */}
               <input type="hidden" {...register("submissionDate")} />
               <DialogFooter>
                 <DialogClose asChild>
@@ -401,7 +470,7 @@ export default function ClientsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Client List</CardTitle>
-          <CardDescription>Manage your clients. Click a row to view details and associated behavioural brief.</CardDescription>
+          <CardDescription>Manage your clients. Click a row to view details and associated forms.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading && (
@@ -418,7 +487,7 @@ export default function ClientsPage() {
           )}
           {!isLoading && !error && clients.length === 0 && (
             <p className="text-muted-foreground text-center py-10">
-              No clients found. Add a new client to get started or submit a Behavioural Brief.
+              No clients found. Add a new client or submit a form.
               {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && " (Firebase may not be configured)"}
             </p>
           )}
@@ -430,7 +499,8 @@ export default function ClientsPage() {
                   <TableHead>Contact</TableHead>
                   <TableHead>Postcode</TableHead>
                   <TableHead>Next Session</TableHead>
-                  <TableHead>Brief Submitted</TableHead>
+                  <TableHead>Brief</TableHead>
+                  <TableHead>Questionnaire</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -457,9 +527,16 @@ export default function ClientsPage() {
                         <Badge variant="outline">No</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {client.behaviourQuestionnaireId ? (
+                        <Badge variant="default">Yes</Badge>
+                      ) : (
+                        <Badge variant="outline">No</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()} /* Prevents row click */>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
@@ -467,17 +544,16 @@ export default function ClientsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Edit Client Contact */}>
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Contact
                           </DropdownMenuItem>
-                           {/* TODO: Add "Edit Behavioural Brief" if brief exists */}
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Schedule */}>
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                             <IconCalendarDays className="mr-2 h-4 w-4" />
                             Schedule Session
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => e.stopPropagation() /* TODO: Implement Delete Client & Brief */}>
+                          <DropdownMenuItem className="text-destructive hover:!bg-destructive/10" onClick={(e) => e.stopPropagation()}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Client
                           </DropdownMenuItem>

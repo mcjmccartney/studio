@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { usePathname } from 'next/navigation'; // Import usePathname
+import { usePathname } from 'next/navigation'; 
 import {
   SidebarProvider,
   Sidebar,
@@ -10,7 +10,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger, // Keep for potential future use or if something else depends on it
+  // SidebarTrigger, // Not used in the current headerless layout
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -24,12 +24,14 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const isPublicIntakePage = pathname === '/public-intake';
+  const isBehaviourQuestionnairePage = pathname === '/behaviour-questionnaire';
+  const useSpecialBackground = isPublicIntakePage || isBehaviourQuestionnairePage;
 
   return (
     <SidebarProvider defaultOpen>
       <Sidebar variant="sidebar" collapsible="icon" side="left">
         <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-          {/* RAISING MY RESCUE text removed, ensure this is intended */}
+          {/* Removed RAISING MY RESCUE text */}
         </SidebarHeader>
         <SidebarContent className="p-2">
           <SidebarNav />
@@ -49,10 +51,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* The header element has been removed */}
         <div
           className={cn(
-            "flex-1 overflow-auto", // Common classes for scrolling and flex growth
-            isPublicIntakePage
-              ? "bg-[#4f6749]" // Public intake page gets green background, its own internal padding handles spacing
-              : "bg-background p-6" // All other pages get theme background AND p-6 padding from the layout
+            "flex-1 overflow-auto", 
+            useSpecialBackground
+              ? "bg-[#4f6749]" 
+              : "bg-background p-6" 
           )}
         >
           {children}
