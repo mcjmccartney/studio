@@ -9,10 +9,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
+  // SidebarTrigger, // No longer needed as header bar is removed
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
-// import { Logo } from '@/components/icons/logo'; // Logo component removed
 import { Button } from '@/components/ui/button';
 import { Settings, LogOut } from 'lucide-react';
 
@@ -26,9 +25,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <Sidebar variant="sidebar" collapsible="icon" side="left">
         <SidebarHeader className="p-4 flex flex-col items-center group-data-[collapsible=icon]:items-center">
           <div className="flex items-center gap-2">
-            {/* <Logo className="text-sidebar-primary w-8 h-8" /> Removed Logo component */}
+            {/* SVG Logo removed, text will use default sans-serif font */}
             <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              Raising My Rescue
+              RAISING MY RESCUE
             </h1>
           </div>
         </SidebarHeader>
@@ -47,12 +46,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex-1">
-            {/* Breadcrumbs or page title can go here */}
-          </div>
-        </header>
+        {/* Header bar removed */}
         <main className="flex-1 px-6 pb-6 pt-2 overflow-auto">
           {children}
         </main>

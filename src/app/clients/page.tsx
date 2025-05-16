@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import type { Client } from '@/lib/types';
-// Removed initialMockClients import, will fetch from Firestore
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -68,7 +67,7 @@ export default function ClientsPage() {
           variant: "destructive",
         });
         setIsLoading(false);
-        setClients([]); // Set to empty or load mock data if preferred
+        setClients([]); 
         return;
       }
       try {
@@ -103,7 +102,6 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
-      // Type assertion for data to match the expected input for addClientToFirestore
       const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = data;
       const newClient = await addClientToFirestore(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient]);
@@ -139,7 +137,7 @@ export default function ClientsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle className="font-serif">Add New Client</DialogTitle>
+              <DialogTitle>Add New Client</DialogTitle> {/* Removed font-serif */}
               <DialogDescription>
                 Fill in the details below to add a new client to your records.
               </DialogDescription>
@@ -201,7 +199,7 @@ export default function ClientsPage() {
       </div>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-serif">Client List</CardTitle>
+          <CardTitle>Client List</CardTitle> {/* Removed font-serif */}
           <CardDescription>Manage your clients and their dogs.</CardDescription>
         </CardHeader>
         <CardContent>

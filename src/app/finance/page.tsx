@@ -42,7 +42,7 @@ export default function FinancePage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Total Income (Paid)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Income (Paid)</CardTitle> {/* Removed font-serif */}
             <TrendingUp className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -51,7 +51,7 @@ export default function FinancePage() {
         </Card>
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle> {/* Removed font-serif */}
             <TrendingDown className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
@@ -60,7 +60,7 @@ export default function FinancePage() {
         </Card>
         <Card className="shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Net Profit</CardTitle>
+            <CardTitle className="text-sm font-medium">Net Profit</CardTitle> {/* Removed font-serif */}
             <IconDollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -71,7 +71,7 @@ export default function FinancePage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-serif">Transaction History</CardTitle>
+          <CardTitle>Transaction History</CardTitle> {/* Removed font-serif */}
           <CardDescription>View and manage all financial transactions.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, getYear, getMonth } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide } from 'lucide-react'; // Renamed CalendarIcon to avoid conflict
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar as ShadCalendar } from "@/components/ui/calendar"; // Renamed Calendar to avoid conflict
+import { Calendar as ShadCalendar } from "@/components/ui/calendar";
 import {
   Accordion,
   AccordionContent,
@@ -74,7 +74,6 @@ export default function SessionsPage() {
   });
 
   useEffect(() => {
-    // In a real app, fetch sessions from Firestore or API
     setSessions(initialMockSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
   }, []);
 
@@ -117,9 +116,9 @@ export default function SessionsPage() {
 
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
-    const dateA = parseISO(`01 ${a}`); // e.g. "01 July 2024"
+    const dateA = parseISO(`01 ${a}`);
     const dateB = parseISO(`01 ${b}`);
-    return dateB.getTime() - dateA.getTime(); // Sort descending by month
+    return dateB.getTime() - dateA.getTime(); 
   });
 
 
@@ -136,7 +135,7 @@ export default function SessionsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle className="font-serif">Add New Session</DialogTitle>
+              <DialogTitle>Add New Session</DialogTitle> {/* Removed font-serif */}
               <DialogDescription>
                 Schedule a new training session. Select a client, date, and time.
               </DialogDescription>
@@ -218,7 +217,7 @@ export default function SessionsPage() {
                             type="time" 
                             value={field.value ? format(parseISO(`1970-01-01T${field.value.replace(/( AM| PM)/i, '')}`), 'HH:mm') : ''}
                             onChange={(e) => {
-                                const time24 = e.target.value; // HH:mm
+                                const time24 = e.target.value; 
                                 if (time24) {
                                     const [hours, minutes] = time24.split(':');
                                     const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
@@ -247,7 +246,7 @@ export default function SessionsPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-serif">All Sessions</CardTitle>
+          <CardTitle>All Sessions</CardTitle> {/* Removed font-serif */}
           <CardDescription>Browse sessions organized by month.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -255,18 +254,18 @@ export default function SessionsPage() {
             <Accordion type="multiple" className="w-full">
               {sortedMonthKeys.map((monthYear) => (
                 <AccordionItem value={monthYear} key={monthYear}>
-                  <AccordionTrigger className="text-lg font-medium hover:no-underline font-serif">
+                  <AccordionTrigger className="text-lg font-medium hover:no-underline"> {/* Removed font-serif */}
                     {monthYear} ({groupedSessions[monthYear].length} sessions)
                   </AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-4 pt-2">
                       {groupedSessions[monthYear]
-                        .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) // Sort by day within month
+                        .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) 
                         .map(session => (
                         <li key={session.id} className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-semibold text-base font-serif">{session.clientName} & {session.dogName}</h3>
+                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3> {/* Removed font-serif */}
                               <p className="text-sm text-muted-foreground">
                                 <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
                                 {format(parseISO(session.date), 'EEEE, MMMM do, yyyy')}

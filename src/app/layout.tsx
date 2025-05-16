@@ -1,5 +1,5 @@
 import type {Metadata} from 'next';
-import { Inter, Roboto_Mono, Playfair_Display } from 'next/font/google';
+import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import AppLayout from '@/components/layout/app-layout';
 import { Toaster } from "@/components/ui/toaster";
@@ -12,14 +12,10 @@ const inter = Inter({
 const robotoMono = Roboto_Mono({
   variable: '--font-mono',
   subsets: ['latin'],
-  weight: ['400', '500', '700'], // Added some typical weights for mono
+  weight: ['400', '500', '700'],
 });
 
-const playfairDisplay = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair-display',
-  weight: ['400', '500', '600', '700', '800', '900'],
-});
+// Playfair_Display removed
 
 export const metadata: Metadata = {
   title: 'Raising My Rescue',
@@ -33,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${robotoMono.variable} ${playfairDisplay.variable} antialiased`}>
+      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
         <AppLayout>
           {children}
         </AppLayout>

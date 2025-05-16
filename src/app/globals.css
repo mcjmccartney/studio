@@ -8,9 +8,7 @@
     @apply text-foreground bg-background;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: theme('fontFamily.serif');
-  }
+  /* Removed h1-h6 serif font styling */
 
   :root {
     --background: 180 13% 95%; /* #F0F4F4 Very light grayish teal */

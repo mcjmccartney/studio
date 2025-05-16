@@ -38,7 +38,7 @@ export default function HomePage() {
       <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Clients</CardTitle>
+            <CardTitle className="text-sm font-medium">Clients</CardTitle> {/* Removed font-serif */}
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -53,7 +53,7 @@ export default function HomePage() {
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Upcoming Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle> {/* Removed font-serif */}
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -68,7 +68,7 @@ export default function HomePage() {
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium font-serif">Finance Overview</CardTitle>
+            <CardTitle className="text-sm font-medium">Finance Overview</CardTitle> {/* Removed font-serif */}
             <IconDollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -86,7 +86,7 @@ export default function HomePage() {
       {/* Calendar Section */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-serif">Session Calendar Overview</CardTitle>
+          <CardTitle>Session Calendar Overview</CardTitle> {/* Removed font-serif */}
           <CardDescription>Quick view of your scheduled sessions. For detailed management, go to the Sessions page.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -109,7 +109,7 @@ export default function HomePage() {
             </Card>
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle className="font-serif">
+                <CardTitle> {/* Removed font-serif */}
                   {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
                 </CardTitle>
               </CardHeader>
