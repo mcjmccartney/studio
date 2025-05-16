@@ -10,26 +10,26 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
+  SidebarTrigger, // Ensure SidebarTrigger is imported
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
 import { Settings, LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Import cn
+import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const pathname = usePathname(); // Get the current pathname
+  const pathname = usePathname();
   const isPublicIntakePage = pathname === '/public-intake';
 
   return (
     <SidebarProvider defaultOpen>
       <Sidebar variant="sidebar" collapsible="icon" side="left">
         <SidebarHeader className="p-4 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-          {/* RAISING MY RESCUE text removed */}
+          {/* RAISING MY RESCUE text removed, ensure this is intended */}
         </SidebarHeader>
         <SidebarContent className="p-2">
           <SidebarNav />
@@ -50,10 +50,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <SidebarTrigger className="md:hidden" />
           <div className="flex-1"></div> {/* Placeholder for potential future header content */}
         </header>
-        <div 
+        <div
           className={cn(
-            "flex-1 overflow-auto",
-            isPublicIntakePage ? "bg-[#4f6749]" : "p-6 bg-background" // Conditional background and padding
+            "flex-1 overflow-auto", // Common classes for scrolling and flex growth
+            isPublicIntakePage
+              ? "bg-[#4f6749]" // Public intake page gets green background, its own internal padding handles spacing
+              : "bg-[#ebeadf] p-6" // All other pages get beige background AND p-6 padding from the layout
           )}
         >
           {children}
