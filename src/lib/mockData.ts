@@ -1,12 +1,60 @@
 
 import type { Client, Session } from './types';
+import { format } from 'date-fns';
 
-// Initial Mock Data - This will be gradually replaced by Firestore data
+// Updated Mock Data to reflect the new Client type structure
 export let mockClients: Client[] = [
-  { id: '1', name: 'Alice Wonderland', dogName: 'Cheshire', dogBreed: 'British Shorthair', contactEmail: 'alice@example.com', contactPhone: '555-0101', behaviorHistory: 'Very curious, tends to disappear and reappear unexpectedly.', lastSession: '2024-07-15', nextSession: '2024-07-29' },
-  { id: '2', name: 'Bob The Builder', dogName: 'Scoop', dogBreed: 'Labrador Retriever', contactEmail: 'bob@example.com', contactPhone: '555-0102', behaviorHistory: 'Good with tools, a bit clumsy.', lastSession: '2024-07-10', nextSession: '2024-07-24' },
-  { id: '3', name: 'Charlie Brown', dogName: 'Snoopy', dogBreed: 'Beagle', contactEmail: 'charlie@example.com', contactPhone: '555-0103', behaviorHistory: 'Likes to nap on his doghouse, philosophical.', lastSession: '2024-07-18', nextSession: '2024-08-01' },
-  { id: '4', name: 'Diana Prince', dogName: 'Krypto (visiting)', dogBreed: 'Golden Retriever', contactEmail: 'diana@example.com', contactPhone: '555-0104', behaviorHistory: 'Noble and strong, occasionally flies.', lastSession: '2024-06-20', nextSession: 'Not Scheduled' },
+  { 
+    id: '1', 
+    ownerFirstName: 'Alice', 
+    ownerLastName: 'Wonderland', 
+    contactEmail: 'alice@example.com', 
+    contactNumber: '555-0101', 
+    postcode: 'EC1A 1BB',
+    dogName: 'Cheshire', 
+    dogSex: 'Male',
+    dogBreed: 'British Shorthair', 
+    lifeWithDogAndHelpNeeded: 'Very curious, tends to disappear and reappear unexpectedly. Needs help with staying present.', 
+    bestOutcome: 'For Cheshire to be more grounded and less prone to vanishing acts.',
+    idealSessionTypes: ['In-Person Session', 'Online Session'],
+    submissionDate: format(new Date('2024-07-01'), "yyyy-MM-dd HH:mm:ss"),
+    lastSession: '2024-07-15', 
+    nextSession: '2024-07-29' 
+  },
+  { 
+    id: '2', 
+    ownerFirstName: 'Bob', 
+    ownerLastName: 'The Builder', 
+    contactEmail: 'bob@example.com', 
+    contactNumber: '555-0102', 
+    postcode: 'SW1A 0AA',
+    dogName: 'Scoop', 
+    dogSex: 'Male',
+    dogBreed: 'Labrador Retriever', 
+    lifeWithDogAndHelpNeeded: 'Good with tools, a bit clumsy. Could use some focus training.', 
+    bestOutcome: 'Scoop to be more agile and less likely to knock things over.',
+    idealSessionTypes: ['In-Person Session'],
+    submissionDate: format(new Date('2024-07-05'), "yyyy-MM-dd HH:mm:ss"),
+    lastSession: '2024-07-10', 
+    nextSession: '2024-07-24' 
+  },
+  { 
+    id: '3', 
+    ownerFirstName: 'Charlie', 
+    ownerLastName: 'Brown', 
+    contactEmail: 'charlie@example.com', 
+    contactNumber: '555-0103', 
+    postcode: 'W1A 0AX',
+    dogName: 'Snoopy', 
+    dogSex: 'Male',
+    dogBreed: 'Beagle', 
+    lifeWithDogAndHelpNeeded: 'Likes to nap on his doghouse, philosophical. Needs motivation for active training.', 
+    bestOutcome: 'Snoopy to engage more during training sessions.',
+    idealSessionTypes: ['Online Session'],
+    submissionDate: format(new Date('2024-07-10'), "yyyy-MM-dd HH:mm:ss"),
+    lastSession: '2024-07-18', 
+    nextSession: '2024-08-01' 
+  },
 ];
 
 export let mockSessions: Session[] = [
@@ -17,22 +65,16 @@ export let mockSessions: Session[] = [
   { id: '5', clientId: '2', clientName: 'Bob The Builder', dogName: 'Scoop', date: '2024-08-07', time: '02:00 PM', status: 'Completed' },
 ];
 
-// The addClient function is removed as client addition for the ClientsPage
-// is now handled by addClientToFirestore in src/lib/firebase.ts.
-// The mockClients array above might still be used by other parts of the app
-// (e.g., session creation dropdown) until they are also migrated to Firestore.
 
 export const addSession = (session: Omit<Session, 'id' | 'status' | 'clientName' | 'dogName'>, client: Client): Session => {
   const newSession: Session = { 
     ...session, 
     id: String(Date.now()), 
     status: 'Scheduled',
-    clientName: client.name,
+    clientName: `${client.ownerFirstName} ${client.ownerLastName}`,
     dogName: client.dogName,
   };
   mockSessions = [...mockSessions, newSession];
-  // In a full Firestore integration, this would also update client.nextSession in Firestore.
-  // For now, we might also want to update the mockClient in mockClients array.
   const clientIndex = mockClients.findIndex(c => c.id === client.id);
   if (clientIndex > -1) {
     mockClients[clientIndex] = { ...mockClients[clientIndex], nextSession: session.date };

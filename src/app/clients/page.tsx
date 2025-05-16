@@ -6,7 +6,7 @@ import type { Client, Session } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays, Loader2, User, Dog, Mail, Phone, ClipboardList, History as HistoryIcon, X, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, CalendarDays as IconCalendarDays, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"; // Kept for Add Client Modal
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,23 +33,31 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore } from '@/lib/firebase'; 
+import { getClients, addClientToFirestore as fbAddClient } from '@/lib/firebase'; 
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft } from 'lucide-react';
 
-const clientFormSchema = z.object({
-  name: z.string().min(2, { message: "Client name must be at least 2 characters." }),
-  dogName: z.string().min(1, { message: "Dog name is required." }),
-  dogBreed: z.string().min(2, { message: "Dog breed must be at least 2 characters." }),
+// Simplified Zod schema for internal "Add New Client" modal
+// This can be simpler than the public behavioural brief.
+const internalClientFormSchema = z.object({
+  ownerFirstName: z.string().min(1, { message: "First name is required." }),
+  ownerLastName: z.string().min(1, { message: "Last name is required." }),
   contactEmail: z.string().email({ message: "Invalid email address." }),
-  contactPhone: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
-  behaviorHistory: z.string().optional(),
+  contactNumber: z.string().min(5, { message: "Contact number is required." }),
+  postcode: z.string().min(3, { message: "Postcode is required." }),
+  dogName: z.string().min(1, { message: "Dog's name is required." }),
+  dogBreed: z.string().min(1, { message: "Dog's breed is required." }),
+  dogSex: z.enum(['Male', 'Female', ''], { required_error: "Dog's sex is required."}).refine(val => val !== '', { message: "Dog's sex is required." }),
+  // Optional fields for quick add, can be expanded later via detailed view/edit
+  lifeWithDogAndHelpNeeded: z.string().optional(),
+  bestOutcome: z.string().optional(),
+  idealSessionTypes: z.array(z.string()).optional(),
 });
 
-type ClientFormValues = z.infer<typeof clientFormSchema>;
+type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
 
-// Client Detail View Component (can be in the same file or separate)
 interface ClientDetailViewProps {
   client: Client;
   sessions: Session[];
@@ -61,7 +69,7 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">
-          {client.name} &amp; {client.dogName}
+          {client.ownerFirstName} {client.ownerLastName} &amp; {client.dogName}
         </h2>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -69,39 +77,73 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
         </Button>
       </div>
       
-      <ScrollArea className="h-[calc(100vh-200px)] pr-4"> {/* Adjust height as needed */}
+      <ScrollArea className="h-[calc(100vh-240px)] pr-4"> {/* Adjusted height */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <User className="mr-2 h-5 w-5 text-primary" /> Client & Dog Information
+                <IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div><strong>Client Name:</strong> {client.name}</div>
-                <div><strong>Dog's Name:</strong> {client.dogName}</div>
-                <div><strong>Dog's Breed:</strong> {client.dogBreed}</div>
-              </div>
-              <div className="text-sm pt-2">
-                <strong className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/>Email:</strong> {client.contactEmail}
-              </div>
-              <div className="text-sm">
-                <strong className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/>Phone:</strong> {client.contactPhone}
-              </div>
-              {client.behaviorHistory && (
-                <div className="text-sm pt-2">
-                  <strong className="flex items-center"><ClipboardList className="mr-2 h-4 w-4 text-muted-foreground"/>Behavior History:</strong>
-                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.behaviorHistory}</p>
-                </div>
-              )}
+            <CardContent className="space-y-3 text-sm">
+              <div><strong>Owner:</strong> {client.ownerFirstName} {client.ownerLastName}</div>
+              <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> {client.contactEmail}</div>
+              <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Contact Number:</strong> {client.contactNumber}</div>
+              <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {client.postcode}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <HistoryIcon className="mr-2 h-5 w-5 text-primary" /> Session History
+                <Dog className="mr-2 h-5 w-5 text-primary" /> Dog Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div><strong>Name:</strong> {client.dogName}</div>
+              <div><strong>Breed:</strong> {client.dogBreed}</div>
+              <div><strong>Sex:</strong> {client.dogSex}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <Info className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {client.lifeWithDogAndHelpNeeded && (
+                <div>
+                  <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.lifeWithDogAndHelpNeeded}</p>
+                </div>
+              )}
+              {client.bestOutcome && (
+                <div className="pt-2">
+                  <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{client.bestOutcome}</p>
+                </div>
+              )}
+              {client.idealSessionTypes && client.idealSessionTypes.length > 0 && (
+                 <div className="pt-2">
+                  <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
+                  <ul className="list-disc list-inside mt-1 text-muted-foreground">
+                    {client.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
+                  </ul>
+                </div>
+              )}
+              <div className="pt-2">
+                  <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Submission Date:</strong>
+                  <p className="mt-1 text-muted-foreground">{client.submissionDate ? format(new Date(client.submissionDate), 'PPP p') : 'N/A'}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <Activity className="mr-2 h-5 w-5 text-primary" /> Session History
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -152,12 +194,25 @@ export default function ClientsPage() {
 
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ClientFormValues>({
-    resolver: zodResolver(clientFormSchema),
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<InternalClientFormValues>({
+    resolver: zodResolver(internalClientFormSchema),
+     defaultValues: {
+      ownerFirstName: '',
+      ownerLastName: '',
+      contactEmail: '',
+      contactNumber: '',
+      postcode: '',
+      dogName: '',
+      dogBreed: '',
+      dogSex: '', // Initialize select to empty string
+      lifeWithDogAndHelpNeeded: '',
+      bestOutcome: '',
+      idealSessionTypes: [],
+    }
   });
 
   useEffect(() => {
-    if (!selectedClient) { // Only fetch clients if no client is selected (i.e., we are in list view)
+    if (!selectedClient) {
       const fetchClients = async () => {
         if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
           toast({
@@ -173,7 +228,7 @@ export default function ClientsPage() {
           setIsLoading(true);
           setError(null);
           const firestoreClients = await getClients();
-          setClients(firestoreClients.sort((a, b) => (a.name > b.name) ? 1 : -1));
+          setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
         } catch (err) {
           console.error("Error fetching clients:", err);
           const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
@@ -189,9 +244,9 @@ export default function ClientsPage() {
       };
       fetchClients();
     }
-  }, [toast, selectedClient]); // Add selectedClient to dependency array
+  }, [toast, selectedClient]);
 
-  const handleAddClient: SubmitHandler<ClientFormValues> = async (data) => {
+  const handleAddClient: SubmitHandler<InternalClientFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       toast({
         title: "Firebase Not Configured",
@@ -202,12 +257,15 @@ export default function ClientsPage() {
     }
     setIsSubmitting(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = data;
-      const newClient = await addClientToFirestore(clientDataForFirestore);
-      setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.name > b.name) ? 1 : -1));
+      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt' | 'submissionDate'> = {
+        ...data,
+        submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"), // Add submission date for internal adds too
+      };
+      const newClient = await fbAddClient(clientDataForFirestore);
+      setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
       toast({
         title: "Client Added",
-        description: `${newClient.name} has been successfully added.`,
+        description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.`,
       });
       reset();
       setIsAddClientModalOpen(false);
@@ -255,15 +313,43 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
               <DialogDescription>
-                Fill in the details below to add a new client to your records.
+                Fill in the details below to add a new client. More details can be added from the client's page.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddClient)} className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Client Name</Label>
+                <Label htmlFor="ownerFirstName" className="text-right">First Name</Label>
                 <div className="col-span-3">
-                  <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} disabled={isSubmitting} />
-                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmitting} />
+                  {errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{errors.ownerFirstName.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="ownerLastName" className="text-right">Last Name</Label>
+                <div className="col-span-3">
+                  <Input id="ownerLastName" {...register("ownerLastName")} className={errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmitting} />
+                  {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="contactEmail" className="text-right">Email</Label>
+                <div className="col-span-3">
+                  <Input id="contactEmail" type="email" {...register("contactEmail")} className={errors.contactEmail ? "border-destructive" : ""} disabled={isSubmitting}/>
+                  {errors.contactEmail && <p className="text-xs text-destructive mt-1">{errors.contactEmail.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="contactNumber" className="text-right">Number</Label>
+                <div className="col-span-3">
+                  <Input id="contactNumber" type="tel" {...register("contactNumber")} className={errors.contactNumber ? "border-destructive" : ""} disabled={isSubmitting}/>
+                  {errors.contactNumber && <p className="text-xs text-destructive mt-1">{errors.contactNumber.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="postcode" className="text-right">Postcode</Label>
+                <div className="col-span-3">
+                  <Input id="postcode" {...register("postcode")} className={errors.postcode ? "border-destructive" : ""} disabled={isSubmitting}/>
+                  {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -280,24 +366,15 @@ export default function ClientsPage() {
                   {errors.dogBreed && <p className="text-xs text-destructive mt-1">{errors.dogBreed.message}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contactEmail" className="text-right">Email</Label>
-                <div className="col-span-3">
-                  <Input id="contactEmail" type="email" {...register("contactEmail")} className={errors.contactEmail ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.contactEmail && <p className="text-xs text-destructive mt-1">{errors.contactEmail.message}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contactPhone" className="text-right">Phone</Label>
-                <div className="col-span-3">
-                  <Input id="contactPhone" type="tel" {...register("contactPhone")} className={errors.contactPhone ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.contactPhone && <p className="text-xs text-destructive mt-1">{errors.contactPhone.message}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="behaviorHistory" className="text-right pt-2">Behavior History</Label>
-                <div className="col-span-3">
-                  <Textarea id="behaviorHistory" {...register("behaviorHistory")} placeholder="Optional: Notes on behavior, training goals, etc." rows={3} disabled={isSubmitting} />
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="dogSex" className="text-right">Dog's Sex</Label>
+                 <div className="col-span-3">
+                    <select id="dogSex" {...register("dogSex")} className={`w-full p-2 border rounded-md ${errors.dogSex ? "border-destructive" : "border-input"}`} disabled={isSubmitting}>
+                        <option value="">Select Sex</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                    {errors.dogSex && <p className="text-xs text-destructive mt-1">{errors.dogSex.message}</p>}
                 </div>
               </div>
               <DialogFooter>
@@ -341,7 +418,7 @@ export default function ClientsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Client Name</TableHead>
+                  <TableHead>Owner Name</TableHead>
                   <TableHead>Dog Name</TableHead>
                   <TableHead>Dog Breed</TableHead>
                   <TableHead>Contact</TableHead>
@@ -352,12 +429,12 @@ export default function ClientsPage() {
               <TableBody>
                 {clients.map((client) => (
                   <TableRow key={client.id} onClick={() => handleRowClick(client)} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell className="font-medium">{client.ownerFirstName} {client.ownerLastName}</TableCell>
                     <TableCell>{client.dogName}</TableCell>
                     <TableCell>{client.dogBreed}</TableCell>
                     <TableCell>
                       <div>{client.contactEmail}</div>
-                      <div className="text-xs text-muted-foreground">{client.contactPhone}</div>
+                      <div className="text-xs text-muted-foreground">{client.contactNumber}</div>
                     </TableCell>
                     <TableCell>
                       {client.nextSession !== 'Not Scheduled' ? (
@@ -381,7 +458,7 @@ export default function ClientsPage() {
                             Edit Client
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={(e) => e.stopPropagation() /* TODO: Implement Schedule */}>
-                            <CalendarDays className="mr-2 h-4 w-4" />
+                            <IconCalendarDays className="mr-2 h-4 w-4" />
                             Schedule Session
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
