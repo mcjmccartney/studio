@@ -11,7 +11,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
+  // SidebarTrigger, // No longer used in this version of header
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const isMobile = useIsMobile();
   const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <SidebarProvider defaultOpen>
@@ -59,13 +61,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <SidebarInset>
-        {/* Header removed as per previous request */}
+        {/* Header removed as per user request */}
         <div
           className={cn(
-            "flex-1 overflow-auto",
-            useSpecialBackground ? "bg-[#4f6749]" : "bg-[#fafafa]",
-            useSpecialBackground ? "" : "p-6", // Padding applied only if not a special background page
-            mounted && isMobile ? "pb-16" : "" // Padding for bottom nav
+            "flex-1 overflow-auto", // Base class
+
+            // Styles applied *before* client-side mount (SSR and initial client render)
+            !mounted && "bg-background p-6",
+
+            // Styles applied *after* client-side mount
+            mounted && (
+              useSpecialBackground 
+                ? "bg-[#4f6749]" // For special pages, green bg. Page itself handles padding.
+                : "bg-[#fafafa] p-6" // For other pages, #fafafa bg with p-6 from layout.
+            ),
+            
+            // Mobile-specific padding, applied only after mount when isMobile is reliable
+            mounted && isMobile && "pb-16" 
           )}
         >
           {children}
