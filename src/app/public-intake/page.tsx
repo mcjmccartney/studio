@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardDescription
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +19,8 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-// Schema based on the Squarespace form structure
+
+// Schema based on the Squarespace form structure from the provided HTML
 const behaviouralBriefSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
@@ -32,8 +33,8 @@ const behaviouralBriefSchema = z.object({
   dogBreed: z.string().min(1, { message: "Dog breed is required." }),
   lifeWithDogAndHelpNeeded: z.string().min(1, { message: "This field is required." }),
   bestOutcome: z.string().min(1, { message: "This field is required." }),
-  idealSessionTypes: z.array(z.string()).optional(),
-  submissionDate: z.string().min(1, {message: "Submission date is required."}),
+  idealSessionTypes: z.array(z.string()).optional(), // Optional based on HTML (no 'required' on fieldset)
+  submissionDate: z.string().min(1, {message: "Submission date is required."}), // Will be set automatically
 });
 
 
@@ -46,7 +47,7 @@ const sessionTypeOptions = [
 
 export default function BehaviouralBriefPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
+  const [currentSubmissionDate, setCurrentSubmissionDate] = useState(''); // Initialized to empty string
   const { toast } = useToast();
   
   useEffect(() => {
@@ -61,12 +62,12 @@ export default function BehaviouralBriefPage() {
     contactNumber: '',
     postcode: '',
     dogName: '',
-    dogSex: undefined as 'Male' | 'Female' | undefined,
+    dogSex: undefined as 'Male' | 'Female' | undefined, // Important for Select placeholder
     dogBreed: '',
     lifeWithDogAndHelpNeeded: '',
     bestOutcome: '',
     idealSessionTypes: [],
-    submissionDate: '', 
+    submissionDate: '', // This will be updated by useEffect and before submission
   }), []);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
@@ -74,11 +75,13 @@ export default function BehaviouralBriefPage() {
     defaultValues: memoizedDefaultValues
   });
 
+  // Sync currentSubmissionDate (client-side generated) with the form's submissionDate field
   useEffect(() => {
     if (currentSubmissionDate) {
       setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
     }
   }, [currentSubmissionDate, setValue]);
+
 
   const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -91,8 +94,9 @@ export default function BehaviouralBriefPage() {
     }
     setIsSubmitting(true);
     try {
+      // Ensure the submissionDate is the most current at the time of submission
       const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      const submissionDataWithPreciseTimestamp = {
+      const submissionDataWithPreciseTimestamp: BehaviouralBriefFormValues = {
         ...data,
         submissionDate: submissionTimestamp,
       };
@@ -103,11 +107,12 @@ export default function BehaviouralBriefPage() {
         description: "Thank you for submitting your Behavioural Brief. We will be in touch shortly.",
       });
       
+      // Reset form and update currentSubmissionDate for the next potential form use
       const newDateForNextForm = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      setCurrentSubmissionDate(newDateForNextForm); 
-      reset({ 
+      setCurrentSubmissionDate(newDateForNextForm); // Update state for next render
+      reset({ // Pass the full default object, including the new submissionDate
         ...memoizedDefaultValues, 
-        submissionDate: newDateForNextForm, 
+        submissionDate: newDateForNextForm, // Ensure this is part of the reset
       });
     } catch (err) {
       console.error("Error submitting behavioural brief to Firestore:", err);
@@ -122,9 +127,10 @@ export default function BehaviouralBriefPage() {
     }
   };
 
+  // Helper component for section titles based on Squarespace form structure
   const SectionTitle: React.FC<{ title: string, description?: string }> = ({ title, description }) => (
     <>
-      <div className="pt-4 pb-2">
+      <div className="pt-4 pb-2"> {/* Added pt-4 to match Squarespace section spacing */}
         <h2 className="text-lg font-semibold uppercase text-foreground">{title}</h2>
         {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
       </div>
@@ -132,16 +138,17 @@ export default function BehaviouralBriefPage() {
     </>
   );
   
+  // Helper component for consistent form field layout
   const FormFieldWrapper: React.FC<{ 
     label?: string; 
-    htmlForProp?: keyof BehaviouralBriefFormValues | string; 
-    error?: string | boolean; 
+    htmlForProp?: keyof BehaviouralBriefFormValues | string; // To allow string for sub-labels
+    error?: string | boolean; // Accept boolean for cases where only styling changes
     children: React.ReactNode; 
     required?: boolean; 
     description?: string;
-    className?: string;
+    className?: string; // Allow additional classes for specific fields
   }> = ({ label, htmlForProp, error, children, required, description, className }) => (
-    <div className={cn("space-y-1.5 mb-5", className)}>
+    <div className={cn("space-y-1.5 mb-5", className)}> {/* Default bottom margin for spacing */}
       {label && (
         <Label htmlFor={htmlForProp as string | undefined} className="font-medium text-foreground text-sm">
           {label}
@@ -156,19 +163,21 @@ export default function BehaviouralBriefPage() {
 
 
   return (
-    <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+    // Removed bg-[#4f6749] as it's now handled by the layout
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <h1 className="text-4xl font-bold text-[#ebeadf] text-center mb-10">
         Behavioural Brief
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
-        <CardContent className="p-6 sm:p-8">
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0">
+        <CardContent className="p-6 sm:p-8"> {/* Added sm:p-8 for slightly more padding on larger screens */}
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0"> {/* Removed space-y-6 to use FormFieldWrapper's margin */}
             
             <SectionTitle title="CONTACT INFORMATION" />
             
+            {/* Owner Name - Split into First and Last Name */}
             <FormFieldWrapper 
               label="Owner Name" 
-              htmlForProp="ownerFirstName" 
+              htmlForProp="ownerFirstName" // Points to the first input in the group
               error={errors.ownerFirstName?.message || errors.ownerLastName?.message} 
               required
             >
@@ -298,6 +307,7 @@ export default function BehaviouralBriefPage() {
                 disabled={isSubmitting} 
                 rows={4}/>
             </FormFieldWrapper>
+            {/* Which type of session would you ideally like? - Checkbox Group */}
             <FormFieldWrapper label="Which type of session would you ideally like?" htmlForProp="idealSessionTypes" error={errors.idealSessionTypes?.message} className="mb-6">
               <Controller
                 name="idealSessionTypes"
@@ -330,9 +340,10 @@ export default function BehaviouralBriefPage() {
               />
             </FormFieldWrapper>
             
+            {/* Hidden input for submissionDate, automatically populated */}
             <input type="hidden" {...register("submissionDate")} />
             
-            <div className="pt-6">
+            <div className="pt-6"> {/* Spacing for the submit button */}
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base bg-[#4f6749] text-black hover:bg-[#4f6749]/90" 
