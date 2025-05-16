@@ -10,7 +10,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger, // Ensure SidebarTrigger is imported
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "flex-1 overflow-auto", // Common classes for scrolling and flex growth
             isPublicIntakePage
               ? "bg-[#4f6749]" // Public intake page gets green background, its own internal padding handles spacing
-              : "bg-[#ebeadf] p-6" // All other pages get beige background AND p-6 padding from the layout
+              : "bg-background p-6" // All other pages get theme background AND p-6 padding from the layout
           )}
         >
           {children}
