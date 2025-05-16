@@ -7,8 +7,8 @@ import { mockSessions as initialMockSessions, mockClients, addSession as apiAddS
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid, getYear, getMonth } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
@@ -60,9 +61,91 @@ interface GroupedSessions {
   [monthYear: string]: Session[];
 }
 
+// Session Detail View Component
+interface SessionDetailViewProps {
+  session: Session;
+  onBack: () => void;
+}
+
+function SessionDetailView({ session, onBack }: SessionDetailViewProps) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Details</h1>
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Sessions
+        </Button>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <Users className="mr-2 h-5 w-5 text-primary" /> Client & Dog
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div><strong>Client:</strong> {session.clientName}</div>
+              <div><strong>Dog:</strong> {session.dogName} <PawPrint className="inline h-4 w-4 ml-1 text-muted-foreground" /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <CalendarIconLucide className="mr-2 h-5 w-5 text-primary" /> Date & Time
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div><strong>Date:</strong> {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
+              <div><strong>Time:</strong> {session.time}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <Info className="mr-2 h-5 w-5 text-primary" /> Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                variant={
+                  session.status === 'Scheduled' ? 'default' :
+                  session.status === 'Completed' ? 'secondary' : 'outline'
+                }
+                className="text-sm px-3 py-1" // Slightly larger badge
+              >
+                {session.status}
+              </Badge>
+            </CardContent>
+          </Card>
+
+          {session.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <ClipboardList className="mr-2 h-5 w-5 text-primary" /> Session Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <p className="whitespace-pre-wrap text-muted-foreground">{session.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>(initialMockSessions);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const { toast } = useToast();
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<SessionFormValues>({
@@ -114,9 +197,21 @@ export default function SessionsPage() {
     }, {} as GroupedSessions);
   };
 
+  const handleSessionClick = (session: Session) => {
+    setSelectedSession(session);
+  };
+
+  const handleBackToSessionList = () => {
+    setSelectedSession(null);
+  };
+
+  if (selectedSession) {
+    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} />;
+  }
+
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
-    const dateA = parseISO(`01 ${a}`);
+    const dateA = parseISO(`01 ${a}`); // parse "Month YYYY" string
     const dateB = parseISO(`01 ${b}`);
     return dateB.getTime() - dateA.getTime(); 
   });
@@ -135,7 +230,7 @@ export default function SessionsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add New Session</DialogTitle> {/* Removed font-serif */}
+              <DialogTitle>Add New Session</DialogTitle>
               <DialogDescription>
                 Schedule a new training session. Select a client, date, and time.
               </DialogDescription>
@@ -246,15 +341,15 @@ export default function SessionsPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>All Sessions</CardTitle> {/* Removed font-serif */}
-          <CardDescription>Browse sessions organized by month.</CardDescription>
+          <CardTitle>All Sessions</CardTitle>
+          <CardDescription>Browse sessions organized by month. Click a session to view details.</CardDescription>
         </CardHeader>
         <CardContent>
           {sortedMonthKeys.length > 0 ? (
-            <Accordion type="multiple" className="w-full">
+            <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
               {sortedMonthKeys.map((monthYear) => (
                 <AccordionItem value={monthYear} key={monthYear}>
-                  <AccordionTrigger className="text-lg font-medium hover:no-underline"> {/* Removed font-serif */}
+                  <AccordionTrigger className="text-lg font-medium hover:no-underline">
                     {monthYear} ({groupedSessions[monthYear].length} sessions)
                   </AccordionTrigger>
                   <AccordionContent>
@@ -262,10 +357,14 @@ export default function SessionsPage() {
                       {groupedSessions[monthYear]
                         .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) 
                         .map(session => (
-                        <li key={session.id} className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm">
+                        <li 
+                          key={session.id} 
+                          className="p-4 rounded-md border bg-card hover:bg-muted/50 transition-colors shadow-sm cursor-pointer"
+                          onClick={() => handleSessionClick(session)}
+                        >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3> {/* Removed font-serif */}
+                              <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
                               <p className="text-sm text-muted-foreground">
                                 <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
                                 {format(parseISO(session.date), 'EEEE, MMMM do, yyyy')}
@@ -295,3 +394,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+    
