@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,7 +32,7 @@ const behaviouralBriefSchema = z.object({
   lifeWithDogAndHelpNeeded: z.string().min(1, { message: "This field is required." }),
   bestOutcome: z.string().min(1, { message: "This field is required." }),
   idealSessionTypes: z.array(z.string()).optional(),
-  submissionDate: z.string(), // Will be auto-filled
+  submissionDate: z.string().min(1, {message: "Submission date is required."}), // Will be auto-filled client-side
 });
 
 type BehaviouralBriefFormValues = z.infer<typeof behaviouralBriefSchema>;
@@ -50,33 +50,50 @@ export default function BehaviouralBriefPage() {
   const { toast } = useToast();
   
   useEffect(() => {
+    // Set currentSubmissionDate on client mount to avoid hydration mismatch
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   }, []);
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
+  const memoizedDefaultValues = useMemo(() => ({
+    ownerFirstName: '',
+    ownerLastName: '',
+    contactEmail: '',
+    contactNumber: '',
+    postcode: '',
+    dogName: '',
+    dogSex: undefined as 'Male' | 'Female' | undefined, // Explicitly type for Select placeholder
+    dogBreed: '',
+    lifeWithDogAndHelpNeeded: '',
+    bestOutcome: '',
+    idealSessionTypes: [],
+    submissionDate: '', // Will be updated by useEffect below
+  }), []);
+
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
     resolver: zodResolver(behaviouralBriefSchema),
-    defaultValues: {
-      submissionDate: '', // Initialize with empty or ensure it's updated by useEffect effect on currentSubmissionDate
-      ownerFirstName: '',
-      ownerLastName: '',
-      contactEmail: '',
-      contactNumber: '',
-      postcode: '',
-      dogName: '',
-      dogSex: undefined, 
-      dogBreed: '',
-      lifeWithDogAndHelpNeeded: '',
-      bestOutcome: '',
-      idealSessionTypes: [],
-    }
+    defaultValues: memoizedDefaultValues
   });
 
-  // Effect to update form's submissionDate default value when currentSubmissionDate changes from initial mount
+  // Effect to update form's internal submissionDate value when currentSubmissionDate state changes
   useEffect(() => {
     if (currentSubmissionDate) {
-      reset({ ...control._defaultValues, submissionDate: currentSubmissionDate }, { keepValues: true });
+      setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
     }
-  }, [currentSubmissionDate, reset, control._defaultValues]);
+  }, [currentSubmissionDate, setValue]);
+
+  const memoizedResetValues = useMemo(() => ({
+    ownerFirstName: '',
+    ownerLastName: '',
+    contactEmail: '',
+    contactNumber: '',
+    postcode: '',
+    dogName: '',
+    dogSex: undefined as 'Male' | 'Female' | undefined,
+    dogBreed: '',
+    lifeWithDogAndHelpNeeded: '',
+    bestOutcome: '',
+    idealSessionTypes: [],
+  }), []);
 
 
   const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
@@ -90,16 +107,15 @@ export default function BehaviouralBriefPage() {
     }
     setIsSubmitting(true);
     try {
-      // Ensure submissionDate is current at the time of submission, taken from the hidden input
-      // The hidden input's value is driven by `currentSubmissionDate` state, which is fine.
-      // Or, if we want the exact moment of submission:
+      // Ensure submissionDate is current at the time of submission, overriding form field if necessary for precision
       const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      const submissionData = {
+      const submissionDataWithPreciseTimestamp = {
         ...data,
         submissionDate: submissionTimestamp,
       };
 
-      const clientDataForFirestore: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = submissionData;
+      // Cast to Omit as per addClientToFirestore signature, id, lastSession, etc. are handled by backend/defaults
+      const clientDataForFirestore = submissionDataWithPreciseTimestamp as Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'>;
       
       await addClientToFirestore(clientDataForFirestore);
       toast({
@@ -108,11 +124,9 @@ export default function BehaviouralBriefPage() {
       });
       
       const newDateForNextForm = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      setCurrentSubmissionDate(newDateForNextForm); // Update for next potential form use
-      reset({ // Reset form to initial state but with new submission date for hidden field
-        ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '',
-        dogName: '', dogSex: undefined, dogBreed: '', lifeWithDogAndHelpNeeded: '', bestOutcome: '',
-        idealSessionTypes: [],
+      setCurrentSubmissionDate(newDateForNextForm); // Update state for hidden input's next value
+      reset({ // Reset form to initial state but with new submission date for RHF state
+        ...memoizedResetValues,
         submissionDate: newDateForNextForm, 
       });
     } catch (err) {
@@ -136,9 +150,9 @@ export default function BehaviouralBriefPage() {
     </>
   );
   
-  const FormField: React.FC<{ label: string; htmlForProp: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlForProp, error, children, required, description }) => (
+  const FormField: React.FC<{ label: string; htmlForProp?: keyof BehaviouralBriefFormValues, error?: string, children: React.ReactNode, required?: boolean, description?: string }> = ({ label, htmlForProp, error, children, required, description }) => (
     <div className="space-y-2 mb-4">
-      <Label htmlFor={htmlForProp}>{label}{required && <span className="text-destructive">*</span>}</Label>
+      <Label htmlFor={htmlForProp as string | undefined}>{label}{required && <span className="text-destructive">*</span>}</Label>
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
       {children}
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
@@ -158,7 +172,7 @@ export default function BehaviouralBriefPage() {
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             
             <SectionTitle title="CONTACT INFORMATION" />
-            <FormField label="Owner Name" htmlForProp="ownerFirstName" error={errors.ownerFirstName?.message || errors.ownerLastName?.message} required>
+            <FormField label="Owner Name" error={errors.ownerFirstName?.message || errors.ownerLastName?.message} required>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ownerFirstName" className="text-xs text-muted-foreground">First Name</Label>
@@ -222,10 +236,11 @@ export default function BehaviouralBriefPage() {
                           id={`sessionType-${option.id}`}
                           checked={field.value?.includes(option.label)}
                           onCheckedChange={(checked) => {
+                            const currentValue = field.value || [];
                             return checked
-                              ? field.onChange([...(field.value || []), option.label])
+                              ? field.onChange([...currentValue, option.label])
                               : field.onChange(
-                                  (field.value || []).filter(
+                                  currentValue.filter(
                                     (value) => value !== option.label
                                   )
                                 );
@@ -240,9 +255,9 @@ export default function BehaviouralBriefPage() {
               />
             </FormField>
             
-            <input type="hidden" {...register("submissionDate")} value={currentSubmissionDate} />
-            {/* Date of Submission display removed */}
-
+            {/* Hidden input to carry the submissionDate, value driven by currentSubmissionDate state, registered with RHF */}
+            <input type="hidden" {...register("submissionDate")} />
+            
             <div className="pt-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -252,8 +267,6 @@ export default function BehaviouralBriefPage() {
           </form>
         </CardContent>
       </Card>
-      {/* Thank you message paragraph removed */}
     </div>
   );
 }
-
