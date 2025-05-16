@@ -4,9 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardDescription
 import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays } from 'lucide-react';
-import Image from 'next/image'; // Import next/image
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -134,12 +134,11 @@ function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: Client
         <div className="flex items-center gap-2">
             {client.isMember && (
                  <Image
-                    src="https://placehold.co/40x40.png"
+                    src="https://iili.io/34300ox.md.jpg"
                     alt="Member Icon"
                     width={40}
                     height={40}
                     className="rounded-md"
-                    data-ai-hint="company logo"
                   />
             )}
             <h2 className="text-2xl font-bold tracking-tight">
@@ -643,8 +642,7 @@ export default function ClientsPage() {
         </Dialog>
       </div>
       <Card className="shadow-lg">
-        {/* CardHeader removed as per user request */}
-        <CardContent className="pt-6"> {/* Added pt-6 to compensate for removed CardHeader */}
+        <CardContent className="pt-6">
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -664,7 +662,7 @@ export default function ClientsPage() {
             </p>
           )}
           {!isLoading && !error && clients.length > 0 && (
-            <div className="space-y-2"> {/* Reduced space-y for a tighter list */}
+            <div className="space-y-2">
               {clients.map((client) => (
                 <div 
                   key={client.id} 
@@ -674,18 +672,20 @@ export default function ClientsPage() {
                   <div className="flex items-center gap-3">
                     {client.isMember && (
                       <Image
-                        src="https://placehold.co/32x32.png" // Using a 32x32 placeholder
-                        alt="Member Logo"
+                        src="https://iili.io/34300ox.md.jpg"
+                        alt="Member Icon"
                         width={32}
                         height={32}
                         className="rounded-md"
-                        data-ai-hint="company logo"
                       />
                     )}
                     <div>
                       <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
                       {client.dogName && (
-                        <p className="text-sm text-muted-foreground">{client.dogName}</p>
+                        <p className="text-sm text-muted-foreground flex items-center">
+                           <PawPrint className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
+                          {client.dogName}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -815,4 +815,3 @@ export default function ClientsPage() {
   );
 }
     
-
