@@ -8,7 +8,7 @@ import {
   doc, 
   getDoc, 
   updateDoc,
-  deleteDoc, // Added deleteDoc
+  deleteDoc,
   serverTimestamp, 
   Timestamp, 
   type DocumentData, 
@@ -114,26 +114,25 @@ const db = getFirestore(app);
 
 const clientConverter: FirestoreDataConverter<Client> = {
   toFirestore(client: Omit<Client, 'id'>): DocumentData {
-    const { behaviouralBriefId, behaviourQuestionnaireId, address, ...contactData } = client;
+    const { behaviouralBriefId, behaviourQuestionnaireId, ...clientData } = client;
     const dataToSave: any = { 
-      ...contactData,
+      ...clientData, // Includes ownerFirstName, ownerLastName, contactEmail, contactNumber, postcode, dogName, isMember, address, howHeardAboutServices
       createdAt: client.createdAt instanceof Date || client.createdAt instanceof Timestamp ? client.createdAt : serverTimestamp(),
       submissionDate: client.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
-      dogName: client.dogName || null,
-      isMember: client.isMember === undefined ? false : client.isMember,
-      postcode: address && address.postcode ? address.postcode : client.postcode, // Ensure postcode is at top level
     };
     if (behaviouralBriefId) dataToSave.behaviouralBriefId = behaviouralBriefId;
     if (behaviourQuestionnaireId) dataToSave.behaviourQuestionnaireId = behaviourQuestionnaireId;
-    if (address) dataToSave.address = address;
     
      Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key] === undefined) {
         if (key === 'dogName') dataToSave[key] = null;
         else if (key === 'isMember') dataToSave[key] = false;
-        else if (key !== 'address' && key !== 'behaviouralBriefId' && key !== 'behaviourQuestionnaireId') { // Don't delete address or IDs if they are meant to be optional
+        else if (key === 'address') dataToSave[key] = null; // or {} depending on desired Firestore representation for empty address
+        else if (key === 'howHeardAboutServices') dataToSave[key] = null;
+        // Don't delete IDs if they are meant to be optional
+        else if (key !== 'behaviouralBriefId' && key !== 'behaviourQuestionnaireId') { 
           delete dataToSave[key]; 
         }
       }
@@ -252,14 +251,14 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
       housetrainedStatus: data.housetrainedStatus || undefined,
       activitiesAsideFromWalks: data.activitiesAsideFromWalks || undefined,
       dogLikes: data.dogLikes || undefined,
-      dogChallenges: data.dogChallenges || undefined,
-      positiveReinforcementMethods: data.positiveReinforcementMethods || undefined,
-      favoriteRewards: data.favoriteRewards || undefined,
-      correctionMethods: data.correctionMethods || undefined,
-      correctionEffects: data.correctionEffects || undefined,
-      previousProfessionalTraining: data.previousProfessionalTraining || undefined,
-      previousTrainingMethodsUsed: data.previousTrainingMethodsUsed || undefined,
-      previousTrainingExperienceResults: data.previousTrainingExperienceResults || undefined,
+      dogChallenges: data.dogChallenges || '',
+      positiveReinforcementMethods: data.positiveReinforcementMethods || '',
+      favoriteRewards: data.favoriteRewards || '',
+      correctionMethods: data.correctionMethods || '',
+      correctionEffects: data.correctionEffects || '',
+      previousProfessionalTraining: data.previousProfessionalTraining || '',
+      previousTrainingMethodsUsed: data.previousTrainingMethodsUsed || '',
+      previousTrainingExperienceResults: data.previousTrainingExperienceResults || '',
       sociabilityWithDogs: data.sociabilityWithDogs || '',
       sociabilityWithPeople: data.sociabilityWithPeople || '',
       additionalInformation: data.additionalInformation || undefined,
@@ -289,7 +288,7 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
-export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean }): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
@@ -317,6 +316,49 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   } as Client; 
 };
 
+// Type for data used when updating a client (subset of Client fields)
+export type EditableClientData = {
+  ownerFirstName?: string;
+  ownerLastName?: string;
+  contactEmail?: string;
+  contactNumber?: string;
+  postcode?: string;
+  dogName?: string;
+  isMember?: boolean;
+  // Note: address and howHeardAboutServices are not part of the internal edit form for now.
+  // submissionDate is system-managed and not typically user-editable.
+};
+
+export const updateClientInFirestore = async (clientId: string, clientData: EditableClientData): Promise<void> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    throw new Error("Firebase project ID is not set. Cannot update client.");
+  }
+  if (!clientId) {
+    throw new Error("Client ID is required to update a client.");
+  }
+  
+  const clientDocRef = doc(clientsCollectionRef, clientId);
+  
+  // Construct the update object, ensuring only defined fields are sent
+  const updateData: Partial<Client> = {};
+  if (clientData.ownerFirstName !== undefined) updateData.ownerFirstName = clientData.ownerFirstName;
+  if (clientData.ownerLastName !== undefined) updateData.ownerLastName = clientData.ownerLastName;
+  if (clientData.contactEmail !== undefined) updateData.contactEmail = clientData.contactEmail;
+  if (clientData.contactNumber !== undefined) updateData.contactNumber = clientData.contactNumber;
+  if (clientData.postcode !== undefined) updateData.postcode = clientData.postcode;
+  if (clientData.dogName !== undefined) updateData.dogName = clientData.dogName;
+  if (clientData.isMember !== undefined) updateData.isMember = clientData.isMember;
+  // Add other editable fields here if needed, ensuring they are part of EditableClientData
+
+  if (Object.keys(updateData).length === 0) {
+    console.warn("No data provided to update client.");
+    return;
+  }
+
+  await updateDoc(clientDocRef, updateData);
+};
+
+
 export const deleteClientFromFirestore = async (clientId: string): Promise<void> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot delete client.");
@@ -330,7 +372,7 @@ export const deleteClientFromFirestore = async (clientId: string): Promise<void>
     // Note: Consider deleting associated behavioural briefs and questionnaires here if needed (cascade delete)
   } catch (error) {
     console.error("Error deleting client from Firestore:", error);
-    throw error; // Re-throw the error to be handled by the caller
+    throw error; 
   }
 };
 
@@ -392,7 +434,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
       addressLine2: formData.addressLine2 || '',
       city: formData.city,
       country: formData.country,
-      postcode: formData.postcode, // Postcode also stored in address object
+      // postcode: formData.postcode, // Postcode also stored in address object - removed redundancy, client.postcode is primary
   };
 
   const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
@@ -448,18 +490,18 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (formData: Be
     housetrainedStatus: formData.housetrainedStatus,
     activitiesAsideFromWalks: formData.activitiesAsideFromWalks,
     dogLikes: formData.dogLikes,
-    dogChallenges: data.dogChallenges,
-    positiveReinforcementMethods: data.positiveReinforcementMethods,
-    favoriteRewards: data.favoriteRewards,
-    correctionMethods: data.correctionMethods,
-    correctionEffects: data.correctionEffects,
-    previousProfessionalTraining: data.previousProfessionalTraining,
-    previousTrainingMethodsUsed: data.previousTrainingMethodsUsed,
-    previousTrainingExperienceResults: data.previousTrainingExperienceResults,
-    sociabilityWithDogs: data.sociabilityWithDogs,
-    sociabilityWithPeople: data.sociabilityWithPeople,
-    additionalInformation: data.additionalInformation,
-    timeDedicatedToTraining: data.timeDedicatedToTraining,
+    dogChallenges: formData.dogChallenges || '',
+    positiveReinforcementMethods: formData.positiveReinforcementMethods || '',
+    favoriteRewards: formData.favoriteRewards || '',
+    correctionMethods: formData.correctionMethods || '',
+    correctionEffects: formData.correctionEffects || '',
+    previousProfessionalTraining: formData.previousProfessionalTraining || '',
+    previousTrainingMethodsUsed: formData.previousTrainingMethodsUsed || '',
+    previousTrainingExperienceResults: formData.previousTrainingExperienceResults || '',
+    sociabilityWithDogs: formData.sociabilityWithDogs || '',
+    sociabilityWithPeople: formData.sociabilityWithPeople || '',
+    additionalInformation: formData.additionalInformation,
+    timeDedicatedToTraining: formData.timeDedicatedToTraining,
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
   };

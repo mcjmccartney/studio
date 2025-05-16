@@ -17,6 +17,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -42,7 +52,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById } from '@/lib/firebase'; 
+import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById, updateClientInFirestore, type EditableClientData } from '@/lib/firebase'; 
 import { mockSessions } from '@/lib/mockData'; 
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -66,9 +76,11 @@ interface ClientDetailViewProps {
   client: Client;
   sessions: Session[];
   onBack: () => void;
+  onEdit: (client: Client) => void;
+  onDelete: (client: Client) => void;
 }
 
-function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
+function ClientDetailView({ client, sessions, onBack, onEdit, onDelete }: ClientDetailViewProps) {
   const [behaviouralBrief, setBehaviouralBrief] = useState<BehaviouralBrief | null>(null);
   const [isLoadingBrief, setIsLoadingBrief] = useState<boolean>(false);
   const [behaviourQuestionnaire, setBehaviourQuestionnaire] = useState<BehaviourQuestionnaire | null>(null);
@@ -120,21 +132,29 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
             {client.isMember && <ShieldCheck className="h-7 w-7 text-primary" />}
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight font-serif">
             {client.ownerFirstName} {client.ownerLastName}
             </h2>
         </div>
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Client List
-        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onEdit(client)}>
+                <Edit className="mr-2 h-4 w-4" /> Edit Client
+            </Button>
+            <Button variant="destructive" onClick={() => onDelete(client)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Client
+            </Button>
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Client List
+            </Button>
+        </div>
       </div>
       
       <ScrollArea className="h-[calc(100vh-240px)] pr-4">
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
+              <CardTitle className="text-lg flex items-center font-serif">
                 <IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Information
               </CardTitle>
             </CardHeader>
@@ -174,14 +194,14 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
 
           {isLoadingBrief && (
             <Card>
-              <CardHeader><CardTitle className="text-lg">Loading Behavioural Brief...</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg font-serif">Loading Behavioural Brief...</CardTitle></CardHeader>
               <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
             </Card>
           )}
           {!isLoadingBrief && behaviouralBrief && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
+                <CardTitle className="text-lg flex items-center font-serif">
                   <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief for {behaviouralBrief.dogName}
                 </CardTitle>
               </CardHeader>
@@ -218,21 +238,21 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
           )}
           {!isLoadingBrief && !behaviouralBrief && client.behaviouralBriefId && (
              <Card>
-                <CardHeader><CardTitle className="text-lg">Behavioural Brief Not Found</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg font-serif">Behavioural Brief Not Found</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">The associated behavioural brief could not be loaded.</p></CardContent>
              </Card>
           )}
 
           {isLoadingQuestionnaire && (
             <Card>
-              <CardHeader><CardTitle className="text-lg">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg font-serif">Loading Behaviour Questionnaire...</CardTitle></CardHeader>
               <CardContent><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
             </Card>
           )}
           {!isLoadingQuestionnaire && behaviourQuestionnaire && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
+                <CardTitle className="text-lg flex items-center font-serif">
                   <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire for {behaviourQuestionnaire.dogName}
                 </CardTitle>
               </CardHeader>
@@ -253,14 +273,14 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
           )}
            {!isLoadingQuestionnaire && !behaviourQuestionnaire && client.behaviourQuestionnaireId && (
              <Card>
-                <CardHeader><CardTitle className="text-lg">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg font-serif">Behaviour Questionnaire Not Found</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">The associated behaviour questionnaire could not be loaded.</p></CardContent>
              </Card>
           )}
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
+              <CardTitle className="text-lg flex items-center font-serif">
                 <Activity className="mr-2 h-5 w-5 text-primary" /> Session History
               </CardTitle>
             </CardHeader>
@@ -304,17 +324,25 @@ function ClientDetailView({ client, sessions, onBack }: ClientDetailViewProps) {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); // Renamed for clarity
   const [error, setError] = useState<string | null>(null);
+  
+  // State for "Add New Client" Dialog
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  
+  // State for "Edit Client" Sheet
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSessions, setClientSessions] = useState<Session[]>([]);
+  
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<InternalClientFormValues>({
+  const addClientForm = useForm<InternalClientFormValues>({
     resolver: zodResolver(internalClientFormSchema),
      defaultValues: {
       ownerFirstName: '',
@@ -327,6 +355,21 @@ export default function ClientsPage() {
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
+
+  const editClientForm = useForm<InternalClientFormValues>({
+    resolver: zodResolver(internalClientFormSchema),
+    defaultValues: {
+      ownerFirstName: '',
+      ownerLastName: '',
+      contactEmail: '',
+      contactNumber: '',
+      postcode: '',
+      dogName: '',
+      isMember: false,
+      // submissionDate is not typically edited here, but schema requires it
+    }
+  });
+
 
   const fetchClients = async () => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -362,20 +405,31 @@ export default function ClientsPage() {
     if (!selectedClient) {
       fetchClients();
     }
-  }, [toast, selectedClient]);
+  }, [selectedClient]); // Removed toast from dependency array as it's stable
+
+  useEffect(() => {
+    if (clientToEdit) {
+      editClientForm.reset({
+        ownerFirstName: clientToEdit.ownerFirstName,
+        ownerLastName: clientToEdit.ownerLastName,
+        contactEmail: clientToEdit.contactEmail,
+        contactNumber: clientToEdit.contactNumber,
+        postcode: clientToEdit.postcode,
+        dogName: clientToEdit.dogName || '',
+        isMember: clientToEdit.isMember || false,
+        submissionDate: clientToEdit.submissionDate, // Keep original submission date
+      });
+    }
+  }, [clientToEdit, editClientForm]);
 
   const handleAddClient: SubmitHandler<InternalClientFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-      toast({
-        title: "Firebase Not Configured",
-        description: "Firebase project ID is missing. Cannot add client.",
-        variant: "destructive",
-      });
+      toast({ title: "Firebase Not Configured", description: "Firebase project ID is missing. Cannot add client.", variant: "destructive" });
       return;
     }
-    setIsSubmitting(true);
+    setIsSubmittingForm(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean } = {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
@@ -387,22 +441,54 @@ export default function ClientsPage() {
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
-      toast({
-        title: "Client Added",
-        description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.`,
-      });
-      reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      toast({ title: "Client Added", description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.` });
+      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientModalOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add client.";
-      toast({
-        title: "Error Adding Client",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Error Adding Client", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingForm(false);
+    }
+  };
+
+  const handleUpdateClient: SubmitHandler<InternalClientFormValues> = async (data) => {
+    if (!clientToEdit) return;
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      toast({ title: "Firebase Not Configured", description: "Firebase project ID is missing. Cannot update client.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingForm(true);
+    try {
+      const updatedData: EditableClientData = {
+        ownerFirstName: data.ownerFirstName,
+        ownerLastName: data.ownerLastName,
+        contactEmail: data.contactEmail,
+        contactNumber: data.contactNumber,
+        postcode: data.postcode,
+        dogName: data.dogName || undefined,
+        isMember: data.isMember || false,
+      };
+      await updateClientInFirestore(clientToEdit.id, updatedData);
+      setClients(prevClients => 
+        prevClients.map(c => 
+          c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName } : c // Ensure dogName is updated or kept
+        ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1))
+      );
+      toast({ title: "Client Updated", description: `${data.ownerFirstName} ${data.ownerLastName} has been successfully updated.` });
+      setIsEditSheetOpen(false);
+      setClientToEdit(null);
+      if (selectedClient && selectedClient.id === clientToEdit.id) {
+        setSelectedClient(clients.find(c => c.id === clientToEdit.id) || null); // refresh selected client if it was the one being edited
+      }
+
+    } catch (err) {
+      console.error("Error updating client in Firestore:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to update client.";
+      toast({ title: "Error Updating Client", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsSubmittingForm(false);
     }
   };
 
@@ -416,11 +502,14 @@ export default function ClientsPage() {
   const handleBackToList = () => {
     setSelectedClient(null);
     setClientSessions([]);
-    // Optionally re-fetch clients if data might have changed while viewing details
-    // fetchClients(); 
+  };
+  
+  const openEditSheet = (client: Client) => {
+    setClientToEdit(client);
+    setIsEditSheetOpen(true);
   };
 
-  const handleDeleteClient = async (client: Client | null) => {
+  const handleDeleteRequest = (client: Client | null) => {
     if (!client) return;
     setClientToDelete(client);
     setIsDeleteDialogOpen(true);
@@ -428,34 +517,32 @@ export default function ClientsPage() {
 
   const handleConfirmDeleteClient = async () => {
     if (!clientToDelete) return;
+    setIsSubmittingForm(true); // Indicate an operation is in progress
     try {
       await deleteClientFromFirestore(clientToDelete.id);
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
-      toast({
-        title: "Client Deleted",
-        description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.`,
-      });
+      toast({ title: "Client Deleted", description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.` });
+      if (selectedClient && selectedClient.id === clientToDelete.id) {
+         setSelectedClient(null); // If the detailed view client was deleted, go back to list
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
-      toast({
-        title: "Error Deleting Client",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Error Deleting Client", description: errorMessage, variant: "destructive" });
     } finally {
       setIsDeleteDialogOpen(false);
       setClientToDelete(null);
+      setIsSubmittingForm(false);
     }
   };
   
   if (selectedClient) {
-    return <ClientDetailView client={selectedClient} sessions={clientSessions} onBack={handleBackToList} />;
+    return <ClientDetailView client={selectedClient} sessions={clientSessions} onBack={handleBackToList} onEdit={openEditSheet} onDelete={handleDeleteRequest} />;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground font-serif">Clients</h1>
         <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -465,66 +552,66 @@ export default function ClientsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add New Client (Quick Add)</DialogTitle>
+              <DialogTitle className="font-serif">Add New Client (Quick Add)</DialogTitle>
               <DialogDescription>
                 Add essential contact and dog information. Full details can be submitted via public forms.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit(handleAddClient)} className="grid gap-4 py-4">
+            <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="ownerFirstName" className="text-right">First Name</Label>
+                <Label htmlFor="add-ownerFirstName" className="text-right">First Name</Label>
                 <div className="col-span-3">
-                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmitting} />
-                  {errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{errors.ownerFirstName.message}</p>}
+                  <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={addClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                  {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="ownerLastName" className="text-right">Last Name</Label>
+                <Label htmlFor="add-ownerLastName" className="text-right">Last Name</Label>
                 <div className="col-span-3">
-                  <Input id="ownerLastName" {...register("ownerLastName")} className={errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmitting} />
-                  {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
+                  <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={addClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                  {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
                 </div>
               </div>
                <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dogName" className="text-right">Dog's Name</Label>
+                <Label htmlFor="add-dogName" className="text-right">Dog's Name</Label>
                 <div className="col-span-3">
-                  <Input id="dogName" {...register("dogName")} className={errors.dogName ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.dogName && <p className="text-xs text-destructive mt-1">{errors.dogName.message}</p>}
+                  <Input id="add-dogName" {...addClientForm.register("dogName")} className={addClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contactEmail" className="text-right">Email</Label>
+                <Label htmlFor="add-contactEmail" className="text-right">Email</Label>
                 <div className="col-span-3">
-                  <Input id="contactEmail" type="email" {...register("contactEmail")} className={errors.contactEmail ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.contactEmail && <p className="text-xs text-destructive mt-1">{errors.contactEmail.message}</p>}
+                  <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={addClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="contactNumber" className="text-right">Number</Label>
+                <Label htmlFor="add-contactNumber" className="text-right">Number</Label>
                 <div className="col-span-3">
-                  <Input id="contactNumber" type="tel" {...register("contactNumber")} className={errors.contactNumber ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.contactNumber && <p className="text-xs text-destructive mt-1">{errors.contactNumber.message}</p>}
+                  <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={addClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="postcode" className="text-right">Postcode</Label>
+                <Label htmlFor="add-postcode" className="text-right">Postcode</Label>
                 <div className="col-span-3">
-                  <Input id="postcode" {...register("postcode")} className={errors.postcode ? "border-destructive" : ""} disabled={isSubmitting}/>
-                  {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
+                  <Input id="add-postcode" {...addClientForm.register("postcode")} className={addClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="isMember" className="text-right pt-2">Is Member?</Label>
+                <Label htmlFor="add-isMember" className="text-right pt-2">Is Member?</Label>
                 <div className="col-span-3 flex items-center">
                    <Controller
                     name="isMember"
-                    control={control}
+                    control={addClientForm.control}
                     render={({ field }) => (
                       <Checkbox
-                        id="isMember"
+                        id="add-isMember"
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={isSubmitting}
+                        disabled={isSubmittingForm}
                         className="mr-2"
                       />
                     )}
@@ -532,13 +619,13 @@ export default function ClientsPage() {
                   <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
                 </div>
               </div>
-              <input type="hidden" {...register("submissionDate")} />
+              <input type="hidden" {...addClientForm.register("submissionDate")} />
               <DialogFooter>
                 <DialogClose asChild>
-                   <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
+                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={isSubmittingForm}>
+                  {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Client
                 </Button>
               </DialogFooter>
@@ -548,7 +635,7 @@ export default function ClientsPage() {
       </div>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Client List</CardTitle>
+          <CardTitle className="font-serif">Client List</CardTitle>
           <CardDescription>Manage your clients. Click an item to view details.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -600,7 +687,7 @@ export default function ClientsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit client functionality to be implemented.');}}>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Contact
                           </DropdownMenuItem>
@@ -610,8 +697,8 @@ export default function ClientsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                            onClick={(e) => {e.stopPropagation(); handleDeleteClient(client);}}
+                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                            onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Client
@@ -637,18 +724,90 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Client Sheet */}
+      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="font-serif">Edit Client: {clientToEdit?.ownerFirstName} {clientToEdit?.ownerLastName}</SheetTitle>
+            <SheetDescription>
+              Update the client's contact information and details.
+            </SheetDescription>
+          </SheetHeader>
+          {clientToEdit && (
+            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-ownerFirstName">First Name</Label>
+                <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={editClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-ownerLastName">Last Name</Label>
+                <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={editClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-dogName">Dog's Name</Label>
+                <Input id="edit-dogName" {...editClientForm.register("dogName")} className={editClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-contactEmail">Email</Label>
+                <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={editClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-contactNumber">Number</Label>
+                <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={editClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-postcode">Postcode</Label>
+                <Input id="edit-postcode" {...editClientForm.register("postcode")} className={editClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
+              </div>
+              <div className="flex items-center space-x-2 pt-2">
+                 <Controller
+                  name="isMember"
+                  control={editClientForm.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="edit-isMember"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmittingForm}
+                    />
+                  )}
+                />
+                <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
+              </div>
+              <SheetFooter className="mt-4">
+                <SheetClose asChild>
+                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
+                </SheetClose>
+                <Button type="submit" disabled={isSubmittingForm}>
+                  {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </SheetFooter>
+            </form>
+          )}
+        </SheetContent>
+      </Sheet>
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle className="font-serif">Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the client
-              "{clientToDelete?.ownerFirstName} {clientToDelete?.ownerLastName}" and all associated data.
+              "{clientToDelete?.ownerFirstName} {clientToDelete?.ownerLastName}" and all associated data from Firestore.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogCancel onClick={() => {setClientToDelete(null); setIsDeleteDialogOpen(false);}} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90" disabled={isSubmittingForm}>
+              {isSubmittingForm && clientToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
