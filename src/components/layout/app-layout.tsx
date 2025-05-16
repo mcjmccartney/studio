@@ -11,7 +11,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  // SidebarTrigger, // Not used in the current headerless layout
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -59,14 +59,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <SidebarInset>
-        {/* The header element has been removed */}
+        {/* Header removed as per previous request */}
         <div
           className={cn(
             "flex-1 overflow-auto",
-            useSpecialBackground ? "" : "p-6", // No padding for special background pages by default from layout
-            useSpecialBackground && pathname === '/public-intake' ? "bg-[#4f6749]" : "",
-            useSpecialBackground && pathname === '/behaviour-questionnaire' ? "bg-[#4f6749]" : "",
-            !useSpecialBackground ? "bg-background" : "",
+            useSpecialBackground ? "bg-[#4f6749]" : "bg-[#fafafa]",
+            useSpecialBackground ? "" : "p-6", // Padding applied only if not a special background page
             mounted && isMobile ? "pb-16" : "" // Padding for bottom nav
           )}
         >
