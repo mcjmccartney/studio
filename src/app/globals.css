@@ -29,8 +29,8 @@
     --muted: 180 10% 88%; /* Same as secondary or slightly more desaturated */
     --muted-foreground: 0 0% 40%; /* Softer gray for muted text */
 
-    --accent: 27 65% 69%; /* #E5A67A Soft peach */
-    --accent-foreground: 0 0% 100%; /* White text on accent buttons for contrast */
+    --accent: 10 49% 41%; /* #9c4a38 New hover color */
+    --accent-foreground: 0 0% 100%; /* White text on accent for contrast */
 
     --destructive: 0 70% 50%; /* A standard red for destructive actions */
     --destructive-foreground: 0 0% 98%;
@@ -50,14 +50,14 @@
     --sidebar-background: 11 64% 35%; /* Primary color #913520 */
     --sidebar-foreground: 0 0% 98%;    /* White/Very Light Gray for text on new primary */
     
-    --sidebar-primary: hsl(var(--accent)); /* Soft peach for active items */
+    --sidebar-primary: 27 65% 69%; /* Soft peach #E5A67A for active items (using original accent) */
     --sidebar-primary-foreground: 0 0% 10%; /* Dark Gray/Black for text on peach */
     
-    --sidebar-accent: 11 64% 45%;     /* Slightly Lighter #913520 for hover */
+    --sidebar-accent: 10 49% 41%;     /* #9c4a38 New hover color */
     --sidebar-accent-foreground: 0 0% 98%; /* White/Very Light Gray for text on hover */
     
     --sidebar-border: 11 64% 25%;     /* Slightly Darker #913520 for borders */
-    --sidebar-ring: hsl(var(--accent)); /* Soft peach for focus rings */
+    --sidebar-ring: 27 65% 69%; /* Soft peach #E5A67A for focus rings (using original accent) */
   }
 
   .dark {
@@ -79,8 +79,8 @@
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 27 65% 69%; /* Soft peach */
-    --accent-foreground: 0 0% 10%; /* Dark text on peach */
+    --accent: 10 49% 41%; /* #9c4a38 New hover color */
+    --accent-foreground: 0 0% 100%; /* White text on accent for contrast */
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
@@ -99,14 +99,14 @@
     --sidebar-background: 11 64% 35%; /* Primary color #913520 */
     --sidebar-foreground: 0 0% 98%;    /* White/Very Light Gray */
     
-    --sidebar-primary: hsl(var(--accent)); /* Soft peach */
+    --sidebar-primary: 27 65% 69%; /* Soft peach #E5A67A */
     --sidebar-primary-foreground: 0 0% 10%; /* Dark Gray/Black */
     
-    --sidebar-accent: 11 64% 45%;     /* Slightly Lighter #913520 */
+    --sidebar-accent: 10 49% 41%;     /* #9c4a38 New hover color */
     --sidebar-accent-foreground: 0 0% 98%; /* White/Very Light Gray */
     
     --sidebar-border: 11 64% 25%;     /* Slightly Darker #913520 */
-    --sidebar-ring: hsl(var(--accent)); /* Soft peach */
+    --sidebar-ring: 27 65% 69%; /* Soft peach #E5A67A */
   }
 }
 
