@@ -281,7 +281,7 @@ export default function SessionsPage() {
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
-      status: 'Scheduled',
+      status: 'Scheduled', // Default status
       sessionType: data.sessionType,
       cost: data.cost,
     };
@@ -608,13 +608,10 @@ export default function SessionsPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge 
-                              variant={
-                                session.status === 'Scheduled' ? 'default' :
-                                session.status === 'Completed' ? 'secondary' : 'outline'
-                              }
+                              variant="default"
                               className="mt-1 whitespace-nowrap"
                             >
-                              {session.status}
+                              {session.sessionType}
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
