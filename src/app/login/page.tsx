@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,16 +32,21 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Redirect if user is already logged in
-  if (!loading && user) {
-    router.replace('/'); // Redirect to dashboard
-    return ( // Render a loader or null while redirecting
+  useEffect(() => {
+    // Redirect if user is already logged in and auth state is not loading
+    if (!loading && user) {
+      router.replace('/'); // Redirect to dashboard
+    }
+  }, [user, loading, router]);
+
+  // Show loader if auth is loading or if user exists (and redirect is in progress)
+  if (loading || (!loading && user)) {
+    return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
     );
   }
-
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
     setIsSubmitting(true);
@@ -51,7 +56,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Welcome back!",
       });
-      router.push('/'); // Redirect to dashboard or desired page
+      router.push('/'); // Redirect to dashboard or desired page after successful login
     } catch (error) {
       console.error("Login error:", error);
       let errorMessage = "Failed to login. Please check your credentials.";
@@ -70,9 +75,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#92351f] p-4">
-      <Card className="w-full max-w-sm shadow-xl bg-card text-card-foreground"> {/* Adjusted max-w-sm for a more square shape */}
+      <Card className="w-full max-w-sm shadow-xl bg-card text-card-foreground">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Raising My Rescue</CardTitle>
+          <CardTitle className="text-2xl font-semibold">Raising My Rescue</CardTitle>
           <CardDescription>Please sign in to continue</CardDescription>
         </CardHeader>
         <CardContent>
