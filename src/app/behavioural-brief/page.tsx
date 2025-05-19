@@ -14,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Using the specific type
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 
+// Schema based on the Squarespace form structure from the provided HTML
 const behaviouralBriefSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
@@ -169,8 +170,8 @@ export default function BehaviouralBriefPage() {
         <Image 
           src="https://iili.io/3PLgTAb.png" 
           alt="Behavioural Brief Title" 
-          width={480} 
-          height={80}
+          width={420} 
+          height={70}
           data-ai-hint="form title"
         />
       </div>
