@@ -1,10 +1,10 @@
 
 import type {Metadata} from 'next';
-import { Inter, Roboto_Mono } from 'next/font/google';
+import { Inter, Roboto_Mono, Montserrat } from 'next/font/google'; // Added Montserrat
 import './globals.css';
 import AppLayout from '@/components/layout/app-layout';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/contexts/auth-context'; // Import AuthProvider
+import { AuthProvider } from '@/contexts/auth-context';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -15,6 +15,13 @@ const robotoMono = Roboto_Mono({
   variable: '--font-mono',
   subsets: ['latin'],
   weight: ['400', '500', '700'],
+});
+
+// Added Montserrat for titles
+const montserrat = Montserrat({
+  variable: '--font-title',
+  subsets: ['latin'],
+  weight: ['700'], // Using bold weight
 });
 
 export const metadata: Metadata = {
@@ -29,8 +36,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
-        <AuthProvider> {/* Wrap AppLayout with AuthProvider */}
+      <body className={`${inter.variable} ${robotoMono.variable} ${montserrat.variable} antialiased`}> {/* Added montserrat.variable */}
+        <AuthProvider>
           <AppLayout>
             {children}
           </AppLayout>

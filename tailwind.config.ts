@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 import defaultTheme from 'tailwindcss/defaultTheme';
 
@@ -13,6 +14,7 @@ export default {
       fontFamily: {
         sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
         mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
+        title: ['var(--font-title)', ...defaultTheme.fontFamily.sans], // Added title font family
       },
   		colors: {
   			background: 'hsl(var(--background))',

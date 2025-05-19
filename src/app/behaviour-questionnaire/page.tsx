@@ -33,11 +33,11 @@ const behaviourQuestionnaireSchema = z.object({
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
   contactEmail: z.string().email({ message: "Please enter a valid email address." }),
   contactNumber: z.string().min(1, { message: "Contact Number is required." }),
-  addressLine1: z.string().min(1, "Address Line 1 is required."), // Part of address
-  addressLine2: z.string().optional(), // Part of address
-  city: z.string().min(1, "City / Town is required."), // Part of address
-  country: z.string().min(1, "Country is required."), // Part of address
-  postcode: z.string().min(1, "Postcode is required."), // Part of address, also top-level on Client
+  addressLine1: z.string().min(1, "Address Line 1 is required."), 
+  addressLine2: z.string().optional(), 
+  city: z.string().min(1, "City / Town is required."), 
+  country: z.string().min(1, "Country is required."), 
+  postcode: z.string().min(1, "Postcode is required."), 
   howHeardAboutServices: z.string().optional(),
 
   // Dog Info
@@ -67,7 +67,7 @@ const behaviourQuestionnaireSchema = z.object({
 
   // Diet and Feeding
   dietDetails: z.string().optional(),
-  foodMotivationLevel: z.string().optional(), // "1" - "10"
+  foodMotivationLevel: z.string().optional(), 
   mealtimeRoutine: z.string().optional(),
   treatRoutine: z.string().optional(),
   externalTreatsConsent: z.string().optional(),
@@ -104,7 +104,6 @@ const behaviourQuestionnaireSchema = z.object({
   submissionDate: z.string().min(1, {message: "Submission date is required."}),
 });
 
-
 const countryOptions = [
     { value: "GB", label: "United Kingdom" },
     { value: "US", label: "United States" },
@@ -116,7 +115,6 @@ const countryOptions = [
 
 const foodMotivationOptions = Array.from({length: 10}, (_, i) => ({ value: (i+1).toString(), label: (i+1).toString() }));
 const sociabilityOptions = ["Sociable", "Nervous", "Reactive", "Disinterested"];
-
 
 export default function BehaviourQuestionnairePage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -135,7 +133,7 @@ export default function BehaviourQuestionnairePage() {
     addressLine1: '',
     addressLine2: '',
     city: '',
-    country: 'GB', // Default to UK
+    country: 'GB', 
     postcode: '',
     howHeardAboutServices: '',
     dogName: '',
@@ -273,7 +271,7 @@ export default function BehaviourQuestionnairePage() {
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="font-sans text-4xl font-bold text-[#ebeadf] text-center mb-10">
+      <h1 className="font-title text-4xl font-bold text-[#ebeadf] text-center mb-10"> {/* Updated font */}
         Behaviour Questionnaire
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
@@ -302,7 +300,6 @@ export default function BehaviourQuestionnairePage() {
               <Input id="contactNumber" type="tel" {...register("contactNumber")} className={cn(inputClassName, errors.contactNumber && errorInputClassName)} disabled={isSubmitting}/>
             </FormFieldWrapper>
 
-            {/* Address Fields */}
             <FormFieldWrapper label="Address" htmlForProp="addressLine1" error={errors.addressLine1?.message || errors.city?.message || errors.postcode?.message || errors.country?.message} required>
                 <div>
                     <Label htmlFor="addressLine1" className="text-xs text-muted-foreground">Address Line 1</Label>

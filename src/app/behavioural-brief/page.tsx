@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardDescription
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Using dedicated type
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-
 
 const behaviouralBriefSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
@@ -36,13 +35,11 @@ const behaviouralBriefSchema = z.object({
   submissionDate: z.string().min(1, {message: "Submission date is required."}),
 });
 
-
 const sessionTypeOptions = [
   { id: "online", label: "Online Session" },
   { id: "in-person", label: "In-Person Session" },
   { id: "rescue-remedy", label: "Rescue Remedy Session (Dog Club members & current clients only)" },
 ];
-
 
 export default function BehaviouralBriefPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -78,7 +75,6 @@ export default function BehaviouralBriefPage() {
       setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
     }
   }, [currentSubmissionDate, setValue]);
-
 
   const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -157,10 +153,9 @@ export default function BehaviouralBriefPage() {
   const inputClassName = "border-black bg-[#ebeadf] focus-visible:ring-black";
   const errorInputClassName = "border-destructive";
 
-
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="font-sans text-4xl font-bold text-[#ebeadf] text-center mb-10">
+      <h1 className="font-title text-4xl font-bold text-[#ebeadf] text-center mb-10"> {/* Updated font */}
         Behavioural Brief
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
