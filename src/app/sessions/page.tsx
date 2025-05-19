@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon, Users as UsersIcon } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon, Users as UsersIcon, DollarSign } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -73,6 +73,10 @@ const sessionFormSchema = z.object({
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
   sessionType: z.string().min(1, { message: "Session type is required." }),
+  cost: z.preprocess(
+    (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
+    z.number().nonnegative({ message: "Cost must be a positive number." }).optional()
+  ),
 });
 
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
@@ -149,6 +153,13 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
             </CardContent>
           </Card>
 
+          {session.cost !== undefined && (
+            <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary" /> Cost</CardTitle></CardHeader>
+                <CardContent className="text-sm"><p>£{session.cost.toFixed(2)}</p></CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-primary" /> Status</CardTitle>
@@ -203,6 +214,7 @@ export default function SessionsPage() {
       time: '',
       clientId: '',
       sessionType: '',
+      cost: undefined,
     }
   });
 
@@ -212,7 +224,8 @@ export default function SessionsPage() {
         date: new Date(),
         time: format(new Date(), "HH:mm"),
         clientId: '',
-        sessionType: ''
+        sessionType: '',
+        cost: undefined,
       });
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
@@ -263,6 +276,7 @@ export default function SessionsPage() {
       time: data.time,
       status: 'Scheduled',
       sessionType: data.sessionType,
+      cost: data.cost,
     };
 
     try {
@@ -475,6 +489,27 @@ export default function SessionsPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="cost-sessionpage" className="text-right">Cost (£)</Label>
+                <div className="col-span-3">
+                <Controller name="cost" control={addSessionForm.control}
+                    render={({ field }) => (
+                    <Input 
+                        id="cost-sessionpage" 
+                        type="number" 
+                        placeholder="e.g. 75.50"
+                        {...field} 
+                        value={field.value === undefined ? '' : field.value}
+                        onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                        className={cn("w-full", addSessionForm.formState.errors.cost && "border-destructive")} 
+                        disabled={isSubmittingForm} 
+                    />
+                    )}
+                />
+                {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.cost.message}</p>}
+                </div>
+              </div>
+
               <SheetFooter className="mt-4">
                 <SheetClose asChild>
                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
@@ -535,16 +570,26 @@ export default function SessionsPage() {
                         <div className="flex justify-between items-start">
                           <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
                             <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
-                              {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
-                              <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
-                              {session.time}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              <TagIcon className="inline-block mr-1.5 h-4 w-4" />
-                              {session.sessionType}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
+                                <span className="flex items-center">
+                                    <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
+                                    {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
+                                </span>
+                                <span className="flex items-center">
+                                    <Clock className="inline-block mr-1.5 h-4 w-4" />
+                                    {session.time}
+                                </span>
+                                <span className="flex items-center">
+                                    <TagIcon className="inline-block mr-1.5 h-4 w-4" />
+                                    {session.sessionType}
+                                </span>
+                                {session.cost !== undefined && (
+                                    <span className="flex items-center">
+                                        <DollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                        £{session.cost.toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'} className="mt-1 whitespace-nowrap">

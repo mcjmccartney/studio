@@ -130,11 +130,12 @@ export interface Session {
   id: string;
   clientId: string;
   clientName: string; // Denormalized for easier display
-  dogName: string;    // Denormalized for easier display
+  dogName?: string;    // Denormalized for easier display
   date: string; // Should be in 'yyyy-MM-dd' format
-  time: string; // Should be in 'HH:MM AM/PM' format
+  time: string; // Should be in 'HH:MM' (24-hour) format
   status: 'Scheduled' | 'Completed' | 'Cancelled';
-  sessionType: string; // Added new field
+  sessionType: string;
+  cost?: number; // Added cost field
   notes?: string;
   createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }
@@ -159,4 +160,3 @@ export interface Address {
   country: string;
   // Postcode is part of client.postcode, but can be shown as part of a full address display
 }
-

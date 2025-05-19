@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon, DollarSign } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import type { Session, Client } from '@/lib/types';
@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay, differenceInCalendarDays } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay, differenceInCalendarDays, closestTo } from 'date-fns';
 import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
@@ -56,6 +56,10 @@ const sessionFormSchema = z.object({
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
   sessionType: z.string().min(1, { message: "Session type is required." }),
+  cost: z.preprocess(
+    (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
+    z.number().nonnegative({ message: "Cost must be a positive number." }).optional()
+  ),
 });
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
 
@@ -89,6 +93,7 @@ export default function HomePage() {
       time: '',
       clientId: '',
       sessionType: '',
+      cost: undefined,
     }
   });
 
@@ -99,6 +104,7 @@ export default function HomePage() {
             time: format(new Date(), "HH:mm"),
             clientId: '',
             sessionType: '',
+            cost: undefined,
         });
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
@@ -153,7 +159,7 @@ export default function HomePage() {
   }, [toast]);
 
 
-  const filteredSessions = useMemo(() => {
+  const filteredSessionsForCalendar = useMemo(() => {
     if (!searchTerm.trim()) return sessions;
     const lowerSearchTerm = searchTerm.toLowerCase();
     return sessions.filter(session => {
@@ -179,9 +185,10 @@ export default function HomePage() {
       clientName: ownerFullName,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time,
+      time: data.time, // Already in HH:mm
       status: 'Scheduled',
       sessionType: data.sessionType,
+      cost: data.cost,
     };
 
     try {
@@ -249,7 +256,7 @@ export default function HomePage() {
   };
 
   function CustomDayContent(props: DayProps) {
-    const daySessions = filteredSessions.filter(s => {
+    const daySessions = filteredSessionsForCalendar.filter(s => {
       const sessionDate = parseISO(s.date);
       return isValid(sessionDate) && isSameDay(sessionDate, props.date);
     }).sort((a, b) => {
@@ -313,14 +320,12 @@ export default function HomePage() {
 
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
-            {/* Month Navigation - Left */}
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
                 <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
 
-            {/* Search Input and Add Session Button - Right */}
             <div className="flex items-center gap-2">
                 <div className="relative">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -415,6 +420,28 @@ export default function HomePage() {
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="cost-dashboard" className="text-right">Cost (£)</Label>
+                        <div className="col-span-3">
+                        <Controller name="cost" control={addSessionForm.control}
+                            render={({ field }) => (
+                            <Input 
+                                id="cost-dashboard" 
+                                type="number" 
+                                placeholder="e.g. 75.50"
+                                {...field} 
+                                value={field.value === undefined ? '' : field.value}
+                                onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                                className={cn("w-full", addSessionForm.formState.errors.cost && "border-destructive")} 
+                                disabled={isSubmittingSheet} 
+                            />
+                            )}
+                        />
+                        {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.cost.message}</p>}
+                        </div>
+                    </div>
+
+
                     <SheetFooter className="mt-4">
                       <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
                       <Button type="submit" disabled={isSubmittingSheet}>
@@ -494,6 +521,12 @@ export default function HomePage() {
                     <CardHeader><CardTitle className="text-base flex items-center"><TagIcon className="mr-2 h-4 w-4 text-primary" /> Session Type</CardTitle></CardHeader>
                     <CardContent className="text-sm"><p>{selectedSessionForSheet.sessionType}</p></CardContent>
                   </Card>
+                   {selectedSessionForSheet.cost !== undefined && (
+                    <Card>
+                        <CardHeader><CardTitle className="text-base flex items-center"><DollarSign className="mr-2 h-4 w-4 text-primary" /> Cost</CardTitle></CardHeader>
+                        <CardContent className="text-sm"><p>£{selectedSessionForSheet.cost.toFixed(2)}</p></CardContent>
+                    </Card>
+                   )}
                   <Card>
                     <CardHeader><CardTitle className="text-base flex items-center"><Info className="mr-2 h-4 w-4 text-primary" /> Status</CardTitle></CardHeader>
                     <CardContent>
