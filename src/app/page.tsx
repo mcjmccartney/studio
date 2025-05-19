@@ -320,7 +320,7 @@ export default function HomePage() {
              <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
              <p className="flex items-center">
                 <CalendarIconLucide className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
-                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PPP') : 'Invalid Date'}
+                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PP') : 'Invalid Date'}
             </p>
             <p className="flex items-center">
                 <Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
@@ -386,7 +386,7 @@ export default function HomePage() {
                 ),
                 day: "h-full w-full p-0", 
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-destructive ring-offset-background ring-offset-1",
+                day_today: "ring-2 ring-[#92351f] ring-offset-background ring-offset-1 rounded-md",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -416,7 +416,7 @@ export default function HomePage() {
                       <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
                         {clients.map(client => (
                             <SelectItem key={client.id} value={client.id}>
-                              {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
+                              {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
                             </SelectItem>
                           ))}
                       </SelectGroup></SelectContent>
@@ -551,3 +551,4 @@ export default function HomePage() {
     </div>
   );
 }
+
