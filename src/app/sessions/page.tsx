@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Session, Client } from '@/lib/types';
 import {
   getSessionsFromFirestore,
@@ -62,7 +62,7 @@ import {
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { cn } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +100,7 @@ interface SessionDetailViewProps {
 }
 
 function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
+  const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
@@ -122,11 +123,10 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Client & Dog</CardTitle>
+              <CardTitle className="text-lg flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Client</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div><strong>Client:</strong> {session.clientName}</div>
-              <div><strong>Dog:</strong> {session.dogName} <PawPrint className="inline h-4 w-4 ml-1 text-muted-foreground" /></div>
+              <div><strong>Name:</strong> {displayName}</div>
             </CardContent>
           </Card>
 
@@ -207,15 +207,15 @@ export default function SessionsPage() {
   });
 
   useEffect(() => {
-    // Set initial date and time on client mount to avoid hydration issues
-    // and when the modal opens for a new session.
     if (isAddSessionModalOpen) {
-      setValue("date", new Date(), { shouldValidate: false, shouldDirty: false });
-      setValue("time", format(new Date(), "HH:mm"), { shouldValidate: false, shouldDirty: false });
-      setValue("clientId", "", { shouldValidate: false, shouldDirty: false });
-      setValue("sessionType", "", { shouldValidate: false, shouldDirty: false });
+      reset({
+        date: new Date(), 
+        time: format(new Date(), "HH:mm"), 
+        clientId: '', 
+        sessionType: ''
+      });
     }
-  }, [setValue, isAddSessionModalOpen]);
+  }, [isAddSessionModalOpen, reset]);
 
 
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function SessionsPage() {
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time, // Already in HH:mm
+      time: data.time, 
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -271,9 +271,8 @@ export default function SessionsPage() {
 
       toast({
         title: "Session Added",
-        description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
+        description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      reset({ date: undefined, time: '', clientId: '', sessionType: '' });
       setIsAddSessionModalOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
@@ -319,7 +318,7 @@ export default function SessionsPage() {
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
       toast({
         title: "Session Deleted",
-        description: `Session with ${sessionToDelete.clientName} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
+        description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
       });
       if (selectedSession && selectedSession.id === sessionToDelete.id) {
         setSelectedSession(null);
@@ -336,7 +335,7 @@ export default function SessionsPage() {
   };
 
   const handleEditSession = (session: Session) => {
-    alert(`Edit session functionality for "${session.clientName} - ${format(parseISO(session.date), 'PPP')}" to be implemented.`);
+    alert(`Edit session functionality for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${format(parseISO(session.date), 'PPP')}" to be implemented.`);
   };
 
 
@@ -378,24 +377,27 @@ export default function SessionsPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddSession)} className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientId" className="text-right">Client</Label>
+                <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
                 <div className="col-span-3">
                   <Controller
                     name="clientId"
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
-                        <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
+                        <SelectTrigger id="clientId-sessionpage" className={cn(errors.clientId ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
                             <SelectLabel>Clients</SelectLabel>
-                            {clients.map(client => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.ownerFirstName} {client.ownerLastName} (Dog: {client.dogName || 'N/A'})
-                              </SelectItem>
-                            ))}
+                            {clients.map(client => {
+                               const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
+                               return (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {formatFullNameAndDogName(ownerFullName, client.dogName)}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -406,7 +408,7 @@ export default function SessionsPage() {
               </div>
 
               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="date" className="text-right pt-2">Date</Label>
+                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label>
                 <div className="col-span-3">
                   <Controller
                     name="date"
@@ -418,6 +420,7 @@ export default function SessionsPage() {
                         onSelect={field.onChange}
                         initialFocus
                         disabled={isSubmittingForm}
+                        id="date-sessionpage"
                         className={cn("rounded-md border", errors.date ? "border-destructive" : "")}
                       />
                     )}
@@ -427,14 +430,14 @@ export default function SessionsPage() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time" className="text-right">Time (24h)</Label>
+                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
                 <div className="col-span-3">
                   <Controller
                     name="time"
                     control={control}
                     render={({ field }) => (
                       <Input
-                        id="time"
+                        id="time-sessionpage"
                         type="time"
                         {...field}
                         className={cn(errors.time ? "border-destructive" : "")}
@@ -448,14 +451,14 @@ export default function SessionsPage() {
 
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="sessionType" className="text-right">Type</Label>
+                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
                 <div className="col-span-3">
                   <Controller
                     name="sessionType"
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
-                        <SelectTrigger className={cn(errors.sessionType ? "border-destructive" : "")}>
+                        <SelectTrigger id="sessionType-sessionpage" className={cn(errors.sessionType ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select session type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -505,7 +508,7 @@ export default function SessionsPage() {
           <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
       )}
       {!isLoading && !error && sortedMonthKeys.length > 0 && (
-        <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
+        <Accordion type="multiple" className="w-full space-y-0" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
             <AccordionItem value={monthYear} key={monthYear} className="border-b-0 bg-card shadow-sm rounded-md mb-2">
               <AccordionTrigger className="text-lg font-medium hover:no-underline px-4 py-3">
@@ -522,7 +525,7 @@ export default function SessionsPage() {
                     >
                       <div className="flex justify-between items-start">
                         <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
-                          <h3 className="font-semibold text-base">{session.clientName} & {session.dogName}</h3>
+                          <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
                           <p className="text-sm text-muted-foreground">
                             <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
                             {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
@@ -557,7 +560,7 @@ export default function SessionsPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                    className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
+                                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
                                     onClick={(e) => {e.stopPropagation(); handleDeleteSessionRequest(session);}}
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -585,7 +588,7 @@ export default function SessionsPage() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the session
-              with {sessionToDelete?.clientName} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+              with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

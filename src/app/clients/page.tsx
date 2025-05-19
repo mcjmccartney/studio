@@ -23,7 +23,6 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
 import {
@@ -59,13 +58,13 @@ import {
   getBehaviouralBriefByBriefId, 
   getBehaviourQuestionnaireById, 
   updateClientInFirestore, 
-  getSessionsFromFirestore, // Import getSessionsFromFirestore
+  getSessionsFromFirestore,
   type EditableClientData 
 } from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 
 
 const internalClientFormSchema = z.object({
@@ -77,7 +76,7 @@ const internalClientFormSchema = z.object({
   dogName: z.string().optional(),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  submissionDate: z.string().optional(), // This is handled internally
+  submissionDate: z.string().optional(), 
 });
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
@@ -87,7 +86,7 @@ type SheetViewMode = 'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [allSessions, setAllSessions] = useState<Session[]>([]); // Store all sessions
+  const [allSessions, setAllSessions] = useState<Session[]>([]); 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +218,8 @@ export default function ClientsPage() {
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
-      toast({ title: "Client Added", description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.` });
+      const ownerFullName = `${newClient.ownerFirstName} ${newClient.ownerLastName}`.trim();
+      toast({ title: "Client Added", description: `${formatFullNameAndDogName(ownerFullName, newClient.dogName)} has been successfully added.` });
       addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientModalOpen(false);
     } catch (err) {
@@ -255,8 +255,9 @@ export default function ClientsPage() {
         c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName, isActive: updatedData.isActive } : c
       ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1));
       setClients(updatedClients);
-
-      toast({ title: "Client Updated", description: `${data.ownerFirstName} ${data.ownerLastName} has been successfully updated.` });
+      
+      const ownerFullName = `${data.ownerFirstName} ${data.ownerLastName}`.trim();
+      toast({ title: "Client Updated", description: `${formatFullNameAndDogName(ownerFullName, data.dogName)} has been successfully updated.` });
       setIsEditSheetOpen(false);
 
       if (clientForViewSheet && clientForViewSheet.id === clientToEdit.id) {
@@ -290,7 +291,8 @@ export default function ClientsPage() {
     try {
       await deleteClientFromFirestore(clientToDelete.id);
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
-      toast({ title: "Client Deleted", description: `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName} has been successfully deleted.` });
+      const ownerFullName = `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName}`.trim();
+      toast({ title: "Client Deleted", description: `${formatFullNameAndDogName(ownerFullName, clientToDelete.dogName)} has been successfully deleted.` });
       if (clientForViewSheet && clientForViewSheet.id === clientToDelete.id) {
          setClientForViewSheet(null);
          setIsViewSheetOpen(false);
@@ -357,7 +359,7 @@ export default function ClientsPage() {
 
   const handleViewBriefInSheet = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
-    if (!briefForSheet) setIsLoadingBriefForSheet(true); // Show loader only if not already loaded
+    if (!briefForSheet) setIsLoadingBriefForSheet(true); 
     try {
         if (!briefForSheet) { 
             const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
@@ -374,7 +376,7 @@ export default function ClientsPage() {
 
   const handleViewQuestionnaireInSheet = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviourQuestionnaireId) return;
-    if (!questionnaireForSheet) setIsLoadingQuestionnaireForSheet(true); // Show loader only if not already loaded
+    if (!questionnaireForSheet) setIsLoadingQuestionnaireForSheet(true); 
     try {
         if (!questionnaireForSheet) {
             const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
@@ -504,7 +506,7 @@ export default function ClientsPage() {
         </Dialog>
       </div>
       
-      <div className="mt-0"> {/* Removed outer Card */}
+      <div className="mt-0"> 
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -525,62 +527,61 @@ export default function ClientsPage() {
           )}
           {!isLoading && !error && clients.length > 0 && (
              <div className="space-y-0">
-              {clients.map((client) => (
-                <div
-                  key={client.id}
-                  onClick={() => handleClientRowClick(client)}
-                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center bg-card shadow-sm rounded-md mb-2"
-                >
-                  <div className="flex items-center gap-3">
-                    {client.isMember && (
-                      <Image
-                        src="https://iili.io/34300ox.md.jpg" 
-                        alt="Member Icon"
-                        width={32}
-                        height={32}
-                        className="rounded-md"
-                        data-ai-hint="company logo"
-                      />
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-base">{client.ownerFirstName} {client.ownerLastName}</h3>
-                      {client.dogName && (
-                        <p className="text-sm text-muted-foreground flex items-center">
-                          <PawPrint className="mr-1.5 h-4 w-4 text-muted-foreground" />
-                          {client.dogName}
-                        </p>
+              {clients.map((client) => {
+                const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
+                const displayName = formatFullNameAndDogName(ownerFullName, client.dogName);
+                return (
+                  <div
+                    key={client.id}
+                    onClick={() => handleClientRowClick(client)}
+                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center bg-card shadow-sm rounded-md mb-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      {client.isMember && (
+                        <Image
+                          src="https://iili.io/34300ox.md.jpg" 
+                          alt="Member Icon"
+                          width={32}
+                          height={32}
+                          className="rounded-md"
+                          data-ai-hint="company logo"
+                        />
                       )}
+                      <div>
+                        <h3 className="font-semibold text-base">{displayName}</h3>
+                        {/* Removed sub-dog name display as it's part of displayName now */}
+                      </div>
                     </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Contact
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
+                            <IconCalendarDays className="mr-2 h-4 w-4" />
+                            Schedule Session
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                            onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Client
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Contact
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
-                          <IconCalendarDays className="mr-2 h-4 w-4" />
-                          Schedule Session
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                          onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Client
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
       </div>
@@ -590,7 +591,7 @@ export default function ClientsPage() {
       <Sheet open={isEditSheetOpen} onOpenChange={(isOpen) => { setIsEditSheetOpen(isOpen); if(!isOpen) setClientToEdit(null);}}>
         <SheetContent className="sm:max-w-md w-[90vw] max-w-[500px]">
           <SheetHeader>
-            <SheetTitle>Edit Client: {clientToEdit?.ownerFirstName} {clientToEdit?.ownerLastName}</SheetTitle>
+            <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(`${clientToEdit.ownerFirstName} ${clientToEdit.ownerLastName}`, clientToEdit.dogName) : ''}</SheetTitle>
             <SheetDescription>
               Update the client's contact information and details.
             </SheetDescription>
@@ -690,10 +691,10 @@ export default function ClientsPage() {
                         data-ai-hint="company logo"
                       />
                     )}
-                  {clientForViewSheet.ownerFirstName} {clientForViewSheet.ownerLastName}
+                  {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
                 </SheetTitle>
                 <div className="flex flex-col space-y-1 text-sm">
-                  {clientForViewSheet.dogName && <SheetDescription>Dog: {clientForViewSheet.dogName}</SheetDescription>}
+                  {/* Dog name already in title */}
                   <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit">
                     {clientForViewSheet.isActive ? "Active" : "Inactive"}
                   </Badge>
@@ -903,7 +904,7 @@ export default function ClientsPage() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the client
-              "{clientToDelete?.ownerFirstName} {clientToDelete?.ownerLastName}" and all associated data from Firestore.
+              "{clientToDelete ? formatFullNameAndDogName(`${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName}`, clientToDelete.dogName) : ""}" and all associated data from Firestore.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

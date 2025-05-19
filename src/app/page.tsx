@@ -2,12 +2,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Users, CalendarDays as CalendarIconLucide, DollarSign as IconDollarSign, Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList } from "lucide-react";
+import { Users, CalendarDays as CalendarIconLucide, DollarSign as IconDollarSign, Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
-import 'react-day-picker/dist/style.css'; // Base styles for DayPicker
+import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import {
@@ -52,11 +50,13 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval, isSameDay, startOfMonth, addMonths, subMonths } from 'date-fns'; 
+import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc } from 'date-fns'; 
 import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase'; 
 import { useToast } from "@/hooks/use-toast"; 
-import { cn } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Calendar as ShadCalendar } from "@/components/ui/calendar";
+
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
@@ -90,7 +90,7 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined,
+      date: undefined, 
       time: '',
       clientId: '',
       sessionType: '',
@@ -128,12 +128,11 @@ export default function HomePage() {
         ]);
         setClients(firestoreClients);
         setSessions(firestoreSessions.sort((a, b) => {
-             // Handle potentially invalid dates gracefully
             const dateA = parseISO(a.date);
             const dateB = parseISO(b.date);
             if (!isValid(dateA) && !isValid(dateB)) return 0;
-            if (!isValid(dateA)) return 1; // Put invalid dates at the end
-            if (!isValid(dateB)) return -1; // Put invalid dates at the end
+            if (!isValid(dateA)) return 1; 
+            if (!isValid(dateB)) return -1; 
             return dateB.getTime() - dateA.getTime();
         }));
       } catch (err) {
@@ -214,30 +213,37 @@ export default function HomePage() {
   };
   
   const handleEditSession = (session: Session) => {
-     alert(`Edit session for ${session.clientName} on ${format(parseISO(session.date), 'PPP')} (not implemented).`);
+     alert(`Edit session for ${formatFullNameAndDogName(session.clientName, session.dogName)} on ${format(parseISO(session.date), 'PPP')} (not implemented).`);
   };
-
-  const activeClientsCount = useMemo(() => {
-    return clients.filter(client => client.isActive === true || client.isActive === undefined).length;
-  }, [clients]);
   
-  const today = startOfDay(new Date());
-  const oneWeekFromToday = addDays(today, 6); 
+  const nextUpcomingSession = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null;
+    return sessions
+      .filter(s => {
+          const sessionDate = parseISO(s.date);
+          return s.status === 'Scheduled' && 
+                 isValid(sessionDate) && 
+                 (isToday(sessionDate) || isFuture(sessionDate));
+      })
+      .sort((a, b) => {
+        const dateA = parseISO(a.date);
+        const timeA = a.time; // HH:mm
+        const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${timeA}:00`) : new Date(0);
 
-  const upcomingSessionsCount = useMemo(() => {
-    return sessions.filter(session => {
-      if (session.status !== 'Scheduled') return false;
-      const sessionDate = parseISO(session.date);
-      if (!isValid(sessionDate)) return false;
-      return isWithinInterval(startOfDay(sessionDate), { start: today, end: oneWeekFromToday });
-    }).length;
-  }, [sessions, today, oneWeekFromToday]);
-  
-  const incomeThisMonth = 2350.00; // Placeholder
+        const dateB = parseISO(b.date);
+        const timeB = b.time; // HH:mm
+        const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${timeB}:00`) : new Date(0);
+        
+        if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+        if (!isValid(dateTimeA)) return 1;
+        if (!isValid(dateTimeB)) return -1;
+        
+        return compareAsc(dateTimeA, dateTimeB);
+      })[0] || null;
+  }, [sessions]);
+
 
   const formatCaption: DateFormatter = (month) => {
-    // This formatter is primarily for ARIA attributes if caption_label is hidden.
-    // We display the month/year in our custom header.
     return format(month, 'MMMM yyyy');
   };
 
@@ -258,7 +264,7 @@ export default function HomePage() {
                 className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80"
                 onClick={() => { setSelectedSessionForSheet(session); setIsSessionSheetOpen(true); }}
               >
-                {session.time} - {session.clientName}
+                {session.time} - {formatFullNameAndDogName(session.clientName, session.dogName)}
               </Badge>
             ))}
             </div>
@@ -270,48 +276,35 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-6"> 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+      
+      {isLoadingData ? (
+        <div className="flex justify-center items-center py-10">
+           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : nextUpcomingSession ? (
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoadingData ? (
-                <Loader2 className="h-6 w-6 animate-spin text-primary my-1" />
-            ) : (
-                <div className="text-2xl font-bold">{activeClientsCount}</div>
-            )}
-            <p className="text-xs text-muted-foreground">Manage your client base</p>
-            <Button asChild variant="outline" size="sm" className="mt-4"><Link href="/clients">Manage Clients</Link></Button>
+          <CardContent className="space-y-1 text-sm">
+            <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
+            <p><Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />{format(parseISO(nextUpcomingSession.date), 'PPP')} at {nextUpcomingSession.time}</p>
+            <p><TagIcon className="inline h-4 w-4 mr-1.5 text-muted-foreground" />{nextUpcomingSession.sessionType}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
-            <CalendarIconLucide className="h-5 w-5 text-muted-foreground" />
+      ) : (
+         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+          <CardHeader className="pb-3">
+             <CardTitle className="text-base font-medium flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
           </CardHeader>
           <CardContent>
-             {isLoadingData ? ( <Loader2 className="h-6 w-6 animate-spin text-primary my-1" /> ) : ( <div className="text-2xl font-bold">{upcomingSessionsCount} This Week</div> )}
-            <p className="text-xs text-muted-foreground">View your schedule</p>
-            <Button asChild variant="outline" size="sm" className="mt-4"><Link href="/sessions">View Sessions</Link></Button>
+            <p className="text-sm text-muted-foreground">No upcoming sessions scheduled.</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Finance Overview</CardTitle>
-            <IconDollarSign className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">£{incomeThisMonth.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Income this month</p>
-            <Button asChild variant="outline" size="sm" className="mt-4"><Link href="/finance">Track Finances</Link></Button>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
-      {/* New Large Calendar Section */}
+
+      {/* Large Calendar Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-x-4">
           <div className="flex items-center gap-2">
@@ -320,7 +313,7 @@ export default function HomePage() {
             <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <div className="flex items-center gap-2">
-            {/* <Input type="search" placeholder="Search sessions..." className="h-9 md:w-[200px] lg:w-[250px]" /> */}
+            <Input type="search" placeholder="Search sessions..." className="h-9 md:w-[200px] lg:w-[250px]" />
             <Button onClick={() => setIsAddSessionModalOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
           </div>
         </CardHeader>
@@ -336,10 +329,9 @@ export default function HomePage() {
               formatters={{ formatCaption }}
               className="w-full p-4"
               classNames={{
-                caption: "hidden", // Hides the entire default caption div
+                caption: "hidden", 
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
-                caption_label: "hidden", // Redundant if caption is hidden, but safe to keep
                 nav_button: "h-8 w-8",
                 nav_button_previous: "absolute left-2 top-1/2 -translate-y-1/2",
                 nav_button_next: "absolute right-2 top-1/2 -translate-y-1/2",
@@ -350,7 +342,7 @@ export default function HomePage() {
                 cell: "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                 day: "h-full w-full p-0",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "bg-accent text-accent-foreground",
+                day_today: "ring-2 ring-destructive ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -360,7 +352,7 @@ export default function HomePage() {
       </Card>
 
       {/* Add Session Modal */}
-      <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
+       <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Add New Session</DialogTitle>
@@ -368,17 +360,24 @@ export default function HomePage() {
           </DialogHeader>
           <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="clientId" className="text-right">Client</Label>
+              <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
               <div className="col-span-3">
                 <Controller
                   name="clientId" control={addSessionForm.control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal || isLoadingData}>
-                      <SelectTrigger className={cn(addSessionForm.formState.errors.clientId && "border-destructive")}>
+                      <SelectTrigger id="clientId-dashboard" className={cn(addSessionForm.formState.errors.clientId && "border-destructive")}>
                         <SelectValue placeholder="Select a client" />
                       </SelectTrigger>
                       <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                        {clients.map(client => (<SelectItem key={client.id} value={client.id}>{client.ownerFirstName} {client.ownerLastName} (Dog: {client.dogName || 'N/A'})</SelectItem>))}
+                        {clients.map(client => {
+                          const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
+                          return (
+                            <SelectItem key={client.id} value={client.id}>
+                              {formatFullNameAndDogName(ownerFullName, client.dogName)}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectGroup></SelectContent>
                     </Select>
                   )}
@@ -387,32 +386,32 @@ export default function HomePage() {
               </div>
             </div>
              <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="date" className="text-right pt-2">Date</Label>
+              <Label htmlFor="date-dashboard" className="text-right pt-2">Date</Label>
               <div className="col-span-3">
                 <Controller name="date" control={addSessionForm.control}
                   render={({ field }) => (
-                    <DayPicker mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingModal} className={cn("rounded-md border w-full inline-block", addSessionForm.formState.errors.date && "border-destructive")} />
+                    <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingModal} id="date-dashboard" className={cn("rounded-md border w-full inline-block", addSessionForm.formState.errors.date && "border-destructive")} />
                   )}
                 />
                 {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time" className="text-right">Time (24h)</Label>
+              <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
               <div className="col-span-3">
                 <Controller name="time" control={addSessionForm.control}
-                  render={({ field }) => (<Input id="time" type="time" {...field} className={cn(addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
+                  render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn(addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
                 />
                 {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sessionType" className="text-right">Type</Label>
+              <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
               <div className="col-span-3">
                 <Controller name="sessionType" control={addSessionForm.control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal}>
-                      <SelectTrigger className={cn(addSessionForm.formState.errors.sessionType && "border-destructive")}>
+                      <SelectTrigger id="sessionType-dashboard" className={cn(addSessionForm.formState.errors.sessionType && "border-destructive")}>
                         <SelectValue placeholder="Select session type" />
                       </SelectTrigger>
                       <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -445,7 +444,7 @@ export default function HomePage() {
                   <SheetClose asChild><Button variant="ghost" size="icon" className="h-7 w-7"><X className="h-4 w-4" /></Button></SheetClose>
                 </div>
                 <SheetDescription>
-                  {selectedSessionForSheet.clientName} & {selectedSessionForSheet.dogName}
+                  {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
                 </SheetDescription>
               </SheetHeader>
               <ScrollArea className="h-[calc(100vh-160px)]">
@@ -496,7 +495,7 @@ export default function HomePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the session with {sessionToDelete?.clientName} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+              This will permanently delete the session with {selectedSessionForSheet ? formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName) : 'this client'} on {selectedSessionForSheet && isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
