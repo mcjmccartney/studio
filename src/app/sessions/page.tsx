@@ -62,7 +62,7 @@ import {
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { cn, formatFullNameAndDogName } from '@/lib/utils';
+import { cn, formatFullNameAndDogName, getSessionTypeBadgeClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -245,7 +245,14 @@ export default function SessionsPage() {
           getSessionsFromFirestore(),
           getClients()
         ]);
-        setSessions(firestoreSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+        setSessions(firestoreSessions.sort((a, b) => {
+            const dateA = parseISO(a.date);
+            const dateB = parseISO(b.date);
+            if (!isValid(dateA) && !isValid(dateB)) return 0;
+            if (!isValid(dateA)) return 1;
+            if (!isValid(dateB)) return -1;
+            return dateB.getTime() - dateA.getTime();
+        }));
         setClients(firestoreClients);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -281,7 +288,14 @@ export default function SessionsPage() {
 
     try {
       const newSession = await addSessionToFirestore(sessionData);
-      setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+      setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => {
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        if (!isValid(dateA) && !isValid(dateB)) return 0;
+        if (!isValid(dateA)) return 1;
+        if (!isValid(dateB)) return -1;
+        return dateB.getTime() - dateA.getTime();
+      }));
 
       toast({
         title: "Session Added",
@@ -390,33 +404,33 @@ export default function SessionsPage() {
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="clientId"
-                    control={addSessionForm.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
-                        <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Clients</SelectLabel>
-                            {clients.map(client => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
+                  <div className="col-span-3">
+                    <Controller
+                      name="clientId"
+                      control={addSessionForm.control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
+                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Clients</SelectLabel>
+                              {clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                  </div>
                 </div>
-              </div>
 
                <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="date-sessionpage" className="text-right col-span-1 pt-2 self-start">Date</Label>
@@ -499,7 +513,7 @@ export default function SessionsPage() {
                         type="number" 
                         placeholder="e.g. 75.50"
                         {...field} 
-                        value={field.value === undefined ? '' : field.value}
+                        value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         className={cn("w-full", addSessionForm.formState.errors.cost && "border-destructive")} 
                         disabled={isSubmittingForm} 
@@ -509,6 +523,7 @@ export default function SessionsPage() {
                 {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.cost.message}</p>}
                 </div>
               </div>
+
 
               <SheetFooter className="mt-4">
                 <SheetClose asChild>
@@ -592,8 +607,10 @@ export default function SessionsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'} className="mt-1 whitespace-nowrap">
-                              {session.status}
+                            <Badge 
+                              className={cn("mt-1 whitespace-nowrap", getSessionTypeBadgeClasses(session.sessionType))}
+                            >
+                              {session.sessionType}
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -657,3 +674,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+
