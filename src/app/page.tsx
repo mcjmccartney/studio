@@ -85,8 +85,8 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: new Date(),
-      time: format(new Date(), "HH:mm"),
+      date: undefined,
+      time: '',
       clientId: '',
       sessionType: '',
     }
@@ -317,7 +317,7 @@ export default function HomePage() {
                 <h2 className="text-lg font-semibold text-center min-w-[140px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-            <div className="flex-1 max-w-xs">
+            <div className="max-w-xs"> {/* Search Input Container - Removed flex-1 */}
                 <div className="relative">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -465,7 +465,6 @@ export default function HomePage() {
               <SheetHeader className="p-6 border-b">
                 <div className="flex justify-between items-center">
                   <SheetTitle className="text-xl">Session Details</SheetTitle>
-                  {/* Removed the SheetClose button from here */}
                 </div>
                 <SheetDescription>
                   {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
@@ -541,3 +540,4 @@ export default function HomePage() {
     </div>
   );
 }
+
