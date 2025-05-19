@@ -13,7 +13,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  isPublic?: boolean;
+  isPublic?: boolean; // Added for public forms
 }
 
 export const navItems: NavItem[] = [
@@ -21,6 +21,6 @@ export const navItems: NavItem[] = [
   { href: '/clients', label: 'Clients', icon: Users },
   { href: '/sessions', label: 'Sessions', icon: CalendarDays },
   { href: '/finance', label: 'Finance', icon: DollarSign },
-  { href: '/public-intake', label: 'Behavioural Brief', icon: ClipboardPlus },
-  { href: '/behaviour-questionnaire', label: 'Behaviour Questionnaire', icon: FileQuestion },
+  { href: '/public-intake', label: 'Behavioural Brief', icon: ClipboardPlus, isPublic: true },
+  { href: '/behaviour-questionnaire', label: 'Behaviour Questionnaire', icon: FileQuestion, isPublic: true },
 ];

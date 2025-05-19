@@ -9,20 +9,19 @@ import { cn } from '@/lib/utils';
 export function MobileBottomNav() {
   const pathname = usePathname();
 
+  // Filter out public items for the logged-in user's mobile bottom navigation
+  const privateNavItems = navItems.filter(item => !item.isPublic);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-sidebar-border bg-sidebar md:hidden">
-      {navItems.map((item) => {
+      {privateNavItems.map((item) => {
         const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-        // Do not render public form links on the bottom nav if they are marked as public or have specific routes
-        if (item.href === '/public-intake' || item.href === '/behaviour-questionnaire') {
-          return null;
-        }
         return (
           <Link
             key={item.label}
             href={item.href}
             className={cn(
-              "flex flex-col items-center justify-center p-2 rounded-md text-xs w-1/4", // Adjusted for 4 items
+              "flex flex-col items-center justify-center p-2 rounded-md text-xs w-1/4", // Adjusted for 4 items if privateNavItems.length is 4
               isActive ? "text-sidebar-primary" : "text-sidebar-foreground hover:text-sidebar-accent-foreground"
             )}
           >
