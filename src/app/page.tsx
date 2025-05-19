@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarDays as CalendarIconLucide, DollarSign as IconDollarSign, Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
@@ -50,7 +50,7 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc } from 'date-fns'; 
+import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse } from 'date-fns'; 
 import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase'; 
 import { useToast } from "@/hooks/use-toast"; 
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
@@ -90,8 +90,8 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined, 
-      time: '',
+      date: new Date(), 
+      time: format(new Date(), "HH:mm"),
       clientId: '',
       sessionType: '',
     }
@@ -133,7 +133,15 @@ export default function HomePage() {
             if (!isValid(dateA) && !isValid(dateB)) return 0;
             if (!isValid(dateA)) return 1; 
             if (!isValid(dateB)) return -1; 
-            return dateB.getTime() - dateA.getTime();
+            
+            const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+            const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+            
+            if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+            if (!isValid(dateTimeA)) return 1;
+            if (!isValid(dateTimeB)) return -1;
+
+            return dateTimeB.getTime() - dateTimeA.getTime();
         }));
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -161,7 +169,7 @@ export default function HomePage() {
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
-      dogName: selectedClient.dogName || 'N/A',
+      dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
       status: 'Scheduled',
@@ -176,7 +184,15 @@ export default function HomePage() {
             if (!isValid(dateA) && !isValid(dateB)) return 0;
             if (!isValid(dateA)) return 1;
             if (!isValid(dateB)) return -1;
-            return dateB.getTime() - dateA.getTime();
+
+            const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+            const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+            
+            if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+            if (!isValid(dateTimeA)) return 1;
+            if (!isValid(dateTimeB)) return -1;
+            
+            return dateTimeB.getTime() - dateTimeA.getTime();
         }));
       toast({ title: "Session Added", description: `Session on ${format(data.date, 'PPP')} at ${data.time} scheduled.` });
       setIsAddSessionModalOpen(false);
@@ -213,11 +229,16 @@ export default function HomePage() {
   };
   
   const handleEditSession = (session: Session) => {
-     alert(`Edit session for ${formatFullNameAndDogName(session.clientName, session.dogName)} on ${format(parseISO(session.date), 'PPP')} (not implemented).`);
+     toast({
+      title: "Edit Session",
+      description: `Edit session for ${formatFullNameAndDogName(session.clientName, session.dogName)} on ${format(parseISO(session.date), 'PPP')} (Feature not fully implemented).`,
+      variant: "default"
+    });
   };
   
   const nextUpcomingSession = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
+    const today = startOfDay(new Date());
     return sessions
       .filter(s => {
           const sessionDate = parseISO(s.date);
@@ -227,11 +248,11 @@ export default function HomePage() {
       })
       .sort((a, b) => {
         const dateA = parseISO(a.date);
-        const timeA = a.time; // HH:mm
+        const timeA = a.time; 
         const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${timeA}:00`) : new Date(0);
 
         const dateB = parseISO(b.date);
-        const timeB = b.time; // HH:mm
+        const timeB = b.time; 
         const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${timeB}:00`) : new Date(0);
         
         if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
@@ -244,6 +265,7 @@ export default function HomePage() {
 
 
   const formatCaption: DateFormatter = (month) => {
+    // This is not used because caption_label is hidden
     return format(month, 'MMMM yyyy');
   };
 
@@ -251,12 +273,21 @@ export default function HomePage() {
     const daySessions = sessions.filter(s => {
         const sessionDate = parseISO(s.date);
         return isValid(sessionDate) && isSameDay(sessionDate, props.date);
+    }).sort((a,b) => {
+        // Sort sessions by time for display within the day cell
+        const timeA = parse(a.time, 'HH:mm', new Date());
+        const timeB = parse(b.time, 'HH:mm', new Date());
+        return compareAsc(timeA, timeB);
     });
+
     return (
-      <div className="relative h-full min-h-[6rem] p-1 flex flex-col items-start">
-        <div className="absolute top-1 right-1 text-xs text-muted-foreground">{format(props.date, 'd')}</div>
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left"> {/* Increased min-h for more space */}
+        <div className={cn(
+          "absolute top-1 right-1 text-xs",
+          isToday(props.date) ? "text-destructive font-semibold" : "text-muted-foreground"
+        )}>{format(props.date, 'd')}</div>
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-4 pr-1">
+          <ScrollArea className="w-full mt-5 pr-1"> {/* Increased mt */}
             <div className="space-y-1">
             {daySessions.map(session => (
               <Badge
@@ -278,26 +309,32 @@ export default function HomePage() {
     <div className="flex flex-col gap-6"> 
       
       {isLoadingData ? (
-        <div className="flex justify-center items-center py-10">
+        <div className="flex justify-center items-center py-6">
            <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : nextUpcomingSession ? (
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-base font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
-            <p><Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />{format(parseISO(nextUpcomingSession.date), 'PPP')} at {nextUpcomingSession.time}</p>
-            <p><TagIcon className="inline h-4 w-4 mr-1.5 text-muted-foreground" />{nextUpcomingSession.sessionType}</p>
+          <CardContent className="text-sm py-3">
+             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="flex items-centerwhitespace-nowrap">
+                    {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PP') : 'Invalid Date'} at {nextUpcomingSession.time}
+                </span>
+                <span className="text-muted-foreground">•</span>
+                <span className="flex items-center"><TagIcon className="inline h-4 w-4 mr-1 text-muted-foreground" />{nextUpcomingSession.sessionType}</span>
+            </div>
           </CardContent>
         </Card>
       ) : (
          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="pb-3">
-             <CardTitle className="text-base font-medium flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
+          <CardHeader className="pb-2 pt-3">
+             <CardTitle className="text-base font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-3">
             <p className="text-sm text-muted-foreground">No upcoming sessions scheduled.</p>
           </CardContent>
         </Card>
@@ -306,18 +343,21 @@ export default function HomePage() {
 
       {/* Large Calendar Section */}
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-x-4">
+        <CardHeader className="flex flex-row items-center justify-between space-x-4 py-3 px-4 border-b">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-            <h2 className="text-xl font-semibold text-center min-w-[150px]">{format(currentMonth, 'MMMM yyyy')}</h2>
-            <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+            <h2 className="text-lg font-semibold text-center min-w-[140px]">{format(currentMonth, 'MMMM yyyy')}</h2>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <div className="flex items-center gap-2">
-            <Input type="search" placeholder="Search sessions..." className="h-9 md:w-[200px] lg:w-[250px]" />
-            <Button onClick={() => setIsAddSessionModalOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
+            <div className="relative md:w-[200px] lg:w-[250px]">
+              <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type="search" placeholder="Search sessions..." className="h-9 pl-8 w-full" />
+            </div>
+            <Button onClick={() => setIsAddSessionModalOpen(true)} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0"> {/* Ensure no padding from CardContent */}
           {isLoadingData ? (
             <div className="flex justify-center items-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-3">Loading calendar...</p></div>
           ) : (
@@ -327,20 +367,21 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full p-4"
+              className="w-full" // Remove p-4, rely on internal or cell padding
               classNames={{
-                caption: "hidden", 
+                caption_label: "hidden", // Hides default MMMM yyyy label
+                caption: "hidden", // Hides the entire caption div including nav buttons
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
-                nav_button: "h-8 w-8",
-                nav_button_previous: "absolute left-2 top-1/2 -translate-y-1/2",
-                nav_button_next: "absolute right-2 top-1/2 -translate-y-1/2",
                 table: "w-full border-collapse",
                 head_row: "flex border-b",
                 head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", 
                 row: "flex w-full mt-0 border-b last:border-b-0",
-                cell: "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                day: "h-full w-full p-0",
+                cell: cn(
+                  "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
+                  "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" // Kept selected style for potential future use
+                ),
+                day: "h-full w-full p-0", // Day button itself has no padding
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "ring-2 ring-destructive ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
@@ -370,14 +411,11 @@ export default function HomePage() {
                         <SelectValue placeholder="Select a client" />
                       </SelectTrigger>
                       <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                        {clients.map(client => {
-                          const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
-                          return (
+                        {clients.map(client => (
                             <SelectItem key={client.id} value={client.id}>
-                              {formatFullNameAndDogName(ownerFullName, client.dogName)}
+                              {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
                             </SelectItem>
-                          );
-                        })}
+                          ))}
                       </SelectGroup></SelectContent>
                     </Select>
                   )}
@@ -450,7 +488,7 @@ export default function HomePage() {
               <ScrollArea className="h-[calc(100vh-160px)]">
                 <div className="p-6 space-y-4">
                   <Card>
-                    <CardHeader><CardTitle className="text-base flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1">
                       <p><strong>Date:</strong> {isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</p>
                       <p><strong>Time:</strong> {selectedSessionForSheet.time}</p>
@@ -510,3 +548,4 @@ export default function HomePage() {
     </div>
   );
 }
+
