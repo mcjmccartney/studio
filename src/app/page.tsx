@@ -312,30 +312,26 @@ export default function HomePage() {
         )}
 
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center space-x-4 py-3 px-4 border-b">
-            {/* Month Navigation */}
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
+            {/* Month Navigation - Left */}
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
                 <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
 
-            {/* Search Input Container */}
-            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md">
+            {/* Search Input and Add Session Button - Right */}
+            <div className="flex items-center gap-2">
                 <div className="relative">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
                         placeholder="Search sessions..."
-                        className="h-9 pl-8 w-full"
+                        className="h-9 pl-8 w-full max-w-xs sm:max-w-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-            </div>
-            
-            {/* Add Session Sheet Trigger - Pushed to the right */}
-            <div className="ml-auto">
               <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
                 <SheetTrigger asChild>
                   <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
@@ -548,4 +544,3 @@ export default function HomePage() {
     </div>
   );
 }
-
