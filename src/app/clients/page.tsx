@@ -575,7 +575,7 @@ export default function ClientsPage() {
                   <div
                     key={client.id}
                     onClick={() => handleClientRowClick(client)}
-                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center bg-card shadow-sm rounded-md mb-2"
+                    className="px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center bg-card shadow-sm rounded-md mb-2"
                   >
                     <div className="flex items-center gap-3">
                       {client.isMember && (
@@ -725,8 +725,8 @@ export default function ClientsPage() {
                       <Image
                         src="https://iili.io/34300ox.md.jpg"
                         alt="Member Icon"
-                        width={32} 
-                        height={32}
+                        width={28} 
+                        height={28}
                         className="rounded-md mr-3"
                         data-ai-hint="company logo"
                       />
@@ -960,3 +960,4 @@ export default function ClientsPage() {
 }
 
     
+
