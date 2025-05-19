@@ -10,18 +10,20 @@ export interface Client {
   ownerLastName: string;
   contactEmail: string;
   contactNumber: string;
-  postcode: string;
+  postcode: string; // Remains for direct entry or as part of 'address'
 
   address?: {
     addressLine1: string;
     addressLine2?: string;
     city: string;
     country: string;
+    // Postcode is implicitly part of address if address is filled
   };
   howHeardAboutServices?: string;
 
   dogName?: string; // Primary dog's name for quick display
   isMember?: boolean; // Tracks membership status
+  isActive?: boolean; // Tracks if the client is active
 
   // Link to the Behavioural Brief
   behaviouralBriefId?: string;
@@ -146,4 +148,13 @@ export interface FinancialTransaction {
   clientId?: string;
   clientName?: string;
   createdAt?: Timestamp | Date | string;
+}
+
+// This is the type for the address object specifically
+export interface Address {
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  country: string;
+  // Postcode is part of client.postcode, but can be shown as part of a full address display
 }

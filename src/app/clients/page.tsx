@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
+import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck } from 'lucide-react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -68,6 +68,7 @@ const internalClientFormSchema = z.object({
   postcode: z.string().min(3, { message: "Postcode is required." }),
   dogName: z.string().optional(),
   isMember: z.boolean().optional(),
+  isActive: z.boolean().optional(),
   submissionDate: z.string().optional(),
 });
 
@@ -101,7 +102,7 @@ export default function ClientsPage() {
   const [questionnaireForSheet, setQuestionnaireForSheet] = useState<BehaviourQuestionnaire | null>(null);
   const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
   
-  const [clientSessions, setClientSessions] = useState<Session[]>([]); // Used for session history in view sheet
+  const [clientSessions, setClientSessions] = useState<Session[]>([]);
 
   const { toast } = useToast();
 
@@ -115,6 +116,7 @@ export default function ClientsPage() {
       postcode: '',
       dogName: '',
       isMember: false,
+      isActive: true, // Default new clients from modal to active
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
@@ -129,6 +131,7 @@ export default function ClientsPage() {
       postcode: '',
       dogName: '',
       isMember: false,
+      isActive: true,
     }
   });
 
@@ -165,7 +168,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [toast]); // Added toast to dependency array as it's used in fetchClients
 
   useEffect(() => {
     if (clientToEdit) {
@@ -177,6 +180,7 @@ export default function ClientsPage() {
         postcode: clientToEdit.postcode,
         dogName: clientToEdit.dogName || '',
         isMember: clientToEdit.isMember || false,
+        isActive: clientToEdit.isActive === undefined ? true : clientToEdit.isActive,
         submissionDate: clientToEdit.submissionDate,
       });
     }
@@ -189,7 +193,7 @@ export default function ClientsPage() {
     }
     setIsSubmittingForm(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string } = {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
@@ -197,12 +201,13 @@ export default function ClientsPage() {
         postcode: data.postcode,
         dogName: data.dogName || undefined,
         isMember: data.isMember || false,
+        isActive: data.isActive === undefined ? true : data.isActive,
         submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
       toast({ title: "Client Added", description: `${newClient.ownerFirstName} ${newClient.ownerLastName} has been successfully added.` });
-      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientModalOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
@@ -229,11 +234,12 @@ export default function ClientsPage() {
         postcode: data.postcode,
         dogName: data.dogName || undefined,
         isMember: data.isMember || false,
+        isActive: data.isActive === undefined ? true : data.isActive,
       };
       await updateClientInFirestore(clientToEdit.id, updatedData);
 
       const updatedClients = clients.map(c =>
-        c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName } : c
+        c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName, isActive: updatedData.isActive } : c
       ).sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1));
       setClients(updatedClients);
 
@@ -290,18 +296,18 @@ export default function ClientsPage() {
     setClientForViewSheet(client);
     setSheetViewMode('clientInfo');
     setIsViewSheetOpen(true);
-    // Fetch sessions for this client
+    
     const sessions = mockSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     setClientSessions(sessions);
-    // Reset brief and questionnaire for the new client
+    
     setBriefForSheet(null);
     setQuestionnaireForSheet(null);
   };
 
   useEffect(() => {
     const fetchBriefForSheet = async () => {
-      if (clientForViewSheet?.behaviouralBriefId && sheetViewMode === 'clientInfo' && !briefForSheet) { // Fetch only if moving to client info or initially
+      if (clientForViewSheet?.behaviouralBriefId && sheetViewMode === 'clientInfo' && !briefForSheet) { 
         setIsLoadingBriefForSheet(true);
         try {
           const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
@@ -315,11 +321,11 @@ export default function ClientsPage() {
       }
     };
     fetchBriefForSheet();
-  }, [clientForViewSheet, sheetViewMode, briefForSheet]);
+  }, [clientForViewSheet, sheetViewMode, briefForSheet, toast]);
 
   useEffect(() => {
     const fetchQuestionnaireForSheet = async () => {
-      if (clientForViewSheet?.behaviourQuestionnaireId && sheetViewMode === 'clientInfo' && !questionnaireForSheet) { // Fetch only if moving to client info or initially
+      if (clientForViewSheet?.behaviourQuestionnaireId && sheetViewMode === 'clientInfo' && !questionnaireForSheet) { 
         setIsLoadingQuestionnaireForSheet(true);
         try {
           const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
@@ -333,14 +339,14 @@ export default function ClientsPage() {
       }
     };
     fetchQuestionnaireForSheet();
-  }, [clientForViewSheet, sheetViewMode, questionnaireForSheet]);
+  }, [clientForViewSheet, sheetViewMode, questionnaireForSheet, toast]);
 
 
   const handleViewBriefInSheet = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
-    if (!briefForSheet) setIsLoadingBriefForSheet(true); // Show loader if brief not yet loaded
+    if (!briefForSheet) setIsLoadingBriefForSheet(true);
     try {
-        if (!briefForSheet) { // Fetch only if not already fetched
+        if (!briefForSheet) { 
             const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
             setBriefForSheet(brief);
         }
@@ -449,6 +455,25 @@ export default function ClientsPage() {
                     )}
                   />
                   <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
+                </div>
+              </div>
+               <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="add-isActive" className="text-right pt-2">Is Active?</Label>
+                <div className="col-span-3 flex items-center">
+                   <Controller
+                    name="isActive"
+                    control={addClientForm.control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="add-isActive"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmittingForm}
+                        className="mr-2"
+                      />
+                    )}
+                  />
+                  <span className="text-sm text-muted-foreground">Untick if client is inactive.</span>
                 </div>
               </div>
               <input type="hidden" {...addClientForm.register("submissionDate")} />
@@ -590,7 +615,7 @@ export default function ClientsPage() {
                 <Input id="edit-postcode" {...editClientForm.register("postcode")} className={editClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
                 {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
               </div>
-              <div className="flex items-center space-x-2 pt-2">
+              <div className="flex items-center space-x-2 pt-1">
                  <Controller
                   name="isMember"
                   control={editClientForm.control}
@@ -604,6 +629,21 @@ export default function ClientsPage() {
                   )}
                 />
                 <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
+              </div>
+               <div className="flex items-center space-x-2 pt-1">
+                 <Controller
+                  name="isActive"
+                  control={editClientForm.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="edit-isActive"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmittingForm}
+                    />
+                  )}
+                />
+                <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
               </div>
               <SheetFooter className="mt-4">
                 <SheetClose asChild>
@@ -639,9 +679,14 @@ export default function ClientsPage() {
                     )}
                   {clientForViewSheet.ownerFirstName} {clientForViewSheet.ownerLastName}
                 </SheetTitle>
-                {clientForViewSheet.dogName && <SheetDescription>Dog: {clientForViewSheet.dogName}</SheetDescription>}
+                <div className="flex flex-col space-y-1 text-sm">
+                  {clientForViewSheet.dogName && <SheetDescription>Dog: {clientForViewSheet.dogName}</SheetDescription>}
+                  <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit">
+                    {clientForViewSheet.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-70px)]"> {/* Adjust height based on header */}
+              <ScrollArea className="h-[calc(100vh-100px)]">
                 <div className="p-6 space-y-6">
                   {sheetViewMode === 'clientInfo' && (
                     <>
@@ -652,19 +697,21 @@ export default function ClientsPage() {
                         <CardContent className="space-y-2 text-sm">
                           <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> <a href={`mailto:${clientForViewSheet.contactEmail}`} className="ml-1 hover:underline">{clientForViewSheet.contactEmail}</a></div>
                           <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Number:</strong> <a href={`tel:${clientForViewSheet.contactNumber}`} className="ml-1 hover:underline">{clientForViewSheet.contactNumber}</a></div>
+                          
                           {clientForViewSheet.address ? (
                             <div className="flex items-start"><MapPin className="mr-2 h-4 w-4 text-muted-foreground mt-0.5"/>
                               <strong>Address:</strong>
                               <div className="ml-1">
                                   {clientForViewSheet.address.addressLine1} <br />
                                   {clientForViewSheet.address.addressLine2 && <>{clientForViewSheet.address.addressLine2} <br /></>}
-                                  {clientForViewSheet.address.city}, {clientForViewSheet.postcode} <br />
+                                  {clientForViewSheet.address.city}, {clientForViewSheet.postcode} <br /> 
                                   {clientForViewSheet.address.country}
                               </div>
                             </div>
                           ) : (
                             <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {clientForViewSheet.postcode}</div>
                           )}
+
                           {clientForViewSheet.howHeardAboutServices && (
                             <div className="pt-2">
                                 <strong className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground"/>How heard about services:</strong>
@@ -678,6 +725,10 @@ export default function ClientsPage() {
                           <div className="pt-2">
                               <strong className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Membership:</strong>
                               <Badge variant={clientForViewSheet.isMember ? "default" : "outline"} className="ml-1">{clientForViewSheet.isMember ? "Active Member" : "Not a Member"}</Badge>
+                          </div>
+                           <div className="pt-2">
+                              <strong className="flex items-center"><SquareCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Status:</strong>
+                              <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="ml-1">{clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}</Badge>
                           </div>
                         </CardContent>
                       </Card>
@@ -854,5 +905,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-
-    

@@ -5,21 +5,49 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, CalendarDays, DollarSign as IconDollarSign } from "lucide-react";
+import { Users, CalendarDays, DollarSign as IconDollarSign, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import type { Session } from '@/lib/types';
+import type { Session, Client } from '@/lib/types'; // Added Client
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval } from 'date-fns'; // Added date-fns functions
 import { mockSessions } from '@/lib/mockData'; 
+import { getClients } from '@/lib/firebase'; // Added getClients
+import { useToast } from "@/hooks/use-toast"; // Added useToast
 
 export default function HomePage() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
-  const [currentSessions, setCurrentSessions] = useState<Session[]>([]);
+  const [currentSessions, setCurrentSessions] = useState<Session[]>(mockSessions); // Keep using mock for sessions for now
+  
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState<boolean>(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, fetch sessions, for now using mock.
-    setCurrentSessions(mockSessions);
-  }, []);
+    const fetchClientsForDashboard = async () => {
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        // No need to toast here, clients page already handles this.
+        // Keep dashboard functional with mock/default counts.
+        setIsLoadingClients(false);
+        return;
+      }
+      try {
+        setIsLoadingClients(true);
+        const firestoreClients = await getClients();
+        setClients(firestoreClients);
+      } catch (err) {
+        console.error("Error fetching clients for dashboard:", err);
+        // Optionally toast, or just log and let counts be based on empty/mock.
+        toast({
+          title: "Error Loading Client Data",
+          description: "Could not fetch client data for dashboard stats.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingClients(false);
+      }
+    };
+    fetchClientsForDashboard();
+  }, [toast]);
 
   const selectedDateString = selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'yyyy-MM-dd') : null;
   const sessionsOnSelectedDate = selectedDateString 
@@ -28,21 +56,35 @@ export default function HomePage() {
   
   const allSessionDates = currentSessions.map(s => parseISO(s.date)).filter(isValid);
 
-  // Calculate stats (these are placeholders, you'd fetch real data)
-  const activeClientsCount = 12; 
-  const upcomingSessionsCount = currentSessions.filter(s => parseISO(s.date) >= new Date() && s.status === 'Scheduled').length;
-  const incomeThisMonth = 2350.00;
+  // Calculate stats
+  const activeClientsCount = isLoadingClients ? 0 : clients.filter(client => client.isActive === true || client.isActive === undefined).length;
+  
+  const today = startOfDay(new Date());
+  const oneWeekFromToday = addDays(today, 6); // 7-day window from today
+
+  const upcomingSessionsCount = currentSessions.filter(session => {
+    if (session.status !== 'Scheduled') return false;
+    const sessionDate = parseISO(session.date);
+    if (!isValid(sessionDate)) return false;
+    return isWithinInterval(startOfDay(sessionDate), { start: today, end: oneWeekFromToday });
+  }).length;
+  
+  const incomeThisMonth = 2350.00; // Placeholder, real calculation needed
 
   return (
     <div className="flex flex-col gap-8"> 
       <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clients</CardTitle> {/* Removed font-serif */}
+            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeClientsCount} Active</div>
+            {isLoadingClients ? (
+                <Loader2 className="h-6 w-6 animate-spin text-primary my-1" />
+            ) : (
+                <div className="text-2xl font-bold">{activeClientsCount}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Manage your client base
             </p>
@@ -53,7 +95,7 @@ export default function HomePage() {
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle> {/* Removed font-serif */}
+            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -68,7 +110,7 @@ export default function HomePage() {
         </Card>
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Finance Overview</CardTitle> {/* Removed font-serif */}
+            <CardTitle className="text-sm font-medium">Finance Overview</CardTitle>
             <IconDollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -86,7 +128,7 @@ export default function HomePage() {
       {/* Calendar Section */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Session Calendar Overview</CardTitle> {/* Removed font-serif */}
+          <CardTitle>Session Calendar Overview</CardTitle>
           <CardDescription>Quick view of your scheduled sessions. For detailed management, go to the Sessions page.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -109,7 +151,7 @@ export default function HomePage() {
             </Card>
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle> {/* Removed font-serif */}
+                <CardTitle>
                   {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
                 </CardTitle>
               </CardHeader>

@@ -21,9 +21,9 @@ import {
   type DocumentData, 
   type FirestoreDataConverter, 
   type QueryDocumentSnapshot,
-  query, // Added
-  where, // Added
-  limit // Added
+  query,
+  where,
+  limit
 } from 'firebase/firestore';
 import type { Client, BehaviouralBrief, BehaviourQuestionnaire, Address } from './types';
 import { format } from 'date-fns';
@@ -133,6 +133,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
       isMember: client.isMember === undefined ? false : client.isMember,
+      isActive: client.isActive === undefined ? true : client.isActive, // Default to true if undefined
       dogName: client.dogName || null, 
       address: client.address || null, 
       howHeardAboutServices: client.howHeardAboutServices || null, 
@@ -146,10 +147,10 @@ const clientConverter: FirestoreDataConverter<Client> = {
           dataToSave[key] = null;
         } else if (key === 'isMember') {
             dataToSave[key] = false;
-        } else {
-          // For other potentially undefined fields from the Client type that are not meant to be null in Firestore
-          // an explicit decision should be made. For now, we delete to avoid 'undefined' values in Firestore.
-          // If a field MUST exist, its type or default assignment should handle it.
+        } else if (key === 'isActive') {
+            dataToSave[key] = true; // Default to true
+        }
+         else {
           delete dataToSave[key]; 
         }
       }
@@ -169,6 +170,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       howHeardAboutServices: data.howHeardAboutServices || undefined,
       dogName: data.dogName || undefined,
       isMember: data.isMember === undefined ? false : data.isMember,
+      isActive: data.isActive === undefined ? true : data.isActive, // Default to true if undefined
       behaviouralBriefId: data.behaviouralBriefId || undefined,
       behaviourQuestionnaireId: data.behaviourQuestionnaireId || undefined,
       submissionDate: data.submissionDate || '',
@@ -224,8 +226,6 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
         if (['sociabilityWithDogs', 'sociabilityWithPeople'].includes(key)) {
             dataToSave[key] = '';
         } else {
-            // Default to null for optional fields if undefined, to be explicit in Firestore
-            // instead of potentially deleting the field.
             dataToSave[key] = null; 
         }
       }
@@ -307,7 +307,7 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
-export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string, address?: Address, howHeardAboutServices?: string }): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string, address?: Address, howHeardAboutServices?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
@@ -320,6 +320,7 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
     postcode: clientData.postcode,
     dogName: clientData.dogName || undefined,
     isMember: clientData.isMember || false,
+    isActive: clientData.isActive === undefined ? true : clientData.isActive,
     address: clientData.address || undefined,
     howHeardAboutServices: clientData.howHeardAboutServices || undefined,
     submissionDate: clientData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
@@ -345,6 +346,7 @@ export type EditableClientData = {
   postcode?: string;
   dogName?: string;
   isMember?: boolean;
+  isActive?: boolean;
   address?: Address;
   howHeardAboutServices?: string;
 };
@@ -406,6 +408,7 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     postcode: formData.postcode, 
     dogName: formData.dogName, 
     isMember: false, 
+    isActive: true, // New clients from brief are active by default
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -440,30 +443,48 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
 
 export const addClientAndBehaviourQuestionnaireToFirestore = async (
   formData: BehaviourQuestionnaireFormValues
-): Promise<{ client?: Client; questionnaire: BehaviourQuestionnaire }> => {
+): Promise<{ client: Client; questionnaire: BehaviourQuestionnaire }> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client and questionnaire.");
   }
   const submissionTimestamp = formData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss");
 
-  let targetClientId: string | undefined;
-  let clientDataForReturn: Client | undefined;
+  let targetClientId: string;
+  let clientDataForReturn: Client;
 
-  // 1. Try to find an existing client by email
   const clientsQuery = query(
     clientsCollectionRef,
     where("contactEmail", "==", formData.contactEmail),
-    limit(1) 
+    limit(1)
   );
   const querySnapshot = await getDocs(clientsQuery);
 
   if (!querySnapshot.empty) {
     const existingClientDoc = querySnapshot.docs[0];
-    clientDataForReturn = existingClientDoc.data(); 
     targetClientId = existingClientDoc.id;
+    clientDataForReturn = existingClientDoc.data(); // This will have isActive status from Firestore
     console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
+    
+    // If existing client, update their address and howHeardAboutServices from questionnaire if provided
+    const updates: Partial<Client> = {};
+    if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
+        updates.address = {
+            addressLine1: formData.addressLine1,
+            addressLine2: formData.addressLine2 || undefined,
+            city: formData.city,
+            country: formData.country,
+        };
+        updates.postcode = formData.postcode; // Also update top-level postcode
+    }
+    if (formData.howHeardAboutServices) {
+        updates.howHeardAboutServices = formData.howHeardAboutServices;
+    }
+     if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(clientsCollectionRef, targetClientId), updates);
+        clientDataForReturn = { ...clientDataForReturn, ...updates }; // Reflect updates in returned data
+    }
+
   } else {
-    // 2. If no existing client found by email, create a new one
     console.log(`No existing client found for email: ${formData.contactEmail}. Creating new client.`);
     const clientAddress: Address = {
       addressLine1: formData.addressLine1,
@@ -479,7 +500,8 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
       contactNumber: formData.contactNumber,
       postcode: formData.postcode,
       dogName: formData.dogName,
-      isMember: false, 
+      isMember: false,
+      isActive: true, // New clients from questionnaire are active by default
       address: clientAddress,
       howHeardAboutServices: formData.howHeardAboutServices || undefined,
       submissionDate: submissionTimestamp,
@@ -492,11 +514,6 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     clientDataForReturn = { ...newClientRecord, id: targetClientId, createdAt: new Date().toISOString() } as Client;
   }
 
-  if (!targetClientId) { 
-    throw new Error("Could not determine target client ID for questionnaire submission.");
-  }
-
-  // 3. Create the BehaviourQuestionnaire document
   const questionnaireRecord: Omit<BehaviourQuestionnaire, 'id'> = {
     clientId: targetClientId,
     dogName: formData.dogName,
@@ -550,15 +567,12 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
   const questionnaireDocRef = await addDoc(behaviourQuestionnairesCollectionRef, questionnaireRecord);
   const newQuestionnaireId = questionnaireDocRef.id;
 
-  // 4. Update the client record (whether new or existing) with the ID of the newly created questionnaire
   const clientToUpdateRef = doc(clientsCollectionRef, targetClientId);
   await updateDoc(clientToUpdateRef, {
     behaviourQuestionnaireId: newQuestionnaireId,
   });
   
-  if(clientDataForReturn) {
-    clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId;
-  }
+  clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId; // Ensure this is set on the returned client
 
   const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId, createdAt: new Date().toISOString() } as BehaviourQuestionnaire;
 
@@ -613,7 +627,3 @@ export const signOutUser = async () => {
 };
 
 export { db, app, auth, onAuthStateChanged, Timestamp, serverTimestamp, type User };
-
-    
-
-    
