@@ -276,16 +276,16 @@ export default function BehaviourQuestionnairePage() {
         <Image
           src="https://iili.io/34300ox.md.jpg"
           alt="RMR Logo"
-          width={50}
-          height={50}
+          width={60}
+          height={60}
           className="rounded-sm"
           data-ai-hint="company logo"
         />
         <Image 
           src="https://iili.io/3PLgIHu.png" 
           alt="Behaviour Questionnaire Title" 
-          width={540} 
-          height={60}
+          width={630} 
+          height={70}
           data-ai-hint="form title"
         />
       </div>
