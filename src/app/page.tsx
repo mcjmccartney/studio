@@ -126,7 +126,7 @@ export default function HomePage() {
           getClients(),
           getSessionsFromFirestore()
         ]);
-        setClients(firestoreClients);
+        setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
         setSessions(firestoreSessions.sort((a, b) => {
             const dateA = parseISO(a.date);
             const dateB = parseISO(b.date);
@@ -236,34 +236,6 @@ export default function HomePage() {
       variant: "default"
     });
   };
-  
-  const nextUpcomingSession = useMemo(() => {
-    if (!sessions || sessions.length === 0) return null;
-    const today = startOfDay(new Date());
-    return sessions
-      .filter(s => {
-          const sessionDate = parseISO(s.date);
-          return s.status === 'Scheduled' && 
-                 isValid(sessionDate) && 
-                 (isToday(sessionDate) || isFuture(sessionDate));
-      })
-      .sort((a, b) => {
-        const dateA = parseISO(a.date);
-        const timeA = a.time; 
-        const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${timeA}:00`) : new Date(0);
-
-        const dateB = parseISO(b.date);
-        const timeB = b.time; 
-        const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${timeB}:00`) : new Date(0);
-        
-        if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
-        if (!isValid(dateTimeA)) return 1;
-        if (!isValid(dateTimeB)) return -1;
-        
-        return compareAsc(dateTimeA, dateTimeB);
-      })[0] || null;
-  }, [sessions]);
-
 
   const formatCaption: DateFormatter = (month) => {
     return format(month, 'MMMM yyyy');
@@ -307,42 +279,11 @@ export default function HomePage() {
   return (
     <div className="flex flex-col gap-6"> 
       
-      {isLoadingData ? (
+      {isLoadingData && (
         <div className="flex justify-center items-center py-6">
            <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : nextUpcomingSession ? (
-        <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-base font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-1 py-3">
-             <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
-             <p className="flex items-center">
-                <CalendarIconLucide className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
-                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PP') : 'Invalid Date'}
-            </p>
-            <p className="flex items-center">
-                <Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
-                {nextUpcomingSession.time}
-            </p>
-            <p className="flex items-center">
-                <TagIcon className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
-                {nextUpcomingSession.sessionType}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
-          <CardHeader className="pb-2 pt-3">
-             <CardTitle className="text-base font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
-          </CardHeader>
-          <CardContent className="py-3">
-            <p className="text-sm text-muted-foreground">No upcoming sessions scheduled.</p>
-          </CardContent>
-        </Card>
       )}
-
 
       {/* Large Calendar Section */}
       <Card className="shadow-lg">
@@ -386,7 +327,7 @@ export default function HomePage() {
                 ),
                 day: "h-full w-full p-0", 
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-[#92351f] ring-offset-background ring-offset-1 rounded-md",
+                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
