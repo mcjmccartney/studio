@@ -183,9 +183,9 @@ export default function SessionsPage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
+      clientId: '',
       date: undefined,
       time: '',
-      clientId: '',
       sessionType: '',
       cost: undefined,
     }
@@ -194,9 +194,9 @@ export default function SessionsPage() {
   useEffect(() => {
     if (isAddSessionSheetOpen) {
       addSessionForm.reset({
+        clientId: '',
         date: new Date(),
         time: format(new Date(), "HH:mm"),
-        clientId: '',
         sessionType: '',
         cost: undefined,
       });
@@ -256,6 +256,7 @@ export default function SessionsPage() {
       time: data.time,
       sessionType: data.sessionType,
       cost: data.cost,
+      status: 'Scheduled', // Default status
     };
 
     try {
@@ -565,10 +566,6 @@ export default function SessionsPage() {
                                 <span className="flex items-center">
                                     <Clock className="inline-block mr-1.5 h-4 w-4" />
                                     {session.time}
-                                </span>
-                                <span className="flex items-center">
-                                    <TagIcon className="inline-block mr-1.5 h-4 w-4" />
-                                    {session.sessionType}
                                 </span>
                                 {session.cost !== undefined && (
                                     <span className="flex items-center">
