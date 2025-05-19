@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase'; 
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid, parse } from 'date-fns'; // Added parse
+import { format, parseISO, isValid, parse } from 'date-fns';
 import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon } from 'lucide-react';
 import {
   Dialog,
@@ -194,6 +194,7 @@ export default function SessionsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [isDateTimePopoverOpen, setIsDateTimePopoverOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
@@ -201,7 +202,7 @@ export default function SessionsPage() {
 
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors }, watch } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
@@ -210,6 +211,9 @@ export default function SessionsPage() {
       sessionType: '',
     }
   });
+  const watchedDate = watch("date");
+  const watchedTime = watch("time");
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -248,7 +252,7 @@ export default function SessionsPage() {
       return;
     }
     
-    const sessionData: Omit<Session, 'id' | 'createdAt'> = { // Removed notes
+    const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
@@ -268,6 +272,7 @@ export default function SessionsPage() {
       });
       reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '', sessionType: '' });
       setIsAddSessionModalOpen(false);
+      setIsDateTimePopoverOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -340,7 +345,6 @@ export default function SessionsPage() {
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
     try {
-        // Ensure parsing is robust, e.g. using a fixed day if month/year format is consistent
         const dateA = parse(a, 'MMMM yyyy', new Date());
         const dateB = parse(b, 'MMMM yyyy', new Date());
         if (!isValid(dateA) || !isValid(dateB)) return 0;
@@ -400,97 +404,92 @@ export default function SessionsPage() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">Date</Label>
+                <Label htmlFor="date-time" className="text-right">Date & Time</Label>
                 <div className="col-span-3">
-                  <Controller
-                    name="date"
-                    control={control}
-                    render={({ field }) => (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                              errors.date ? "border-destructive" : ""
-                            )}
-                            disabled={isSubmittingForm}
-                          >
-                            <CalendarIconLucide className="mr-2 h-4 w-4" />
-                            {field.value && isValid(field.value) ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                  <Popover open={isDateTimePopoverOpen} onOpenChange={setIsDateTimePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          (!watchedDate || !watchedTime) && "text-muted-foreground",
+                          (errors.date || errors.time) && "border-destructive"
+                        )}
+                        disabled={isSubmittingForm}
+                      >
+                        <CalendarIconLucide className="mr-2 h-4 w-4" />
+                        {watchedDate && isValid(watchedDate) && watchedTime ? 
+                          `${format(watchedDate, "PPP")} at ${watchedTime}` : 
+                          <span>Pick a date & time</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Controller
+                        name="date"
+                        control={control}
+                        render={({ field }) => (
                           <ShadCalendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
                             disabled={isSubmittingForm}
+                            className="p-3"
                           />
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  />
+                        )}
+                      />
+                      <div className="p-3 border-t border-border">
+                        <Label htmlFor="time-popover" className="text-sm font-medium">Time</Label>
+                        <Controller
+                          name="time"
+                          control={control}
+                          render={({ field }) => {
+                            const convertTo24HourFormat = (time12h: string): string => {
+                              if (!time12h) return "";
+                              try {
+                                const parsedDate = parse(time12h, "hh:mm a", new Date(2000, 0, 1));
+                                if (isValid(parsedDate)) return format(parsedDate, "HH:mm");
+                              } catch (e) { console.error("Error parsing time for input:", time12h, e); }
+                              return ""; 
+                            };
+                            return (
+                              <Input 
+                                id="time-popover" 
+                                type="time" 
+                                value={convertTo24HourFormat(field.value)}
+                                onChange={(e) => {
+                                  const time24 = e.target.value; 
+                                  if (time24) {
+                                    try {
+                                      const [hours, minutes] = time24.split(':');
+                                      const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
+                                      if(isValid(dateForFormatting)) field.onChange(format(dateForFormatting, "hh:mm a"));
+                                      else field.onChange('');
+                                    } catch(error) {
+                                      console.error("Error processing time input:", time24, error);
+                                      field.onChange('');
+                                    }
+                                  } else {
+                                    field.onChange('');
+                                  }
+                                }}
+                                className={cn("w-full mt-1", errors.time ? "border-destructive" : "")}
+                                disabled={isSubmittingForm}
+                              />
+                            );
+                          }}
+                        />
+                      </div>
+                       <div className="p-3 border-t border-border flex justify-end">
+                        <Button size="sm" onClick={() => setIsDateTimePopoverOpen(false)}>Done</Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
+                  {errors.time && !errors.date && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time" className="text-right">Time</Label>
-                <div className="col-span-3">
-                   <Controller
-                    name="time"
-                    control={control}
-                    render={({ field }) => {
-                      // Helper to convert "hh:mm a" (form state) to "HH:mm" (input type="time" value)
-                      const convertTo24HourFormat = (time12h: string): string => {
-                        if (!time12h) return "";
-                        try {
-                          const parsedDate = parse(time12h, "hh:mm a", new Date(2000, 0, 1)); // Use a fixed base date for parsing
-                          if (isValid(parsedDate)) {
-                            return format(parsedDate, "HH:mm");
-                          }
-                        } catch (e) {
-                          console.error("Error parsing time for input:", time12h, e);
-                        }
-                        return ""; 
-                      };
-                      
-                      return (
-                        <Input 
-                            id="time" 
-                            type="time" 
-                            value={convertTo24HourFormat(field.value)}
-                            onChange={(e) => {
-                                const time24 = e.target.value; 
-                                if (time24) {
-                                  try {
-                                    const [hours, minutes] = time24.split(':');
-                                    const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
-                                    if(isValid(dateForFormatting)){
-                                      field.onChange(format(dateForFormatting, "hh:mm a"));
-                                    } else {
-                                      field.onChange('');
-                                    }
-                                  } catch(error) {
-                                    console.error("Error processing time input:", time24, error);
-                                    field.onChange('');
-                                  }
-                                } else {
-                                    field.onChange('');
-                                }
-                            }}
-                            className={cn("w-full", errors.time ? "border-destructive" : "")}
-                            disabled={isSubmittingForm}
-                        />
-                      );
-                    }}
-                  />
-                  {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
-                </div>
-              </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="sessionType" className="text-right">Type</Label>
