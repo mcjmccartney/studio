@@ -189,7 +189,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [toast]); // Added toast to dependency array as it's used in fetchInitialData
+  }, [toast]); 
 
   useEffect(() => {
     if (clientToEdit) {
@@ -322,7 +322,14 @@ export default function ClientsPage() {
     setIsViewSheetOpen(true);
     
     const sessionsForThisClient = allSessions.filter(session => session.clientId === client.id)
-                                .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+                                .sort((a,b) => {
+                                    const dateA = parseISO(a.date);
+                                    const dateB = parseISO(b.date);
+                                    if (!isValid(dateA) && !isValid(dateB)) return 0;
+                                    if (!isValid(dateA)) return 1;
+                                    if (!isValid(dateB)) return -1;
+                                    return dateB.getTime() - dateA.getTime();
+                                });
     setClientSessionsForViewSheet(sessionsForThisClient);
     
     setBriefForSheet(null);
@@ -405,7 +412,7 @@ export default function ClientsPage() {
       return clients;
     } else if (memberFilter === 'members') {
       return clients.filter(client => client.isMember === true);
-    } else { // nonMembers
+    } else { 
       return clients.filter(client => client.isMember === false || client.isMember === undefined);
     }
   }, [clients, memberFilter]);
@@ -575,15 +582,14 @@ export default function ClientsPage() {
                         <Image
                           src="https://iili.io/34300ox.md.jpg" 
                           alt="Member Icon"
-                          width={32}
-                          height={32}
+                          width={28}
+                          height={28}
                           className="rounded-md"
                           data-ai-hint="company logo"
                         />
                       )}
                       <div>
                         <h3 className="font-semibold text-base">{displayName}</h3>
-                        {client.dogName && <p className="text-sm text-muted-foreground flex items-center"><PawPrint className="h-3 w-3 mr-1.5 text-muted-foreground" />{client.dogName}</p>}
                       </div>
                     </div>
                     <DropdownMenu>
@@ -719,7 +725,7 @@ export default function ClientsPage() {
                       <Image
                         src="https://iili.io/34300ox.md.jpg"
                         alt="Member Icon"
-                        width={32}
+                        width={32} 
                         height={32}
                         className="rounded-md mr-3"
                         data-ai-hint="company logo"
@@ -899,7 +905,7 @@ export default function ClientsPage() {
                             {questionnaireForSheet.idealTrainingOutcome && <div className="pt-1"><strong>Ideal Outcome:</strong> <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{questionnaireForSheet.idealTrainingOutcome}</p></div>}
                             {questionnaireForSheet.sociabilityWithDogs && <div className="pt-1"><strong>Sociability with Dogs:</strong> {questionnaireForSheet.sociabilityWithDogs}</div>}
                             {questionnaireForSheet.sociabilityWithPeople && <div className="pt-1"><strong>Sociability with People:</strong> {questionnaireForSheet.sociabilityWithPeople}</div>}
-                            {/* Add more questionnaire fields here as needed */}
+                            
                             <div className="pt-2">
                                 <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
                                 <p className="mt-1 text-muted-foreground">{questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
