@@ -4,10 +4,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon, ExternalLink, SquareCheck } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
-import 'react-day-picker/dist/style.css'; 
-import type { Session, Client } from '@/lib/types'; 
+import 'react-day-picker/dist/style.css';
+import type { Session, Client } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
@@ -43,9 +43,9 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay } from 'date-fns'; 
-import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase'; 
-import { useToast } from "@/hooks/use-toast"; 
+import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay } from 'date-fns';
+import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase';
+import { useToast } from "@/hooks/use-toast";
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar as ShadCalendar } from "@/components/ui/calendar";
@@ -60,7 +60,7 @@ const sessionFormSchema = z.object({
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
 
 const sessionTypeOptions = [
-  "In-Person", "Online", "Training", "Online Catchup", 
+  "In-Person", "Online", "Training", "Online Catchup",
   "Group", "Phone Call", "RMR Live", "Coaching"
 ];
 
@@ -68,11 +68,11 @@ export default function HomePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
-  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false); // Changed from Modal to Sheet
-  const [isSubmittingSheet, setIsSubmittingSheet] = useState(false); // Changed from Modal to Sheet
-  
+  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
+  const [isSubmittingSheet, setIsSubmittingSheet] = useState(false);
+
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
-  
+
   const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
@@ -83,8 +83,8 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined, 
-      time: '',       
+      date: undefined,
+      time: '',
       clientId: '',
       sessionType: '',
     }
@@ -94,7 +94,7 @@ export default function HomePage() {
     if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         date: new Date(),
-        time: format(new Date(), "HH:mm"), 
+        time: format(new Date(), "HH:mm"),
         clientId: '',
         sessionType: '',
       });
@@ -119,22 +119,22 @@ export default function HomePage() {
           getClients(),
           getSessionsFromFirestore()
         ]);
-        setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
+        setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1 : -1) : -1)));
         setSessions(firestoreSessions.sort((a, b) => {
-            const dateA = parseISO(a.date);
-            const dateB = parseISO(b.date);
-            if (!isValid(dateA) && !isValid(dateB)) return 0;
-            if (!isValid(dateA)) return 1; 
-            if (!isValid(dateB)) return -1; 
-            
-            const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
-            const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
-            
-            if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
-            if (!isValid(dateTimeA)) return 1;
-            if (!isValid(dateTimeB)) return -1;
+          const dateA = parseISO(a.date);
+          const dateB = parseISO(b.date);
+          if (!isValid(dateA) && !isValid(dateB)) return 0;
+          if (!isValid(dateA)) return 1;
+          if (!isValid(dateB)) return -1;
 
-            return dateTimeB.getTime() - dateTimeA.getTime();
+          const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+          const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+
+          if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+          if (!isValid(dateTimeA)) return 1;
+          if (!isValid(dateTimeB)) return -1;
+
+          return dateTimeB.getTime() - dateTimeA.getTime();
         }));
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -158,14 +158,14 @@ export default function HomePage() {
       setIsSubmittingSheet(false);
       return;
     }
-    
+
     const ownerFullName = `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`.trim();
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
       clientName: ownerFullName,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time, 
+      time: data.time,
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -173,21 +173,21 @@ export default function HomePage() {
     try {
       const newSession = await addSessionToFirestore(sessionData);
       setSessions(prev => [newSession, ...prev].sort((a, b) => {
-            const dateA = parseISO(a.date);
-            const dateB = parseISO(b.date);
-            if (!isValid(dateA) && !isValid(dateB)) return 0;
-            if (!isValid(dateA)) return 1;
-            if (!isValid(dateB)) return -1;
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        if (!isValid(dateA) && !isValid(dateB)) return 0;
+        if (!isValid(dateA)) return 1;
+        if (!isValid(dateB)) return -1;
 
-            const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
-            const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
-            
-            if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
-            if (!isValid(dateTimeA)) return 1;
-            if (!isValid(dateTimeB)) return -1;
-            
-            return dateTimeB.getTime() - dateTimeA.getTime();
-        }));
+        const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+        const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+
+        if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+        if (!isValid(dateTimeA)) return 1;
+        if (!isValid(dateTimeB)) return -1;
+
+        return dateTimeB.getTime() - dateTimeA.getTime();
+      }));
       toast({ title: "Session Added", description: `Session on ${format(data.date, 'PPP')} at ${data.time} scheduled.` });
       setIsAddSessionSheetOpen(false);
     } catch (err) {
@@ -205,12 +205,12 @@ export default function HomePage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true); // Reuse this state for loading indicator
+    setIsSubmittingSheet(true);
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       toast({ title: "Session Deleted", description: "The session has been deleted." });
-      setIsSessionDetailSheetOpen(false); 
+      setIsSessionDetailSheetOpen(false);
       setSelectedSessionForSheet(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
@@ -221,11 +221,11 @@ export default function HomePage() {
       setIsSubmittingSheet(false);
     }
   };
-  
+
   const handleEditSession = (session: Session) => {
-     toast({
+    toast({
       title: "Edit Session",
-      description: `Edit session for ${formatFullNameAndDogName(session.clientName, session.dogName)} on ${format(parseISO(session.date), 'PPP')} (Feature not fully implemented).`,
+      description: `Edit session for ${formatFullNameAndDogName(session.clientName, session.dogName)} on ${isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'} (Feature not fully implemented).`,
       variant: "default"
     });
   };
@@ -234,23 +234,27 @@ export default function HomePage() {
     return format(month, 'MMMM yyyy');
   };
 
- function CustomDayContent(props: DayProps) {
+  function CustomDayContent(props: DayProps) {
     const daySessions = sessions.filter(s => {
-        const sessionDate = parseISO(s.date);
-        return isValid(sessionDate) && isSameDay(sessionDate, props.date);
-    }).sort((a,b) => {
+      const sessionDate = parseISO(s.date);
+      return isValid(sessionDate) && isSameDay(sessionDate, props.date);
+    }).sort((a, b) => {
+      try {
         const timeA = parse(a.time, 'HH:mm', new Date());
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
+      } catch {
+        return 0; // Fallback if time parsing fails
+      }
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left"> {/* Reverted: Day number positioning & content flow */}
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
         <div
           className={cn(
-            "absolute top-1 right-1 text-xs", // Reverted: Day number to top-right
+            "absolute top-1 right-1 text-xs",
             isToday(props.date)
-              ? "text-destructive font-semibold"
+              ? "text-[#92351f] font-semibold"
               : "text-muted-foreground"
           )}
         >
@@ -258,7 +262,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1"> {/* Added mt-5 for space below day number */}
+          <ScrollArea className="w-full mt-5 pr-1">
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -283,17 +287,15 @@ export default function HomePage() {
     );
   }
 
-
   return (
-    <div className="flex flex-col gap-6"> 
-      
+    <div className="flex flex-col gap-6">
+
       {isLoadingData && (
         <div className="flex justify-center items-center py-6">
-           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
 
-      {/* Large Calendar Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-x-4 py-3 px-4 border-b">
           <div className="flex items-center gap-2">
@@ -315,49 +317,56 @@ export default function HomePage() {
                   <SheetTitle>Add New Session</SheetTitle>
                   <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
                 </SheetHeader>
-                <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="space-y-4 py-4">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="clientId-dashboard">Client</Label>
-                    <Controller
-                      name="clientId" control={addSessionForm.control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoadingData}>
-                          <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
-                            <SelectValue placeholder="Select a client" />
-                          </SelectTrigger>
-                          <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                            {clients.map(client => (
+                <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
+                    <div className="col-span-3">
+                      <Controller
+                        name="clientId" control={addSessionForm.control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoadingData}>
+                            <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
+                              <SelectValue placeholder="Select a client" />
+                            </SelectTrigger>
+                            <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
+                              {clients.map(client => (
                                 <SelectItem key={client.id} value={client.id}>
                                   {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
                                 </SelectItem>
                               ))}
-                          </SelectGroup></SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
-                  </div>
-                  
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="date-dashboard">Date</Label>
-                    <Controller name="date" control={addSessionForm.control}
-                      render={({ field }) => (
-                        <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
-                      )}
-                    />
-                    {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
+                            </SelectGroup></SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                    </div>
                   </div>
 
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="time-dashboard">Time (24h)</Label>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date-dashboard" className="text-right">Date</Label>
+                    <div className="col-span-3">
+                      <Controller name="date" control={addSessionForm.control}
+                        render={({ field }) => (
+                          <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
+                        )}
+                      />
+                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.date.message}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
+                    <div className="col-span-3">
                     <Controller name="time" control={addSessionForm.control}
-                      render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full",addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet}/>)}
+                      render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full", addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet} />)}
                     />
-                    {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
+                    {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
+                    </div>
                   </div>
 
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="sessionType-dashboard">Type</Label>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
+                    <div className="col-span-3">
                     <Controller name="sessionType" control={addSessionForm.control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
@@ -370,10 +379,11 @@ export default function HomePage() {
                         </Select>
                       )}
                     />
-                    {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
+                    {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
+                    </div>
                   </div>
 
-                  <SheetFooter className="mt-6">
+                  <SheetFooter className="mt-4">
                     <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
                     <Button type="submit" disabled={isSubmittingSheet}>
                       {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Session
@@ -394,21 +404,21 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full !p-0 !m-0" 
+              className="w-full !p-0 !m-0"
               classNames={{
-                caption_label: "hidden", 
+                caption_label: "hidden",
                 caption: "hidden",
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
                 head_row: "flex border-b",
-                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", 
+                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2",
                 row: "flex w-full mt-0 border-b last:border-b-0",
                 cell: cn(
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
-                  "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" 
+                  "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
-                day: "h-full w-full p-0", 
+                day: "h-full w-full p-0",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
@@ -419,7 +429,6 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      {/* Session Detail Sheet */}
       <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
         <SheetContent className="sm:max-w-lg w-[90vw] max-w-[600px] p-0">
           {selectedSessionForSheet && (
@@ -443,6 +452,13 @@ export default function HomePage() {
                     </CardContent>
                   </Card>
                   <Card>
+                    <CardHeader><CardTitle className="text-base flex items-center"><UsersIcon className="mr-2 h-4 w-4 text-primary" /> Client</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-1">
+                      <p><strong>Name:</strong> {selectedSessionForSheet.clientName}</p>
+                      {selectedSessionForSheet.dogName && <p><strong>Dog:</strong> {selectedSessionForSheet.dogName}</p>}
+                    </CardContent>
+                  </Card>
+                  <Card>
                     <CardHeader><CardTitle className="text-base flex items-center"><TagIcon className="mr-2 h-4 w-4 text-primary" /> Session Type</CardTitle></CardHeader>
                     <CardContent className="text-sm"><p>{selectedSessionForSheet.sessionType}</p></CardContent>
                   </Card>
@@ -463,19 +479,18 @@ export default function HomePage() {
                 </div>
               </ScrollArea>
               <SheetFooter className="p-6 border-t flex gap-2">
-                  <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1">
-                    <Edit className="mr-2 h-4 w-4" /> Edit
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1">
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
+                <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1">
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
               </SheetFooter>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Delete Session Confirmation Dialog */}
       <AlertDialog open={isDeleteSessionDialogOpen} onOpenChange={setIsDeleteSessionDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -492,9 +507,6 @@ export default function HomePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }
-
-    

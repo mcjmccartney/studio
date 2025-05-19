@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon, Users as UsersIcon } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -106,10 +106,10 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Details</h1>
         <div className="flex gap-2">
-           <Button variant="outline" onClick={() => onEdit(session)}>
+          <Button variant="outline" onClick={() => onEdit(session)}>
             <Edit className="mr-2 h-4 w-4" /> Edit Session
           </Button>
-           <Button variant="destructive" onClick={() => onDelete(session)}>
+          <Button variant="destructive" onClick={() => onDelete(session)}>
             <Trash2 className="mr-2 h-4 w-4" /> Delete Session
           </Button>
           <Button variant="outline" onClick={onBack}>
@@ -123,7 +123,7 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Client</CardTitle>
+              <CardTitle className="text-lg flex items-center"><UsersIcon className="mr-2 h-5 w-5 text-primary" /> Client</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Name:</strong> {displayName}</div>
@@ -157,7 +157,7 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
               <Badge
                 variant={
                   session.status === 'Scheduled' ? 'default' :
-                  session.status === 'Completed' ? 'secondary' : 'outline'
+                    session.status === 'Completed' ? 'secondary' : 'outline'
                 }
                 className="text-sm px-3 py-1"
               >
@@ -312,13 +312,13 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingForm(true); 
+    setIsSubmittingForm(true);
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
       toast({
         title: "Session Deleted",
-        description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
+        description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''} has been deleted.`,
       });
       if (selectedSession && selectedSession.id === sessionToDelete.id) {
         setSelectedSession(null);
@@ -330,12 +330,12 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingForm(false); 
+      setIsSubmittingForm(false);
     }
   };
 
   const handleEditSession = (session: Session) => {
-    alert(`Edit session functionality for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${format(parseISO(session.date), 'PPP')}" to be implemented.`);
+    alert(`Edit session functionality for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : ''}" to be implemented.`);
   };
 
 
@@ -344,15 +344,15 @@ export default function SessionsPage() {
   }
 
   const groupedSessions = groupSessionsByMonth(sessions);
-  const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
+  const sortedMonthKeys = Object.keys(groupedSessions).sort((a, b) => {
     try {
-        const dateA = parse(a, 'MMMM yyyy', new Date());
-        const dateB = parse(b, 'MMMM yyyy', new Date());
-        if (!isValid(dateA) || !isValid(dateB)) return 0;
-        return dateB.getTime() - dateA.getTime();
+      const dateA = parse(a, 'MMMM yyyy', new Date());
+      const dateB = parse(b, 'MMMM yyyy', new Date());
+      if (!isValid(dateA) || !isValid(dateB)) return 0;
+      return dateB.getTime() - dateA.getTime();
     } catch (e) {
-        console.error("Error parsing month keys for sorting:", a, b, e);
-        return 0;
+      console.error("Error parsing month keys for sorting:", a, b, e);
+      return 0;
     }
   });
 
@@ -375,105 +375,112 @@ export default function SessionsPage() {
                 Schedule a new training session. Select a client, date, time, and session type.
               </SheetDescription>
             </SheetHeader>
-            <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4 py-4">
-              <div className="grid gap-1.5">
-                <Label htmlFor="clientId-sessionpage">Client</Label>
-                <Controller
-                  name="clientId"
-                  control={addSessionForm.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
-                      <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Clients</SelectLabel>
-                          {clients.map(client => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
+            <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="clientId"
+                    control={addSessionForm.control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
+                        <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
+                          <SelectValue placeholder="Select a client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Clients</SelectLabel>
+                            {clients.map(client => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                </div>
               </div>
 
-              <div className="grid gap-1.5">
-                <Label htmlFor="date-sessionpage">Date</Label>
-                <Controller
-                  name="date"
-                  control={addSessionForm.control}
-                  render={({ field }) => (
-                    <ShadCalendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                      disabled={isSubmittingForm}
-                      id="date-sessionpage"
-                      className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
-                    />
-                  )}
-                />
-                {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date-sessionpage" className="text-right">Date</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="date"
+                    control={addSessionForm.control}
+                    render={({ field }) => (
+                      <ShadCalendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        disabled={isSubmittingForm}
+                        id="date-sessionpage"
+                        className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                      />
+                    )}
+                  />
+                  {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.date.message}</p>}
+                </div>
               </div>
 
-              <div className="grid gap-1.5">
-                <Label htmlFor="time-sessionpage">Time (24h)</Label>
-                <Controller
-                  name="time"
-                  control={addSessionForm.control}
-                  render={({ field }) => (
-                    <Input
-                      id="time-sessionpage"
-                      type="time"
-                      {...field}
-                      className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
-                      disabled={isSubmittingForm}
-                    />
-                  )}
-                />
-                {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="time"
+                    control={addSessionForm.control}
+                    render={({ field }) => (
+                      <Input
+                        id="time-sessionpage"
+                        type="time"
+                        {...field}
+                        className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
+                        disabled={isSubmittingForm}
+                      />
+                    )}
+                  />
+                  {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
+                </div>
               </div>
 
-
-              <div className="grid gap-1.5">
-                <Label htmlFor="sessionType-sessionpage">Type</Label>
-                <Controller
-                  name="sessionType"
-                  control={addSessionForm.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
-                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
-                        <SelectValue placeholder="Select session type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Session Types</SelectLabel>
-                          {sessionTypeOptions.map(type => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="sessionType"
+                    control={addSessionForm.control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
+                        <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
+                          <SelectValue placeholder="Select session type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Session Types</SelectLabel>
+                            {sessionTypeOptions.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
+                </div>
               </div>
 
-              <SheetFooter className="mt-6">
-                 <SheetClose asChild>
-                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                 </SheetClose>
+              <SheetFooter className="mt-4">
+                <SheetClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
+                </SheetClose>
                 <Button type="submit" disabled={isSubmittingForm}>
-                    {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Session
+                  {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Session
                 </Button>
               </SheetFooter>
             </form>
@@ -494,7 +501,7 @@ export default function SessionsPage() {
         </div>
       )}
       {!isLoading && !error && sortedMonthKeys.length === 0 && (
-          <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+        <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
       )}
       {!isLoading && !error && sortedMonthKeys.length > 0 && (
         <Accordion type="multiple" className="w-full space-y-0" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
@@ -506,64 +513,76 @@ export default function SessionsPage() {
               <AccordionContent className="px-4">
                 <ul className="space-y-3 pt-2 pb-3">
                   {groupedSessions[monthYear]
-                    .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate())
+                    .sort((a, b) => {
+                        const dateA = parseISO(a.date);
+                        const dateB = parseISO(b.date);
+                        if (!isValid(dateA) || !isValid(dateB)) return 0; // Should not happen if data is clean
+                        const dayDiff = dateA.getDate() - dateB.getDate();
+                        if (dayDiff !== 0) return dayDiff;
+                        // If same day, sort by time
+                        try {
+                            const timeA = parse(a.time, 'HH:mm', new Date());
+                            const timeB = parse(b.time, 'HH:mm', new Date());
+                            return timeA.getTime() - timeB.getTime();
+                        } catch { return 0; } // Fallback if time parsing fails
+                    })
                     .map(session => (
-                    <li
-                      key={session.id}
-                      className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors shadow-sm"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
-                          <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
-                            {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
-                            <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
-                            {session.time}
-                          </p>
-                           <p className="text-sm text-muted-foreground mt-1">
-                            <TagIcon className="inline-block mr-1.5 h-4 w-4" />
-                            {session.sessionType}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
+                      <li
+                        key={session.id}
+                        className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors shadow-sm"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
+                            <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
+                              {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
+                              <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
+                              {session.time}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              <TagIcon className="inline-block mr-1.5 h-4 w-4" />
+                              {session.sessionType}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
                             <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'} className="mt-1 whitespace-nowrap">
-                            {session.status}
+                              {session.status}
                             </Badge>
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
                                 </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleSessionClick(session)}}>
-                                    <Info className="mr-2 h-4 w-4" />
-                                    View Details
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSessionClick(session) }}>
+                                  <Info className="mr-2 h-4 w-4" />
+                                  View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleEditSession(session);}}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit Session
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSession(session); }}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit Session
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                                    onClick={(e) => {e.stopPropagation(); handleDeleteSessionRequest(session);}}
+                                  className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSessionRequest(session); }}
                                 >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Session
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Session
                                 </DropdownMenuItem>
-                                </DropdownMenuContent>
+                              </DropdownMenuContent>
                             </DropdownMenu>
+                          </div>
                         </div>
-                      </div>
-                      {session.notes && (
-                        <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
-                      )}
-                    </li>
-                  ))}
+                        {session.notes && (
+                          <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
+                        )}
+                      </li>
+                    ))}
                 </ul>
               </AccordionContent>
             </AccordionItem>
@@ -581,9 +600,9 @@ export default function SessionsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {setSessionToDelete(null); setIsSessionDeleteDialogOpen(false);}} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingForm}>
-              {isSubmittingForm && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+              {isSubmittingForm && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -592,4 +611,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-    
