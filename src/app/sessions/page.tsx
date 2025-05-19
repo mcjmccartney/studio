@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase'; 
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, parse } from 'date-fns'; // Added parse
 import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon } from 'lucide-react';
 import {
   Dialog,
@@ -197,7 +197,7 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
-  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); // Used for Add Session form
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); 
 
   const { toast } = useToast();
 
@@ -248,7 +248,7 @@ export default function SessionsPage() {
       return;
     }
     
-    const sessionData: Omit<Session, 'id' | 'createdAt' | 'notes'> = {
+    const sessionData: Omit<Session, 'id' | 'createdAt'> = { // Removed notes
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
@@ -306,7 +306,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingForm(true); // Using existing form submission state for delete
+    setIsSubmittingForm(true); 
     try {
       await deleteSessionFromFirestore(sessionToDelete.id); 
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -340,10 +340,9 @@ export default function SessionsPage() {
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
     try {
-        const [monthA, yearA] = a.split(' ');
-        const [monthB, yearB] = b.split(' ');
-        const dateA = parseISO(`01 ${monthA} ${yearA}`);
-        const dateB = parseISO(`01 ${monthB} ${yearB}`);
+        // Ensure parsing is robust, e.g. using a fixed day if month/year format is consistent
+        const dateA = parse(a, 'MMMM yyyy', new Date());
+        const dateB = parse(b, 'MMMM yyyy', new Date());
         if (!isValid(dateA) || !isValid(dateB)) return 0;
         return dateB.getTime() - dateA.getTime();
     } catch (e) {
@@ -419,7 +418,7 @@ export default function SessionsPage() {
                             disabled={isSubmittingForm}
                           >
                             <CalendarIconLucide className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            {field.value && isValid(field.value) ? format(field.value, "PPP") : <span>Pick a date</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -444,17 +443,41 @@ export default function SessionsPage() {
                    <Controller
                     name="time"
                     control={control}
-                    render={({ field }) => (
+                    render={({ field }) => {
+                      // Helper to convert "hh:mm a" (form state) to "HH:mm" (input type="time" value)
+                      const convertTo24HourFormat = (time12h: string): string => {
+                        if (!time12h) return "";
+                        try {
+                          const parsedDate = parse(time12h, "hh:mm a", new Date(2000, 0, 1)); // Use a fixed base date for parsing
+                          if (isValid(parsedDate)) {
+                            return format(parsedDate, "HH:mm");
+                          }
+                        } catch (e) {
+                          console.error("Error parsing time for input:", time12h, e);
+                        }
+                        return ""; 
+                      };
+                      
+                      return (
                         <Input 
                             id="time" 
                             type="time" 
-                            defaultValue={field.value ? format(parseISO(`1970-01-01T${field.value.replace(/( AM| PM)/i, '')}`), 'HH:mm') : ''}
+                            value={convertTo24HourFormat(field.value)}
                             onChange={(e) => {
                                 const time24 = e.target.value; 
                                 if (time24) {
+                                  try {
                                     const [hours, minutes] = time24.split(':');
                                     const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
-                                    field.onChange(format(dateForFormatting, "hh:mm a"));
+                                    if(isValid(dateForFormatting)){
+                                      field.onChange(format(dateForFormatting, "hh:mm a"));
+                                    } else {
+                                      field.onChange('');
+                                    }
+                                  } catch(error) {
+                                    console.error("Error processing time input:", time24, error);
+                                    field.onChange('');
+                                  }
                                 } else {
                                     field.onChange('');
                                 }
@@ -462,7 +485,8 @@ export default function SessionsPage() {
                             className={cn("w-full", errors.time ? "border-destructive" : "")}
                             disabled={isSubmittingForm}
                         />
-                    )}
+                      );
+                    }}
                   />
                   {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
@@ -621,6 +645,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-
-    
