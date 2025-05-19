@@ -157,7 +157,8 @@ export default function HomePage() {
     if (!searchTerm.trim()) return sessions;
     const lowerSearchTerm = searchTerm.toLowerCase();
     return sessions.filter(session => {
-      const clientNameMatch = session.clientName && session.clientName.toLowerCase().includes(lowerSearchTerm);
+      const ownerFullName = session.clientName || "";
+      const clientNameMatch = ownerFullName.toLowerCase().includes(lowerSearchTerm);
       const dogNameMatch = session.dogName && session.dogName.toLowerCase().includes(lowerSearchTerm);
       return clientNameMatch || dogNameMatch;
     });
@@ -311,13 +312,16 @@ export default function HomePage() {
         )}
 
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-x-4 py-3 px-4 border-b">
+        <CardHeader className="flex flex-row items-center space-x-4 py-3 px-4 border-b">
+            {/* Month Navigation */}
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-                <h2 className="text-lg font-semibold text-center min-w-[140px]">{format(currentMonth, 'MMMM yyyy')}</h2>
+                <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-            <div className="max-w-xs"> {/* Search Input Container - Removed flex-1 */}
+
+            {/* Search Input Container */}
+            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md">
                 <div className="relative">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -329,98 +333,102 @@ export default function HomePage() {
                     />
                 </div>
             </div>
-             <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
-              <SheetTrigger asChild>
-                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
-              </SheetTrigger>
-              <SheetContent className="sm:max-w-md">
-                <SheetHeader>
-                  <SheetTitle>Add New Session</SheetTitle>
-                  <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
-                </SheetHeader>
-                <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
-                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
-                    <div className="col-span-3">
-                      <Controller
-                        name="clientId" control={addSessionForm.control}
+            
+            {/* Add Session Sheet Trigger - Pushed to the right */}
+            <div className="ml-auto">
+              <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
+                </SheetTrigger>
+                <SheetContent className="sm:max-w-md">
+                  <SheetHeader>
+                    <SheetTitle>Add New Session</SheetTitle>
+                    <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
+                  </SheetHeader>
+                  <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
+                      <div className="col-span-3">
+                        <Controller
+                          name="clientId" control={addSessionForm.control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoadingData}>
+                              <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
+                                <SelectValue placeholder="Select a client" />
+                              </SelectTrigger>
+                              <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
+                                {clients.map(client => (
+                                  <SelectItem key={client.id} value={client.id}>
+                                    {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup></SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label htmlFor="date-dashboard" className="text-right col-span-1 pt-2 self-start">Date</Label>
+                      <div className="col-span-3">
+                        <Controller name="date" control={addSessionForm.control}
+                          render={({ field }) => (
+                            <ShadCalendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                              disabled={isSubmittingSheet}
+                              id="date-dashboard"
+                              className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
+                            />
+                          )}
+                        />
+                        {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
+                      <div className="col-span-3">
+                      <Controller name="time" control={addSessionForm.control}
+                        render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full", addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet} />)}
+                      />
+                      {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
+                      <div className="col-span-3">
+                      <Controller name="sessionType" control={addSessionForm.control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoadingData}>
-                            <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
-                              <SelectValue placeholder="Select a client" />
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
+                            <SelectTrigger id="sessionType-dashboard" className={cn("w-full", addSessionForm.formState.errors.sessionType && "border-destructive")}>
+                              <SelectValue placeholder="Select session type" />
                             </SelectTrigger>
-                            <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                              {clients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>
-                                  {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
-                                </SelectItem>
-                              ))}
+                            <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
+                              {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
                             </SelectGroup></SelectContent>
                           </Select>
                         )}
                       />
-                      {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                      {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
+                      </div>
                     </div>
-                  </div>
 
-                 <div className="grid grid-cols-4 items-start gap-4">
-                    <Label htmlFor="date-dashboard" className="text-right col-span-1 pt-2 self-start">Date</Label>
-                    <div className="col-span-3">
-                      <Controller name="date" control={addSessionForm.control}
-                        render={({ field }) => (
-                          <ShadCalendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                            disabled={isSubmittingSheet}
-                            id="date-dashboard"
-                            className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
-                          />
-                        )}
-                      />
-                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
-                    <div className="col-span-3">
-                    <Controller name="time" control={addSessionForm.control}
-                      render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full", addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet} />)}
-                    />
-                    {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
-                    <div className="col-span-3">
-                    <Controller name="sessionType" control={addSessionForm.control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
-                          <SelectTrigger id="sessionType-dashboard" className={cn("w-full", addSessionForm.formState.errors.sessionType && "border-destructive")}>
-                            <SelectValue placeholder="Select session type" />
-                          </SelectTrigger>
-                          <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
-                            {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
-                          </SelectGroup></SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
-                    </div>
-                  </div>
-
-                  <SheetFooter className="mt-4">
-                    <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
-                    <Button type="submit" disabled={isSubmittingSheet}>
-                      {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Session
-                    </Button>
-                  </SheetFooter>
-                </form>
-              </SheetContent>
-            </Sheet>
+                    <SheetFooter className="mt-4">
+                      <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
+                      <Button type="submit" disabled={isSubmittingSheet}>
+                        {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Session
+                      </Button>
+                    </SheetFooter>
+                  </form>
+                </SheetContent>
+              </Sheet>
+            </div>
         </CardHeader>
         <CardContent className="p-0"> 
           {isLoadingData ? (
