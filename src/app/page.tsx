@@ -2,23 +2,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon, ExternalLink } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon, ExternalLink, SquareCheck } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -26,6 +17,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetClose,
+  SheetTrigger,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -75,12 +68,12 @@ export default function HomePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
-  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
-  const [isSubmittingModal, setIsSubmittingModal] = useState(false);
+  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false); // Changed from Modal to Sheet
+  const [isSubmittingSheet, setIsSubmittingSheet] = useState(false); // Changed from Modal to Sheet
   
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   
-  const [isSessionSheetOpen, setIsSessionSheetOpen] = useState(false);
+  const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isDeleteSessionDialogOpen, setIsDeleteSessionDialogOpen] = useState(false);
@@ -90,23 +83,23 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined, // Initialize as undefined for client-side effect
-      time: '',       // Initialize as empty for client-side effect
+      date: undefined, 
+      time: '',       
       clientId: '',
       sessionType: '',
     }
   });
 
- useEffect(() => {
-    if (isAddSessionModalOpen) {
+  useEffect(() => {
+    if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         date: new Date(),
-        time: format(new Date(), "HH:mm"), // 24-hour format
+        time: format(new Date(), "HH:mm"), 
         clientId: '',
         sessionType: '',
       });
     }
-  }, [isAddSessionModalOpen, addSessionForm]);
+  }, [isAddSessionSheetOpen, addSessionForm]);
 
 
   useEffect(() => {
@@ -158,11 +151,11 @@ export default function HomePage() {
   }, [toast]);
 
   const handleAddSessionSubmit: SubmitHandler<SessionFormValues> = async (data) => {
-    setIsSubmittingModal(true);
+    setIsSubmittingSheet(true);
     const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
       toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
-      setIsSubmittingModal(false);
+      setIsSubmittingSheet(false);
       return;
     }
     
@@ -172,7 +165,7 @@ export default function HomePage() {
       clientName: ownerFullName,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time, // Already in HH:mm
+      time: data.time, 
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -196,12 +189,12 @@ export default function HomePage() {
             return dateTimeB.getTime() - dateTimeA.getTime();
         }));
       toast({ title: "Session Added", description: `Session on ${format(data.date, 'PPP')} at ${data.time} scheduled.` });
-      setIsAddSessionModalOpen(false);
+      setIsAddSessionSheetOpen(false);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
       toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmittingModal(false);
+      setIsSubmittingSheet(false);
     }
   };
 
@@ -212,12 +205,12 @@ export default function HomePage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingModal(true);
+    setIsSubmittingSheet(true); // Reuse this state for loading indicator
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       toast({ title: "Session Deleted", description: "The session has been deleted." });
-      setIsSessionSheetOpen(false); 
+      setIsSessionDetailSheetOpen(false); 
       setSelectedSessionForSheet(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
@@ -225,7 +218,7 @@ export default function HomePage() {
     } finally {
       setIsDeleteSessionDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingModal(false);
+      setIsSubmittingSheet(false);
     }
   };
   
@@ -241,36 +234,31 @@ export default function HomePage() {
     return format(month, 'MMMM yyyy');
   };
 
-  function CustomDayContent(props: DayProps) {
+ function CustomDayContent(props: DayProps) {
     const daySessions = sessions.filter(s => {
         const sessionDate = parseISO(s.date);
         return isValid(sessionDate) && isSameDay(sessionDate, props.date);
     }).sort((a,b) => {
-        // Assuming time is "HH:mm"
         const timeA = parse(a.time, 'HH:mm', new Date());
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
     });
 
     return (
-      // This div IS the day cell content. It gets h-full, w-full from 'day' class.
-      // Add flex, flex-col, and p-1 for internal padding and layout.
-      <div className="flex flex-col h-full p-1">
-        {/* Day number div - centered horizontally at the top */}
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left"> {/* Reverted: Day number positioning & content flow */}
         <div
           className={cn(
-            "text-center text-xs", 
+            "absolute top-1 right-1 text-xs", // Reverted: Day number to top-right
             isToday(props.date)
-              ? "text-destructive font-semibold" 
+              ? "text-destructive font-semibold"
               : "text-muted-foreground"
           )}
         >
           {format(props.date, "d")}
         </div>
 
-        {/* Session pills area */}
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-1 flex-1 pr-1"> {/* flex-1 to take available space, mt-1 for space */}
+          <ScrollArea className="w-full mt-5 pr-1"> {/* Added mt-5 for space below day number */}
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -278,7 +266,7 @@ export default function HomePage() {
                   className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80"
                   onClick={() => {
                     setSelectedSessionForSheet(session);
-                    setIsSessionSheetOpen(true);
+                    setIsSessionDetailSheetOpen(true);
                   }}
                 >
                   {session.time} -{" "}
@@ -318,7 +306,82 @@ export default function HomePage() {
               <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input type="search" placeholder="Search sessions..." className="h-9 pl-8 w-full" />
             </div>
-            <Button onClick={() => setIsAddSessionModalOpen(true)} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
+            <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
+              <SheetTrigger asChild>
+                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
+              </SheetTrigger>
+              <SheetContent className="sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Add New Session</SheetTitle>
+                  <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
+                </SheetHeader>
+                <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="space-y-4 py-4">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="clientId-dashboard">Client</Label>
+                    <Controller
+                      name="clientId" control={addSessionForm.control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoadingData}>
+                          <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                          <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
+                            {clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                                </SelectItem>
+                              ))}
+                          </SelectGroup></SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
+                  </div>
+                  
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="date-dashboard">Date</Label>
+                    <Controller name="date" control={addSessionForm.control}
+                      render={({ field }) => (
+                        <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
+                      )}
+                    />
+                    {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="time-dashboard">Time (24h)</Label>
+                    <Controller name="time" control={addSessionForm.control}
+                      render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full",addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet}/>)}
+                    />
+                    {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="sessionType-dashboard">Type</Label>
+                    <Controller name="sessionType" control={addSessionForm.control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
+                          <SelectTrigger id="sessionType-dashboard" className={cn("w-full", addSessionForm.formState.errors.sessionType && "border-destructive")}>
+                            <SelectValue placeholder="Select session type" />
+                          </SelectTrigger>
+                          <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
+                            {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
+                          </SelectGroup></SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
+                  </div>
+
+                  <SheetFooter className="mt-6">
+                    <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
+                    <Button type="submit" disabled={isSubmittingSheet}>
+                      {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Session
+                    </Button>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
+            </Sheet>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -331,10 +394,10 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full !p-0 !m-0" // Ensure no margin/padding on DayPicker itself
+              className="w-full !p-0 !m-0" 
               classNames={{
                 caption_label: "hidden", 
-                caption: "hidden", // Hides the default DayPicker caption and nav
+                caption: "hidden",
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
@@ -345,9 +408,9 @@ export default function HomePage() {
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" 
                 ),
-                day: "h-full w-full p-0", // Day element (replaced by DayContent) should also have no padding
+                day: "h-full w-full p-0", 
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1", // Red ring for today
+                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -356,84 +419,8 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      {/* Add Session Modal */}
-       <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Session</DialogTitle>
-            <DialogDescription>Schedule a new session. Select a client, date, time, and session type.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="space-y-4 py-4">
-            
-            <div className="grid gap-1.5">
-              <Label htmlFor="clientId-dashboard">Client</Label>
-              <Controller
-                name="clientId" control={addSessionForm.control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal || isLoadingData}>
-                    <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
-                      <SelectValue placeholder="Select a client" />
-                    </SelectTrigger>
-                    <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                      {clients.map(client => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
-                          </SelectItem>
-                        ))}
-                    </SelectGroup></SelectContent>
-                  </Select>
-                )}
-              />
-              {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
-            </div>
-            
-            <div className="grid gap-1.5">
-              <Label htmlFor="date-dashboard">Date</Label>
-              <Controller name="date" control={addSessionForm.control}
-                render={({ field }) => (
-                  <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingModal} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
-                )}
-              />
-              {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="time-dashboard">Time (24h)</Label>
-              <Controller name="time" control={addSessionForm.control}
-                render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full",addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
-              />
-              {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="sessionType-dashboard">Type</Label>
-              <Controller name="sessionType" control={addSessionForm.control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal}>
-                    <SelectTrigger id="sessionType-dashboard" className={cn("w-full", addSessionForm.formState.errors.sessionType && "border-destructive")}>
-                      <SelectValue placeholder="Select session type" />
-                    </SelectTrigger>
-                    <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
-                      {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
-                    </SelectGroup></SelectContent>
-                  </Select>
-                )}
-              />
-              {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingModal}>Cancel</Button></DialogClose>
-              <Button type="submit" disabled={isSubmittingModal}>
-                {isSubmittingModal && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Session
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* Session Detail Sheet */}
-      <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => { setIsSessionSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
+      <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
         <SheetContent className="sm:max-w-lg w-[90vw] max-w-[600px] p-0">
           {selectedSessionForSheet && (
             <>
@@ -475,14 +462,14 @@ export default function HomePage() {
                   )}
                 </div>
               </ScrollArea>
-              <div className="p-6 border-t flex gap-2">
+              <SheetFooter className="p-6 border-t flex gap-2">
                   <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1">
                     <Edit className="mr-2 h-4 w-4" /> Edit
                   </Button>
                   <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </Button>
-              </div>
+              </SheetFooter>
             </>
           )}
         </SheetContent>
@@ -498,9 +485,9 @@ export default function HomePage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingModal}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingModal}>
-              {isSubmittingModal && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm Delete
+            <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
+              {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -509,3 +496,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
