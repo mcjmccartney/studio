@@ -7,12 +7,12 @@ import {
   getSessionsFromFirestore, 
   addSessionToFirestore, 
   deleteSessionFromFirestore,
-  getClients // Import getClients to fetch clients for the dropdown
+  getClients 
 } from '@/lib/firebase'; 
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -77,7 +77,7 @@ const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s(AM|PM)$/i, { message: "Invalid time format. Use HH:MM AM/PM." }),
-  notes: z.string().optional(),
+  // Notes field removed from schema
 });
 
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
@@ -86,20 +86,20 @@ interface GroupedSessions {
   [monthYear: string]: Session[];
 }
 
-// Session Detail View Component
 interface SessionDetailViewProps {
   session: Session;
   onBack: () => void;
   onDelete: (session: Session) => void;
+  onEdit: (session: Session) => void; 
 }
 
-function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps) {
+function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Details</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => alert("Edit session functionality to be implemented.")}>
+           <Button variant="outline" onClick={() => onEdit(session)}>
             <Edit className="mr-2 h-4 w-4" /> Edit Session
           </Button>
            <Button variant="destructive" onClick={() => onDelete(session)}>
@@ -170,7 +170,7 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [clients, setClients] = useState<Client[]>([]); // State for clients
+  const [clients, setClients] = useState<Client[]>([]); 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
@@ -179,13 +179,13 @@ export default function SessionsPage() {
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, register, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
-      time: format(new Date(), "hh:mm a"),
-      notes: '',
+      time: format(new Date(), "hh:mm a"), // e.g., "03:30 PM"
       clientId: '',
+      // Notes field removed from defaultValues
     }
   });
 
@@ -224,14 +224,14 @@ export default function SessionsPage() {
       return;
     }
     
-    const sessionData: Omit<Session, 'id' | 'createdAt'> = {
+    const sessionData: Omit<Session, 'id' | 'createdAt' | 'notes'> & { notes?: string } = { // notes is now truly optional here
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
       status: 'Scheduled',
-      notes: data.notes || undefined,
+      // Notes field removed from sessionData
     };
 
     try {
@@ -242,7 +242,7 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '', notes: '' });
+      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '' });
       setIsAddSessionModalOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
@@ -300,16 +300,27 @@ export default function SessionsPage() {
     }
   };
 
+  const handleEditSession = (session: Session) => {
+    // For now, just log or show an alert. Implementation will be in a future step.
+    alert(`Edit session functionality for "${session.clientName} - ${format(parseISO(session.date), 'PPP')}" to be implemented.`);
+    // TODO: Open an edit modal/sheet similar to client editing
+  };
+
 
   if (selectedSession) {
-    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} />;
+    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} onEdit={handleEditSession} />;
   }
 
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
-    const dateA = parseISO(`01 ${a}`); 
-    const dateB = parseISO(`01 ${b}`);
-    return dateB.getTime() - dateA.getTime(); 
+    try {
+        const dateA = parseISO(`01 ${a.split(' ')[0]} ${a.split(' ')[1]}`);
+        const dateB = parseISO(`01 ${b.split(' ')[0]} ${b.split(' ')[1]}`);
+        if (!isValid(dateA) || !isValid(dateB)) return 0;
+        return dateB.getTime() - dateA.getTime();
+    } catch (e) {
+        return 0; // Fallback if parsing fails
+    }
   });
 
 
@@ -339,7 +350,7 @@ export default function SessionsPage() {
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoading}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isLoading}>
                         <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
@@ -408,7 +419,7 @@ export default function SessionsPage() {
                         <Input 
                             id="time" 
                             type="time" 
-                            value={field.value ? format(parseISO(`1970-01-01T${field.value.replace(/( AM| PM)/i, '')}`), 'HH:mm') : ''}
+                            defaultValue={field.value ? format(parseISO(`1970-01-01T${field.value.replace(/( AM| PM)/i, '')}`), 'HH:mm') : ''}
                             onChange={(e) => {
                                 const time24 = e.target.value; 
                                 if (time24) {
@@ -427,13 +438,7 @@ export default function SessionsPage() {
                   {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="notes" className="text-right">Notes</Label>
-                <div className="col-span-3">
-                  <Input id="notes" {...register("notes")} className={cn(errors.notes ? "border-destructive" : "")} disabled={isSubmitting} />
-                  {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>}
-                </div>
-              </div>
+              {/* Notes field removed from form */}
               <DialogFooter>
                 <DialogClose asChild>
                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
@@ -461,12 +466,16 @@ export default function SessionsPage() {
         </div>
       )}
       {!isLoading && !error && sortedMonthKeys.length === 0 && (
-        <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+        <Card className="shadow-md">
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+          </CardContent>
+        </Card>
       )}
       {!isLoading && !error && sortedMonthKeys.length > 0 && (
         <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
-            <AccordionItem value={monthYear} key={monthYear} className="border-b bg-card shadow-sm rounded-md mb-2">
+            <AccordionItem value={monthYear} key={monthYear} className="border-b-0 bg-card shadow-sm rounded-md mb-2">
               <AccordionTrigger className="text-lg font-medium hover:no-underline px-4 py-3">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
@@ -506,13 +515,13 @@ export default function SessionsPage() {
                                     <Info className="mr-2 h-4 w-4" />
                                     View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Edit session functionality to be implemented.');}}>
+                                <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleEditSession(session);}}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit Session
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
-                                    className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                                    className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
                                     onClick={(e) => {e.stopPropagation(); handleDeleteSessionRequest(session);}}
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -545,7 +554,8 @@ export default function SessionsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              {isSubmitting && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -554,3 +564,6 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+
+    
