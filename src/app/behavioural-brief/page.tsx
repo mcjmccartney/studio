@@ -14,14 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
+import { addClientAndBriefToFirestore } from '@/lib/firebase';
+import type { BehaviouralBriefFormValues as ClientBehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 
-// Schema based on the Squarespace form structure from the provided HTML
 const behaviouralBriefSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
@@ -49,7 +49,7 @@ export default function BehaviouralBriefPage() {
   const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
   
-  const memoizedDefaultValues = useMemo<BehaviouralBriefFormValues>(() => ({
+  const memoizedDefaultValues = useMemo<ClientBehaviouralBriefFormValues>(() => ({
     ownerFirstName: '',
     ownerLastName: '',
     contactEmail: '',
@@ -64,7 +64,7 @@ export default function BehaviouralBriefPage() {
     submissionDate: '',
   }), []);
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClientBehaviouralBriefFormValues>({
     resolver: zodResolver(behaviouralBriefSchema),
     defaultValues: memoizedDefaultValues
   });
@@ -79,7 +79,7 @@ export default function BehaviouralBriefPage() {
     }
   }, [currentSubmissionDate, setValue]);
 
-  const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
+  const handleFormSubmit: SubmitHandler<ClientBehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       toast({
         title: "Service Unavailable",
@@ -91,7 +91,7 @@ export default function BehaviouralBriefPage() {
     setIsSubmitting(true);
     try {
       const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      const submissionDataWithPreciseTimestamp: BehaviouralBriefFormValues = {
+      const submissionDataWithPreciseTimestamp: ClientBehaviouralBriefFormValues = {
         ...data,
         submissionDate: submissionTimestamp,
       };
@@ -133,7 +133,7 @@ export default function BehaviouralBriefPage() {
   
   const FormFieldWrapper: React.FC<{ 
     label?: string; 
-    htmlForProp?: keyof BehaviouralBriefFormValues | string;
+    htmlForProp?: keyof ClientBehaviouralBriefFormValues | string;
     error?: string | boolean;
     children: React.ReactNode; 
     required?: boolean; 
@@ -175,7 +175,7 @@ export default function BehaviouralBriefPage() {
           data-ai-hint="form title"
         />
       </div>
-      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
+      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf] relative">
         <CardContent className="p-6 sm:p-8">
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0">
             
@@ -320,7 +320,7 @@ export default function BehaviouralBriefPage() {
             <div className="pt-6">
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base bg-[#4f6749] text-black hover:bg-[#4f6749]/90" 
+                className="w-full h-12 text-base bg-[#4f6749] text-[#ebeadf] hover:bg-[#4f6749]/90" 
                 disabled={isSubmitting}
               >
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}

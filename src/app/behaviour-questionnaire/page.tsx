@@ -567,7 +567,7 @@ export default function BehaviourQuestionnairePage() {
             <div className="pt-6">
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base bg-[#4f6749] text-black hover:bg-[#4f6749]/90" 
+                className="w-full h-12 text-base bg-[#4f6749] text-[#ebeadf] hover:bg-[#4f6749]/90" 
                 disabled={isSubmitting}
               >
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
