@@ -20,7 +20,10 @@ import {
   Timestamp, 
   type DocumentData, 
   type FirestoreDataConverter, 
-  type QueryDocumentSnapshot 
+  type QueryDocumentSnapshot,
+  query, // Added
+  where, // Added
+  limit // Added
 } from 'firebase/firestore';
 import type { Client, BehaviouralBrief, BehaviourQuestionnaire, Address } from './types';
 import { format } from 'date-fns';
@@ -57,14 +60,14 @@ export interface BehaviourQuestionnaireFormValues {
   dogSex: 'Male' | 'Female' | '';
   dogBreed: string;
   neuteredSpayedDetails: string;
-  mainProblem: string; // Changed from optional to required based on HTML
-  problemTendencyFirstNoticed: string; // Changed from optional to required based on HTML
-  problemFrequencyDetails: string; // Changed from optional to required based on HTML
-  problemRecentChanges: string; // Changed from optional to required based on HTML
-  problemAnticipationDetails: string; // Changed from optional to required based on HTML
-  dogMotivationForProblem: string; // Changed from optional to required based on HTML
-  problemAddressingAttempts: string; // Changed from optional to required based on HTML
-  idealTrainingOutcome: string; // Changed from optional to required based on HTML
+  mainProblem: string; 
+  problemTendencyFirstNoticed: string; 
+  problemFrequencyDetails: string; 
+  problemRecentChanges: string; 
+  problemAnticipationDetails: string; 
+  dogMotivationForProblem: string; 
+  problemAddressingAttempts: string; 
+  idealTrainingOutcome: string; 
   otherHelpNeeded?: string;
   medicalHistory?: string;
   vetConsultationDetails?: string;
@@ -85,14 +88,14 @@ export interface BehaviourQuestionnaireFormValues {
   housetrainedStatus?: string;
   activitiesAsideFromWalks?: string;
   dogLikes?: string;
-  dogChallenges?: string; // Changed from optional to required based on HTML
-  positiveReinforcementMethods?: string; // Changed from optional to required
-  favoriteRewards?: string; // Changed from optional to required
-  correctionMethods?: string; // Changed from optional to required
-  correctionEffects?: string; // Changed from optional to required
-  previousProfessionalTraining?: string; // Changed from optional to required
-  previousTrainingMethodsUsed?: string; // Changed from optional to required
-  previousTrainingExperienceResults?: string; // Changed from optional to required
+  dogChallenges?: string; 
+  positiveReinforcementMethods?: string; 
+  favoriteRewards?: string; 
+  correctionMethods?: string; 
+  correctionEffects?: string; 
+  previousProfessionalTraining?: string; 
+  previousTrainingMethodsUsed?: string; 
+  previousTrainingExperienceResults?: string; 
   sociabilityWithDogs?: 'Sociable' | 'Nervous' | 'Reactive' | 'Disinterested' | '';
   sociabilityWithPeople?: 'Sociable' | 'Nervous' | 'Reactive' | 'Disinterested' | '';
   additionalInformation?: string;
@@ -130,9 +133,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
       isMember: client.isMember === undefined ? false : client.isMember,
-      dogName: client.dogName || null, // Ensure dogName is null if undefined
-      address: client.address || null, // Ensure address is null if undefined
-      howHeardAboutServices: client.howHeardAboutServices || null, // Ensure this is null if undefined
+      dogName: client.dogName || null, 
+      address: client.address || null, 
+      howHeardAboutServices: client.howHeardAboutServices || null, 
     };
     if (behaviouralBriefId) dataToSave.behaviouralBriefId = behaviouralBriefId;
     if (behaviourQuestionnaireId) dataToSave.behaviourQuestionnaireId = behaviourQuestionnaireId;
@@ -144,6 +147,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
         } else if (key === 'isMember') {
             dataToSave[key] = false;
         } else {
+          // For other potentially undefined fields from the Client type that are not meant to be null in Firestore
+          // an explicit decision should be made. For now, we delete to avoid 'undefined' values in Firestore.
+          // If a field MUST exist, its type or default assignment should handle it.
           delete dataToSave[key]; 
         }
       }
@@ -158,7 +164,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       ownerLastName: data.ownerLastName || '',
       contactEmail: data.contactEmail || '',
       contactNumber: data.contactNumber || '',
-      postcode: data.postcode || (data.address ? data.address.postcode : ''), // Use postcode from address if available
+      postcode: data.postcode || (data.address ? data.address.postcode : ''), 
       address: data.address || undefined,
       howHeardAboutServices: data.howHeardAboutServices || undefined,
       dogName: data.dogName || undefined,
@@ -218,6 +224,8 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
         if (['sociabilityWithDogs', 'sociabilityWithPeople'].includes(key)) {
             dataToSave[key] = '';
         } else {
+            // Default to null for optional fields if undefined, to be explicit in Firestore
+            // instead of potentially deleting the field.
             dataToSave[key] = null; 
         }
       }
@@ -226,8 +234,6 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<DocumentData>): BehaviourQuestionnaire {
     const data = snapshot.data();
-    // Ensure all optional fields from the type are present, defaulting to undefined or empty string
-    // to match the type, even if Firestore stores them as null.
     return {
       id: snapshot.id,
       clientId: data.clientId,
@@ -301,8 +307,7 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
-// This function is used for the internal "Add Client" modal
-export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string, address?: Address, howHeardAboutServices?: string }): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt'> & { dogName?: string; isMember?: boolean, submissionDate?: string, address?: Address, howHeardAboutServices?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
@@ -328,7 +333,6 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   return { 
     id: docRef.id, 
     ...dataToSave,
-    // Simulate serverTimestamp for local state update
     createdAt: new Date().toISOString(), 
   } as Client; 
 };
@@ -356,7 +360,6 @@ export const updateClientInFirestore = async (clientId: string, clientData: Edit
   const clientDocRef = doc(clientsCollectionRef, clientId);
   const updateData: DocumentData = {};
 
-  // Filter out undefined values before updating
   Object.keys(clientData).forEach(key => {
     const K = key as keyof EditableClientData;
     if (clientData[K] !== undefined) {
@@ -382,7 +385,6 @@ export const deleteClientFromFirestore = async (clientId: string): Promise<void>
   try {
     const clientDocRef = doc(clientsCollectionRef, clientId);
     await deleteDoc(clientDocRef);
-    // Future consideration: delete associated behavioural briefs and questionnaires if needed (cascade delete)
   } catch (error) {
     console.error("Error deleting client from Firestore:", error);
     throw error; 
@@ -401,9 +403,9 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     ownerLastName: formData.ownerLastName,
     contactEmail: formData.contactEmail,
     contactNumber: formData.contactNumber,
-    postcode: formData.postcode, // Keep postcode at top level for quick access
+    postcode: formData.postcode, 
     dogName: formData.dogName, 
-    isMember: false, // Default to not a member
+    isMember: false, 
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -426,12 +428,10 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
   const briefDocRef = await addDoc(behaviouralBriefsCollectionRef, briefRecord);
   const newBriefId = briefDocRef.id;
 
-  // Update the client record with the ID of the newly created brief
   await updateDoc(clientDocRef, {
     behaviouralBriefId: newBriefId,
   });
 
-  // For returning to the client, ensure all fields including generated IDs are present
   const finalClientData = { ...clientRecord, id: newClientId, behaviouralBriefId: newBriefId, createdAt: new Date().toISOString() } as Client;
   const finalBriefData = { ...briefRecord, id: newBriefId, createdAt: new Date().toISOString() } as BehaviouralBrief;
   
@@ -439,58 +439,66 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
 };
 
 export const addClientAndBehaviourQuestionnaireToFirestore = async (
-  formData: BehaviourQuestionnaireFormValues, 
-  existingClientId?: string
-): Promise<{client?: Client, questionnaire: BehaviourQuestionnaire}> => {
+  formData: BehaviourQuestionnaireFormValues
+): Promise<{ client?: Client; questionnaire: BehaviourQuestionnaire }> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client and questionnaire.");
   }
   const submissionTimestamp = formData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss");
 
-  let finalClientData: Client | undefined = undefined;
-  let targetClientId: string;
+  let targetClientId: string | undefined;
+  let clientDataForReturn: Client | undefined;
 
-  if (existingClientId) {
-    targetClientId = existingClientId;
-    // Fetch the existing client to return it, but don't modify its contact details here based on questionnaire.
-    const existingClientSnap = await getDoc(doc(clientsCollectionRef, existingClientId));
-    if (existingClientSnap.exists()) {
-      finalClientData = existingClientSnap.data();
-    } else {
-      throw new Error(`Client with ID ${existingClientId} not found.`);
-    }
+  // 1. Try to find an existing client by email
+  const clientsQuery = query(
+    clientsCollectionRef,
+    where("contactEmail", "==", formData.contactEmail),
+    limit(1) 
+  );
+  const querySnapshot = await getDocs(clientsQuery);
+
+  if (!querySnapshot.empty) {
+    const existingClientDoc = querySnapshot.docs[0];
+    clientDataForReturn = existingClientDoc.data(); 
+    targetClientId = existingClientDoc.id;
+    console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
   } else {
-    // Create a new client if no existingClientId is provided
+    // 2. If no existing client found by email, create a new one
+    console.log(`No existing client found for email: ${formData.contactEmail}. Creating new client.`);
     const clientAddress: Address = {
-        addressLine1: formData.addressLine1,
-        addressLine2: formData.addressLine2 || '',
-        city: formData.city,
-        country: formData.country,
+      addressLine1: formData.addressLine1,
+      addressLine2: formData.addressLine2 || undefined,
+      city: formData.city,
+      country: formData.country,
     };
 
-    const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
+    const newClientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
       ownerFirstName: formData.ownerFirstName,
       ownerLastName: formData.ownerLastName,
       contactEmail: formData.contactEmail,
       contactNumber: formData.contactNumber,
-      postcode: formData.postcode, // Postcode from form
-      dogName: formData.dogName, 
+      postcode: formData.postcode,
+      dogName: formData.dogName,
       isMember: false, 
       address: clientAddress,
-      howHeardAboutServices: formData.howHeardAboutServices,
+      howHeardAboutServices: formData.howHeardAboutServices || undefined,
       submissionDate: submissionTimestamp,
       createdAt: serverTimestamp() as Timestamp,
       lastSession: 'N/A',
       nextSession: 'Not Scheduled',
     };
-    const clientDocRef = await addDoc(clientsCollectionRef, clientRecord);
+    const clientDocRef = await addDoc(clientsCollectionRef, newClientRecord);
     targetClientId = clientDocRef.id;
-    finalClientData = { ...clientRecord, id: targetClientId, createdAt: new Date().toISOString() } as Client;
+    clientDataForReturn = { ...newClientRecord, id: targetClientId, createdAt: new Date().toISOString() } as Client;
   }
 
-  // Create the BehaviourQuestionnaire document
+  if (!targetClientId) { 
+    throw new Error("Could not determine target client ID for questionnaire submission.");
+  }
+
+  // 3. Create the BehaviourQuestionnaire document
   const questionnaireRecord: Omit<BehaviourQuestionnaire, 'id'> = {
-    clientId: targetClientId, // Use targetClientId (either existing or new)
+    clientId: targetClientId,
     dogName: formData.dogName,
     dogAge: formData.dogAge,
     dogSex: formData.dogSex,
@@ -504,26 +512,26 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     dogMotivationForProblem: formData.dogMotivationForProblem || '',
     problemAddressingAttempts: formData.problemAddressingAttempts || '',
     idealTrainingOutcome: formData.idealTrainingOutcome || '',
-    otherHelpNeeded: formData.otherHelpNeeded,
-    medicalHistory: formData.medicalHistory,
-    vetConsultationDetails: formData.vetConsultationDetails,
-    dogOrigin: formData.dogOrigin,
-    rescueBackground: formData.rescueBackground,
-    dogAgeWhenAcquired: formData.dogAgeWhenAcquired,
-    dietDetails: formData.dietDetails,
-    foodMotivationLevel: formData.foodMotivationLevel,
-    mealtimeRoutine: formData.mealtimeRoutine,
-    treatRoutine: formData.treatRoutine,
-    externalTreatsConsent: formData.externalTreatsConsent,
-    playEngagement: formData.playEngagement,
-    affectionResponse: formData.affectionResponse,
-    exerciseRoutine: formData.exerciseRoutine,
-    muzzleUsage: formData.muzzleUsage,
-    reactionToFamiliarPeople: formData.reactionToFamiliarPeople,
-    reactionToUnfamiliarPeople: formData.reactionToUnfamiliarPeople,
-    housetrainedStatus: formData.housetrainedStatus,
-    activitiesAsideFromWalks: formData.activitiesAsideFromWalks,
-    dogLikes: formData.dogLikes,
+    otherHelpNeeded: formData.otherHelpNeeded || undefined,
+    medicalHistory: formData.medicalHistory || undefined,
+    vetConsultationDetails: formData.vetConsultationDetails || undefined,
+    dogOrigin: formData.dogOrigin || undefined,
+    rescueBackground: formData.rescueBackground || undefined,
+    dogAgeWhenAcquired: formData.dogAgeWhenAcquired || undefined,
+    dietDetails: formData.dietDetails || undefined,
+    foodMotivationLevel: formData.foodMotivationLevel || undefined,
+    mealtimeRoutine: formData.mealtimeRoutine || undefined,
+    treatRoutine: formData.treatRoutine || undefined,
+    externalTreatsConsent: formData.externalTreatsConsent || undefined,
+    playEngagement: formData.playEngagement || undefined,
+    affectionResponse: formData.affectionResponse || undefined,
+    exerciseRoutine: formData.exerciseRoutine || undefined,
+    muzzleUsage: formData.muzzleUsage || undefined,
+    reactionToFamiliarPeople: formData.reactionToFamiliarPeople || undefined,
+    reactionToUnfamiliarPeople: formData.reactionToUnfamiliarPeople || undefined,
+    housetrainedStatus: formData.housetrainedStatus || undefined,
+    activitiesAsideFromWalks: formData.activitiesAsideFromWalks || undefined,
+    dogLikes: formData.dogLikes || undefined,
     dogChallenges: formData.dogChallenges || '',
     positiveReinforcementMethods: formData.positiveReinforcementMethods || '',
     favoriteRewards: formData.favoriteRewards || '',
@@ -534,28 +542,27 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     previousTrainingExperienceResults: formData.previousTrainingExperienceResults || '',
     sociabilityWithDogs: formData.sociabilityWithDogs || '',
     sociabilityWithPeople: formData.sociabilityWithPeople || '',
-    additionalInformation: formData.additionalInformation,
-    timeDedicatedToTraining: formData.timeDedicatedToTraining,
+    additionalInformation: formData.additionalInformation || undefined,
+    timeDedicatedToTraining: formData.timeDedicatedToTraining || undefined,
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
   };
   const questionnaireDocRef = await addDoc(behaviourQuestionnairesCollectionRef, questionnaireRecord);
   const newQuestionnaireId = questionnaireDocRef.id;
 
-  // Update the client record (whether new or existing) with the ID of the newly created questionnaire
+  // 4. Update the client record (whether new or existing) with the ID of the newly created questionnaire
   const clientToUpdateRef = doc(clientsCollectionRef, targetClientId);
   await updateDoc(clientToUpdateRef, {
     behaviourQuestionnaireId: newQuestionnaireId,
   });
   
-  if(finalClientData) {
-    finalClientData.behaviourQuestionnaireId = newQuestionnaireId;
+  if(clientDataForReturn) {
+    clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId;
   }
-
 
   const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId, createdAt: new Date().toISOString() } as BehaviourQuestionnaire;
 
-  return { client: finalClientData, questionnaire: finalQuestionnaireData };
+  return { client: clientDataForReturn, questionnaire: finalQuestionnaireData };
 };
 
 
@@ -597,7 +604,6 @@ export const getBehaviourQuestionnaireById = async (questionnaireId: string): Pr
   }
 };
 
-// --- Firebase Auth Functions ---
 export const signInUser = async (email: string, pass: string) => {
   return signInWithEmailAndPassword(auth, email, pass);
 };
@@ -606,8 +612,8 @@ export const signOutUser = async () => {
   return signOut(auth);
 };
 
-// --- End Firebase Auth Functions ---
-
 export { db, app, auth, onAuthStateChanged, Timestamp, serverTimestamp, type User };
+
+    
 
     

@@ -19,7 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation'; // Import useSearchParams
+// Removed useSearchParams as it's no longer needed for clientId from URL
 
 const addressSchema = z.object({
   addressLine1: z.string().min(1, "Address Line 1 is required."),
@@ -29,9 +29,7 @@ const addressSchema = z.object({
   postcode: z.string().min(1, "Postcode is required."),
 });
 
-// Zod schema based on the HTML structure provided by the user
 const behaviourQuestionnaireSchema = z.object({
-  // Owner Info (Required if new client, optional if linking to existing, but form will collect)
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
   contactEmail: z.string().email({ message: "Please enter a valid email address." }),
@@ -43,39 +41,34 @@ const behaviourQuestionnaireSchema = z.object({
   postcode: z.string().min(1, "Postcode is required."), 
   howHeardAboutServices: z.string().optional(),
 
-  // Dog Info
   dogName: z.string().min(1, { message: "Dog Name is required." }),
   dogAge: z.string().min(1, { message: "Age is required." }),
-  dogSex: z.enum(['Male', 'Female'], { required_error: "Sex is required." }),
+  dogSex: z.enum(['Male', 'Female', ''], { required_error: "Sex is required." }).refine(val => val !== '', { message: "Sex is required."}),
   dogBreed: z.string().min(1, { message: "Dog breed is required." }),
   neuteredSpayedDetails: z.string().min(1, { message: "Neutered/Spayed status and age is required." }),
-  mainProblem: z.string().min(1, { message: "This field is required." }), // Made required based on common form logic
-  problemTendencyFirstNoticed: z.string().min(1, { message: "This field is required." }), // Made required
-  problemFrequencyDetails: z.string().min(1, { message: "This field is required." }), // Made required
-  problemRecentChanges: z.string().min(1, { message: "This field is required." }), // Made required
-  problemAnticipationDetails: z.string().min(1, { message: "This field is required." }), // Made required
-  dogMotivationForProblem: z.string().min(1, { message: "This field is required." }), // Made required
-  problemAddressingAttempts: z.string().min(1, { message: "This field is required." }), // Made required
-  idealTrainingOutcome: z.string().min(1, { message: "This field is required." }), // Made required
+  mainProblem: z.string().min(1, { message: "This field is required." }), 
+  problemTendencyFirstNoticed: z.string().min(1, { message: "This field is required." }), 
+  problemFrequencyDetails: z.string().min(1, { message: "This field is required." }), 
+  problemRecentChanges: z.string().min(1, { message: "This field is required." }), 
+  problemAnticipationDetails: z.string().min(1, { message: "This field is required." }), 
+  dogMotivationForProblem: z.string().min(1, { message: "This field is required." }), 
+  problemAddressingAttempts: z.string().min(1, { message: "This field is required." }), 
+  idealTrainingOutcome: z.string().min(1, { message: "This field is required." }), 
   otherHelpNeeded: z.string().optional(),
 
-  // Health and Veterinary Information
   medicalHistory: z.string().optional(),
   vetConsultationDetails: z.string().optional(),
 
-  // Background Information
   dogOrigin: z.string().optional(),
   rescueBackground: z.string().optional(),
   dogAgeWhenAcquired: z.string().optional(),
 
-  // Diet and Feeding
   dietDetails: z.string().optional(),
-  foodMotivationLevel: z.string().optional(), // Should be string if options are "1", "2", etc.
+  foodMotivationLevel: z.string().optional(), 
   mealtimeRoutine: z.string().optional(),
   treatRoutine: z.string().optional(),
   externalTreatsConsent: z.string().optional(),
 
-  // Routines
   playEngagement: z.string().optional(),
   affectionResponse: z.string().optional(),
   exerciseRoutine: z.string().optional(),
@@ -85,11 +78,9 @@ const behaviourQuestionnaireSchema = z.object({
   housetrainedStatus: z.string().optional(),
   activitiesAsideFromWalks: z.string().optional(),
 
-  // Temperament
   dogLikes: z.string().optional(),
-  dogChallenges: z.string().min(1, { message: "This field is required." }), // Made required
+  dogChallenges: z.string().min(1, { message: "This field is required." }), 
 
-  // Training
   positiveReinforcementMethods: z.string().min(1, { message: "This field is required." }),
   favoriteRewards: z.string().min(1, { message: "This field is required." }),
   correctionMethods: z.string().min(1, { message: "This field is required." }),
@@ -98,7 +89,6 @@ const behaviourQuestionnaireSchema = z.object({
   previousTrainingMethodsUsed: z.string().min(1, { message: "This field is required." }),
   previousTrainingExperienceResults: z.string().min(1, { message: "This field is required." }),
 
-  // Sociability
   sociabilityWithDogs: z.enum(['Sociable', 'Nervous', 'Reactive', 'Disinterested', ''], {invalid_type_error: "Select a valid option for dog sociability."}).optional(),
   sociabilityWithPeople: z.enum(['Sociable', 'Nervous', 'Reactive', 'Disinterested', ''], {invalid_type_error: "Select a valid option for people sociability."}).optional(),
   additionalInformation: z.string().optional(),
@@ -113,7 +103,7 @@ const countryOptions = [
     { value: "CA", label: "Canada" },
     { value: "AU", label: "Australia" },
     { value: "IE", label: "Ireland" },
-    // Add more countries as needed or consider a searchable select component for long lists
+    { value: "Other", label: "Other" },
 ];
 
 const foodMotivationOptions = Array.from({length: 10}, (_, i) => ({ value: (i+1).toString(), label: (i+1).toString() }));
@@ -123,8 +113,7 @@ export default function BehaviourQuestionnairePage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
-  const searchParams = useSearchParams(); // Get search params
-  const existingClientId = searchParams.get('clientId'); // Get clientId if present
+  // Removed searchParams and existingClientId as linking is now email-based
 
   useEffect(() => {
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
@@ -138,12 +127,12 @@ export default function BehaviourQuestionnairePage() {
     addressLine1: '',
     addressLine2: '',
     city: '',
-    country: 'GB', // Default to GB
+    country: 'GB', 
     postcode: '',
     howHeardAboutServices: '',
     dogName: '',
     dogAge: '',
-    dogSex: undefined, // For select placeholder
+    dogSex: '', 
     dogBreed: '',
     neuteredSpayedDetails: '',
     mainProblem: '',
@@ -161,7 +150,7 @@ export default function BehaviourQuestionnairePage() {
     rescueBackground: '',
     dogAgeWhenAcquired: '',
     dietDetails: '',
-    foodMotivationLevel: undefined, // For select placeholder
+    foodMotivationLevel: '', 
     mealtimeRoutine: '',
     treatRoutine: '',
     externalTreatsConsent: '',
@@ -182,11 +171,11 @@ export default function BehaviourQuestionnairePage() {
     previousProfessionalTraining: '',
     previousTrainingMethodsUsed: '',
     previousTrainingExperienceResults: '',
-    sociabilityWithDogs: '', // Default to empty string for RadioGroup
-    sociabilityWithPeople: '', // Default to empty string for RadioGroup
+    sociabilityWithDogs: '', 
+    sociabilityWithPeople: '', 
     additionalInformation: '',
     timeDedicatedToTraining: '',
-    submissionDate: '', // Will be set by useEffect
+    submissionDate: '', 
   }), []);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviourQuestionnaireFormValues>({
@@ -217,8 +206,8 @@ export default function BehaviourQuestionnairePage() {
         submissionDate: submissionTimestamp,
       };
       
-      // Pass existingClientId to the Firestore function
-      await addClientAndBehaviourQuestionnaireToFirestore(submissionData, existingClientId || undefined);
+      // existingClientId is no longer passed
+      await addClientAndBehaviourQuestionnaireToFirestore(submissionData);
       toast({
         title: "Submission Successful!",
         description: "Thank you for submitting your Behaviour Questionnaire. We will be in touch shortly.",
@@ -303,42 +292,42 @@ export default function BehaviourQuestionnairePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ownerFirstName" className="text-xs text-muted-foreground">First Name</Label>
-                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={cn(inputClassName, errors.ownerFirstName && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
+                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={cn(inputClassName, errors.ownerFirstName && errorInputClassName)} disabled={isSubmitting} />
                   {errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{errors.ownerFirstName.message}</p>}
                 </div>
                 <div>
                   <Label htmlFor="ownerLastName" className="text-xs text-muted-foreground">Last Name</Label>
-                  <Input id="ownerLastName" {...register("ownerLastName")} className={cn(inputClassName, errors.ownerLastName && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
+                  <Input id="ownerLastName" {...register("ownerLastName")} className={cn(inputClassName, errors.ownerLastName && errorInputClassName)} disabled={isSubmitting} />
                   {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
                 </div>
               </div>
             </FormFieldWrapper>
             <FormFieldWrapper label="Email" htmlForProp="contactEmail" error={errors.contactEmail?.message} required>
-              <Input id="contactEmail" type="email" {...register("contactEmail")} className={cn(inputClassName, errors.contactEmail && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
+              <Input id="contactEmail" type="email" {...register("contactEmail")} className={cn(inputClassName, errors.contactEmail && errorInputClassName)} disabled={isSubmitting} />
             </FormFieldWrapper>
             <FormFieldWrapper label="Contact Number" htmlForProp="contactNumber" error={errors.contactNumber?.message} required>
-              <Input id="contactNumber" type="tel" {...register("contactNumber")} className={cn(inputClassName, errors.contactNumber && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
+              <Input id="contactNumber" type="tel" {...register("contactNumber")} className={cn(inputClassName, errors.contactNumber && errorInputClassName)} disabled={isSubmitting}/>
             </FormFieldWrapper>
 
             <FormFieldWrapper label="Address" htmlForProp="addressLine1" error={errors.addressLine1?.message || errors.city?.message || errors.postcode?.message || errors.country?.message} required>
                 <div>
                     <Label htmlFor="addressLine1" className="text-xs text-muted-foreground">Address Line 1</Label>
-                    <Input id="addressLine1" {...register("addressLine1")} className={cn(inputClassName, errors.addressLine1 && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
+                    <Input id="addressLine1" {...register("addressLine1")} className={cn(inputClassName, errors.addressLine1 && errorInputClassName)} disabled={isSubmitting}/>
                     {errors.addressLine1 && <p className="text-xs text-destructive mt-1">{errors.addressLine1.message}</p>}
                 </div>
                 <div className="mt-2">
                     <Label htmlFor="addressLine2" className="text-xs text-muted-foreground">Address Line 2 (Optional)</Label>
-                    <Input id="addressLine2" {...register("addressLine2")} className={cn(inputClassName, errors.addressLine2 && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
+                    <Input id="addressLine2" {...register("addressLine2")} className={cn(inputClassName, errors.addressLine2 && errorInputClassName)} disabled={isSubmitting}/>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-2">
                     <div>
                         <Label htmlFor="city" className="text-xs text-muted-foreground">City / Town</Label>
-                        <Input id="city" {...register("city")} className={cn(inputClassName, errors.city && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
+                        <Input id="city" {...register("city")} className={cn(inputClassName, errors.city && errorInputClassName)} disabled={isSubmitting}/>
                         {errors.city && <p className="text-xs text-destructive mt-1">{errors.city.message}</p>}
                     </div>
                     <div>
                         <Label htmlFor="postcode" className="text-xs text-muted-foreground">Postcode</Label>
-                        <Input id="postcode" {...register("postcode")} className={cn(inputClassName, errors.postcode && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
+                        <Input id="postcode" {...register("postcode")} className={cn(inputClassName, errors.postcode && errorInputClassName)} disabled={isSubmitting}/>
                         {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                     </div>
                 </div>
@@ -348,13 +337,12 @@ export default function BehaviourQuestionnairePage() {
                         name="country"
                         control={control}
                         render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || !!existingClientId}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                             <SelectTrigger className={cn(inputClassName, errors.country && errorInputClassName)}>
                             <SelectValue placeholder="Select Country" />
                             </SelectTrigger>
                             <SelectContent className="bg-[#ebeadf]">
                             {countryOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                            <SelectItem value="Other">Other (Please specify if needed)</SelectItem>
                             </SelectContent>
                         </Select>
                         )}
@@ -364,7 +352,7 @@ export default function BehaviourQuestionnairePage() {
             </FormFieldWrapper>
 
             <FormFieldWrapper label="How did you hear about my services?" htmlForProp="howHeardAboutServices" error={errors.howHeardAboutServices?.message}>
-              <Textarea id="howHeardAboutServices" {...register("howHeardAboutServices")} className={cn(inputClassName, errors.howHeardAboutServices && errorInputClassName)} disabled={isSubmitting || !!existingClientId} rows={3}/>
+              <Textarea id="howHeardAboutServices" {...register("howHeardAboutServices")} className={cn(inputClassName, errors.howHeardAboutServices && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
 
 
@@ -449,7 +437,7 @@ export default function BehaviourQuestionnairePage() {
                     name="foodMotivationLevel"
                     control={control}
                     render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmitting}>
                         <SelectTrigger className={cn(inputClassName, errors.foodMotivationLevel && errorInputClassName)}><SelectValue placeholder="Select an option" /></SelectTrigger>
                         <SelectContent className="bg-[#ebeadf]">
                         {foodMotivationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
@@ -531,7 +519,7 @@ export default function BehaviourQuestionnairePage() {
                     name="sociabilityWithDogs"
                     control={control}
                     render={({ field }) => (
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-1">
+                        <RadioGroup onValueChange={field.onChange} value={field.value || ''} className="flex flex-col space-y-1">
                         {sociabilityOptions.map(opt => (
                             <div key={`dog-${opt}`} className="flex items-center space-x-2">
                                 <RadioGroupItem value={opt} id={`dog-${opt}`} className={cn(inputClassName, errors.sociabilityWithDogs && errorInputClassName)} />
@@ -548,7 +536,7 @@ export default function BehaviourQuestionnairePage() {
                     name="sociabilityWithPeople"
                     control={control}
                     render={({ field }) => (
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-1">
+                        <RadioGroup onValueChange={field.onChange} value={field.value || ''} className="flex flex-col space-y-1">
                         {sociabilityOptions.map(opt => (
                             <div key={`people-${opt}`} className="flex items-center space-x-2">
                                 <RadioGroupItem value={opt} id={`people-${opt}`} className={cn(inputClassName, errors.sociabilityWithPeople && errorInputClassName)} />
@@ -585,5 +573,7 @@ export default function BehaviourQuestionnairePage() {
     </div>
   );
 }
+
+    
 
     
