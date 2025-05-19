@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardDescription
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Using dedicated type
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -160,7 +160,7 @@ export default function BehaviouralBriefPage() {
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="text-4xl font-bold text-[#ebeadf] text-center mb-10">
+      <h1 className="font-sans text-4xl font-bold text-[#ebeadf] text-center mb-10">
         Behavioural Brief
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">

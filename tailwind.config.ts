@@ -13,7 +13,6 @@ export default {
       fontFamily: {
         sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
         mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
-        // serif definition removed
       },
   		colors: {
   			background: 'hsl(var(--background))',

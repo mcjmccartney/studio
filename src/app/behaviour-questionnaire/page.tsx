@@ -273,7 +273,7 @@ export default function BehaviourQuestionnairePage() {
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="text-4xl font-bold text-[#ebeadf] text-center mb-10">
+      <h1 className="font-sans text-4xl font-bold text-[#ebeadf] text-center mb-10">
         Behaviour Questionnaire
       </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
