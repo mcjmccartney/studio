@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
@@ -165,7 +165,7 @@ export default function HomePage() {
       setIsSubmittingModal(false);
       return;
     }
-
+    
     const ownerFullName = `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`.trim();
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
@@ -320,7 +320,7 @@ export default function HomePage() {
              <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
              <p className="flex items-center">
                 <CalendarIconLucide className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
-                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
+                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PPP') : 'Invalid Date'}
             </p>
             <p className="flex items-center">
                 <Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
@@ -370,7 +370,7 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full"
+              className="w-full !p-0 !m-0"
               classNames={{
                 caption_label: "hidden", 
                 caption: "hidden", 
@@ -551,5 +551,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
