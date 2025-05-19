@@ -284,8 +284,8 @@ export default function BehaviourQuestionnairePage() {
         <Image 
           src="https://iili.io/3PLgIHu.png" 
           alt="Behaviour Questionnaire Title" 
-          width={630} 
-          height={70}
+          width={720} 
+          height={80}
           data-ai-hint="form title"
         />
       </div>
@@ -585,3 +585,5 @@ export default function BehaviourQuestionnairePage() {
 
     
 
+
+    

@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card'; 
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Using the specific type
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -157,7 +157,7 @@ export default function BehaviouralBriefPage() {
 
   return (
     <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-       <div className="flex justify-center items-center gap-4 mb-10">
+      <div className="flex justify-center items-center gap-4 mb-10">
         <Image
           src="https://iili.io/34300ox.md.jpg"
           alt="RMR Logo"
@@ -169,8 +169,8 @@ export default function BehaviouralBriefPage() {
         <Image 
           src="https://iili.io/3PLgTAb.png" 
           alt="Behavioural Brief Title" 
-          width={420} 
-          height={70}
+          width={480} 
+          height={80}
           data-ai-hint="form title"
         />
       </div>
@@ -332,4 +332,6 @@ export default function BehaviouralBriefPage() {
     </div>
   );
 }
+    
+
     
