@@ -134,6 +134,7 @@ export interface Session {
   date: string; // Should be in 'yyyy-MM-dd' format
   time: string; // Should be in 'HH:MM AM/PM' format
   status: 'Scheduled' | 'Completed' | 'Cancelled';
+  sessionType: string; // Added new field
   notes?: string;
   createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }
@@ -158,3 +159,4 @@ export interface Address {
   country: string;
   // Postcode is part of client.postcode, but can be shown as part of a full address display
 }
+

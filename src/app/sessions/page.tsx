@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -77,10 +77,21 @@ const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s(AM|PM)$/i, { message: "Invalid time format. Use HH:MM AM/PM." }),
-  // Notes field removed from schema
+  sessionType: z.string().min(1, { message: "Session type is required." }),
 });
 
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
+
+const sessionTypeOptions = [
+  "In-Person", 
+  "Online", 
+  "Training", 
+  "Online Catchup", 
+  "Group", 
+  "Phone Call", 
+  "RMR Live", 
+  "Coaching"
+];
 
 interface GroupedSessions {
   [monthYear: string]: Session[];
@@ -136,6 +147,15 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-lg flex items-center"><TagIcon className="mr-2 h-5 w-5 text-primary" /> Session Type</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <div>{session.sessionType}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-primary" /> Status</CardTitle>
             </CardHeader>
             <CardContent>
@@ -177,15 +197,17 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); // Used for Add Session form
+
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
-      time: format(new Date(), "hh:mm a"), // e.g., "03:30 PM"
+      time: format(new Date(), "hh:mm a"), 
       clientId: '',
-      // Notes field removed from defaultValues
+      sessionType: '',
     }
   });
 
@@ -218,20 +240,22 @@ export default function SessionsPage() {
   }, [toast]);
 
   const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
+    setIsSubmittingForm(true);
     const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
       toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
+      setIsSubmittingForm(false);
       return;
     }
     
-    const sessionData: Omit<Session, 'id' | 'createdAt' | 'notes'> & { notes?: string } = { // notes is now truly optional here
+    const sessionData: Omit<Session, 'id' | 'createdAt' | 'notes'> = {
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
       status: 'Scheduled',
-      // Notes field removed from sessionData
+      sessionType: data.sessionType,
     };
 
     try {
@@ -242,12 +266,14 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '' });
+      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '', sessionType: '' });
       setIsAddSessionModalOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
       toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsSubmittingForm(false);
     }
   };
 
@@ -280,6 +306,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
+    setIsSubmittingForm(true); // Using existing form submission state for delete
     try {
       await deleteSessionFromFirestore(sessionToDelete.id); 
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -297,13 +324,12 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
+      setIsSubmittingForm(false);
     }
   };
 
   const handleEditSession = (session: Session) => {
-    // For now, just log or show an alert. Implementation will be in a future step.
     alert(`Edit session functionality for "${session.clientName} - ${format(parseISO(session.date), 'PPP')}" to be implemented.`);
-    // TODO: Open an edit modal/sheet similar to client editing
   };
 
 
@@ -314,12 +340,15 @@ export default function SessionsPage() {
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a,b) => {
     try {
-        const dateA = parseISO(`01 ${a.split(' ')[0]} ${a.split(' ')[1]}`);
-        const dateB = parseISO(`01 ${b.split(' ')[0]} ${b.split(' ')[1]}`);
+        const [monthA, yearA] = a.split(' ');
+        const [monthB, yearB] = b.split(' ');
+        const dateA = parseISO(`01 ${monthA} ${yearA}`);
+        const dateB = parseISO(`01 ${monthB} ${yearB}`);
         if (!isValid(dateA) || !isValid(dateB)) return 0;
         return dateB.getTime() - dateA.getTime();
     } catch (e) {
-        return 0; // Fallback if parsing fails
+        console.error("Error parsing month keys for sorting:", a, b, e);
+        return 0;
     }
   });
 
@@ -339,7 +368,7 @@ export default function SessionsPage() {
             <DialogHeader>
               <DialogTitle>Add New Session</DialogTitle>
               <DialogDescription>
-                Schedule a new training session. Select a client, date, and time.
+                Schedule a new training session. Select a client, date, time, and session type.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleAddSession)} className="grid gap-4 py-4">
@@ -350,7 +379,7 @@ export default function SessionsPage() {
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isLoading}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
                         <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
@@ -387,7 +416,7 @@ export default function SessionsPage() {
                               !field.value && "text-muted-foreground",
                               errors.date ? "border-destructive" : ""
                             )}
-                            disabled={isSubmitting}
+                            disabled={isSubmittingForm}
                           >
                             <CalendarIconLucide className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -399,7 +428,7 @@ export default function SessionsPage() {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
-                            disabled={isSubmitting}
+                            disabled={isSubmittingForm}
                           />
                         </PopoverContent>
                       </Popover>
@@ -431,20 +460,48 @@ export default function SessionsPage() {
                                 }
                             }}
                             className={cn("w-full", errors.time ? "border-destructive" : "")}
-                            disabled={isSubmitting}
+                            disabled={isSubmittingForm}
                         />
                     )}
                   />
                   {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
               </div>
-              {/* Notes field removed from form */}
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sessionType" className="text-right">Type</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="sessionType"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
+                        <SelectTrigger className={cn(errors.sessionType ? "border-destructive" : "")}>
+                          <SelectValue placeholder="Select session type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Session Types</SelectLabel>
+                            {sessionTypeOptions.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.sessionType && <p className="text-xs text-destructive mt-1">{errors.sessionType.message}</p>}
+                </div>
+              </div>
+
               <DialogFooter>
                 <DialogClose asChild>
-                   <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
+                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={isSubmittingForm}>
+                    {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Session
                 </Button>
               </DialogFooter>
@@ -466,11 +523,7 @@ export default function SessionsPage() {
         </div>
       )}
       {!isLoading && !error && sortedMonthKeys.length === 0 && (
-        <Card className="shadow-md">
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
-          </CardContent>
-        </Card>
+          <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
       )}
       {!isLoading && !error && sortedMonthKeys.length > 0 && (
         <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
@@ -496,6 +549,10 @@ export default function SessionsPage() {
                             {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
                             <Clock className="inline-block ml-3 mr-1.5 h-4 w-4" />
                             {session.time}
+                          </p>
+                           <p className="text-sm text-muted-foreground mt-1">
+                            <TagIcon className="inline-block mr-1.5 h-4 w-4" />
+                            {session.sessionType}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -553,9 +610,9 @@ export default function SessionsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-              {isSubmitting && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+            <AlertDialogCancel onClick={() => {setSessionToDelete(null); setIsSessionDeleteDialogOpen(false);}} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingForm}>
+              {isSubmittingForm && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -293,8 +293,9 @@ const sessionConverter: FirestoreDataConverter<Session> = {
   toFirestore(session: Omit<Session, 'id'>): DocumentData {
     return {
       ...session,
+      sessionType: session.sessionType || 'Unknown', // Ensure sessionType is saved
       createdAt: session.createdAt instanceof Date || session.createdAt instanceof Timestamp ? session.createdAt : serverTimestamp(),
-      notes: session.notes || null, // Ensure notes is null if undefined
+      notes: session.notes || null, 
     };
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<DocumentData>): Session {
@@ -304,11 +305,12 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       clientId: data.clientId,
       clientName: data.clientName,
       dogName: data.dogName,
-      date: data.date, // Should be 'yyyy-MM-dd'
-      time: data.time, // Should be 'HH:MM AM/PM'
+      date: data.date, 
+      time: data.time, 
       status: data.status,
+      sessionType: data.sessionType || 'Unknown', // Ensure sessionType is read
       notes: data.notes === null ? undefined : data.notes,
-      createdAt: data.createdAt, // Firestore Timestamp
+      createdAt: data.createdAt, 
     } as Session;
   }
 };
@@ -478,6 +480,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
   let targetClientId: string;
   let clientDataForReturn: Client;
 
+  // Try to find an existing client by email
   const clientsQuery = query(
     clientsCollectionRef,
     where("contactEmail", "==", formData.contactEmail),
@@ -491,6 +494,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     clientDataForReturn = existingClientDoc.data();
     console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
     
+    // Prepare potential updates for the existing client
     const updates: Partial<Client> = { isActive: true }; // Ensure client is marked active
     if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
         updates.address = {
@@ -499,20 +503,22 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             city: formData.city,
             country: formData.country,
         };
-        updates.postcode = formData.postcode; 
+        updates.postcode = formData.postcode; // also update top-level postcode
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
     }
-    if (formData.dogName && !clientDataForReturn.dogName) { // Only update dog name if it wasn't set
+    // Only update dog name if it wasn't already set or if the new form provides one
+    if (formData.dogName && !clientDataForReturn.dogName) { 
         updates.dogName = formData.dogName;
     }
-     if (Object.keys(updates).length > 0) {
+    if (Object.keys(updates).length > 0) {
         await updateDoc(doc(clientsCollectionRef, targetClientId), updates);
-        clientDataForReturn = { ...clientDataForReturn, ...updates };
+        clientDataForReturn = { ...clientDataForReturn, ...updates }; // Reflect updates in returned data
     }
 
   } else {
+    // No existing client found by email, create a new one
     console.log(`No existing client found for email: ${formData.contactEmail}. Creating new client.`);
     const clientAddress: Address = {
       addressLine1: formData.addressLine1,
@@ -528,7 +534,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
       contactNumber: formData.contactNumber,
       postcode: formData.postcode,
       dogName: formData.dogName,
-      isMember: false,
+      isMember: false, // Default for new clients via questionnaire
       isActive: true, 
       address: clientAddress,
       howHeardAboutServices: formData.howHeardAboutServices || undefined,
@@ -542,6 +548,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     clientDataForReturn = { ...newClientRecord, id: targetClientId, createdAt: new Date().toISOString() } as Client;
   }
 
+  // Create the BehaviourQuestionnaire document
   const questionnaireRecord: Omit<BehaviourQuestionnaire, 'id'> = {
     clientId: targetClientId,
     dogName: formData.dogName,
@@ -595,12 +602,13 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
   const questionnaireDocRef = await addDoc(behaviourQuestionnairesCollectionRef, questionnaireRecord);
   const newQuestionnaireId = questionnaireDocRef.id;
 
+  // Link questionnaire to the client
   const clientToUpdateRef = doc(clientsCollectionRef, targetClientId);
   await updateDoc(clientToUpdateRef, {
     behaviourQuestionnaireId: newQuestionnaireId,
   });
   
-  clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId; 
+  clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId; // Ensure returned client data reflects the link
 
   const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId, createdAt: new Date().toISOString() } as BehaviourQuestionnaire;
 
@@ -670,7 +678,8 @@ export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'c
     createdAt: serverTimestamp() as Timestamp,
   };
   const docRef = await addDoc(sessionsCollectionRef, dataToSave);
-  const newSessionData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Session; // Simulate server timestamp
+  // Simulate server timestamp for immediate use, actual timestamp comes from server
+  const newSessionData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Session; 
   return newSessionData;
 };
 
@@ -700,3 +709,4 @@ export const signOutUser = async () => {
 };
 
 export { db, app, auth, onAuthStateChanged, Timestamp, serverTimestamp, type User };
+
