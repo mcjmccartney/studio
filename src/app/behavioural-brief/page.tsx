@@ -14,8 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore } from '@/lib/firebase';
-import type { BehaviouralBriefFormValues as ClientBehaviouralBriefFormValues } from '@/lib/firebase';
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -30,7 +29,7 @@ const behaviouralBriefSchema = z.object({
   postcode: z.string().min(1, { message: "Postcode is required." }),
   
   dogName: z.string().min(1, { message: "Dog Name is required." }),
-  dogSex: z.enum(['Male', 'Female', ''], { required_error: "Sex is required." }).refine(val => val !== '', { message: "Sex is required." }),
+  dogSex: z.enum(['Male', 'Female', ''], { required_error: "Sex is required." }).refine(val => val !== '', { message: "Sex is required."}),
   dogBreed: z.string().min(1, { message: "Dog breed is required." }),
   lifeWithDogAndHelpNeeded: z.string().min(1, { message: "This field is required." }),
   bestOutcome: z.string().min(1, { message: "This field is required." }),
@@ -49,7 +48,7 @@ export default function BehaviouralBriefPage() {
   const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
   
-  const memoizedDefaultValues = useMemo<ClientBehaviouralBriefFormValues>(() => ({
+  const memoizedDefaultValues = useMemo<BehaviouralBriefFormValues>(() => ({
     ownerFirstName: '',
     ownerLastName: '',
     contactEmail: '',
@@ -64,7 +63,7 @@ export default function BehaviouralBriefPage() {
     submissionDate: '',
   }), []);
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClientBehaviouralBriefFormValues>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviouralBriefFormValues>({
     resolver: zodResolver(behaviouralBriefSchema),
     defaultValues: memoizedDefaultValues
   });
@@ -79,7 +78,7 @@ export default function BehaviouralBriefPage() {
     }
   }, [currentSubmissionDate, setValue]);
 
-  const handleFormSubmit: SubmitHandler<ClientBehaviouralBriefFormValues> = async (data) => {
+  const handleFormSubmit: SubmitHandler<BehaviouralBriefFormValues> = async (data) => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       toast({
         title: "Service Unavailable",
@@ -91,7 +90,7 @@ export default function BehaviouralBriefPage() {
     setIsSubmitting(true);
     try {
       const submissionTimestamp = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-      const submissionDataWithPreciseTimestamp: ClientBehaviouralBriefFormValues = {
+      const submissionDataWithPreciseTimestamp: BehaviouralBriefFormValues = {
         ...data,
         submissionDate: submissionTimestamp,
       };
@@ -133,7 +132,7 @@ export default function BehaviouralBriefPage() {
   
   const FormFieldWrapper: React.FC<{ 
     label?: string; 
-    htmlForProp?: keyof ClientBehaviouralBriefFormValues | string;
+    htmlForProp?: keyof BehaviouralBriefFormValues | string;
     error?: string | boolean;
     children: React.ReactNode; 
     required?: boolean; 
@@ -170,12 +169,12 @@ export default function BehaviouralBriefPage() {
         <Image 
           src="https://iili.io/3PLgTAb.png" 
           alt="Behavioural Brief Title" 
-          width={468} 
-          height={78}
+          width={450} 
+          height={75}
           data-ai-hint="form title"
         />
       </div>
-      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf] relative">
+      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
         <CardContent className="p-6 sm:p-8">
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0">
             
@@ -334,3 +333,4 @@ export default function BehaviouralBriefPage() {
   );
 }
 
+    
