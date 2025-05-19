@@ -10,7 +10,7 @@ export interface Client {
   ownerLastName: string;
   contactEmail: string;
   contactNumber: string;
-  postcode: string; // Remains for direct entry or as part of 'address'
+  postcode: string; 
 
   address?: {
     addressLine1: string;
@@ -129,13 +129,13 @@ export interface BehaviourQuestionnaire {
 export interface Session {
   id: string;
   clientId: string;
-  clientName: string;
-  dogName: string;
-  date: string;
-  time: string;
+  clientName: string; // Denormalized for easier display
+  dogName: string;    // Denormalized for easier display
+  date: string; // Should be in 'yyyy-MM-dd' format
+  time: string; // Should be in 'HH:MM AM/PM' format
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   notes?: string;
-  createdAt?: Timestamp | Date | string;
+  createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }
 
 export interface FinancialTransaction {

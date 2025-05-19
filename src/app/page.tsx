@@ -7,69 +7,71 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Users, CalendarDays, DollarSign as IconDollarSign, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import type { Session, Client } from '@/lib/types'; // Added Client
+import type { Session, Client } from '@/lib/types'; 
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval } from 'date-fns'; // Added date-fns functions
-import { mockSessions } from '@/lib/mockData'; 
-import { getClients } from '@/lib/firebase'; // Added getClients
-import { useToast } from "@/hooks/use-toast"; // Added useToast
+import { format, parseISO, isValid, addDays, startOfDay, isWithinInterval } from 'date-fns'; 
+import { getClients, getSessionsFromFirestore } from '@/lib/firebase'; 
+import { useToast } from "@/hooks/use-toast"; 
 
 export default function HomePage() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(new Date());
-  const [currentSessions, setCurrentSessions] = useState<Session[]>(mockSessions); // Keep using mock for sessions for now
   
   const [clients, setClients] = useState<Client[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState<boolean>(true);
+  const [sessions, setSessions] = useState<Session[]>([]); // State for sessions
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchClientsForDashboard = async () => {
+    const fetchDashboardData = async () => {
       if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-        // No need to toast here, clients page already handles this.
-        // Keep dashboard functional with mock/default counts.
-        setIsLoadingClients(false);
+        setIsLoadingData(false);
         return;
       }
       try {
-        setIsLoadingClients(true);
-        const firestoreClients = await getClients();
+        setIsLoadingData(true);
+        const [firestoreClients, firestoreSessions] = await Promise.all([
+          getClients(),
+          getSessionsFromFirestore()
+        ]);
         setClients(firestoreClients);
+        setSessions(firestoreSessions);
       } catch (err) {
-        console.error("Error fetching clients for dashboard:", err);
-        // Optionally toast, or just log and let counts be based on empty/mock.
+        console.error("Error fetching dashboard data:", err);
         toast({
-          title: "Error Loading Client Data",
-          description: "Could not fetch client data for dashboard stats.",
+          title: "Error Loading Dashboard Data",
+          description: "Could not fetch client or session data.",
           variant: "destructive",
         });
       } finally {
-        setIsLoadingClients(false);
+        setIsLoadingData(false);
       }
     };
-    fetchClientsForDashboard();
+    fetchDashboardData();
   }, [toast]);
 
   const selectedDateString = selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'yyyy-MM-dd') : null;
+  
   const sessionsOnSelectedDate = selectedDateString 
-    ? currentSessions.filter(s => s.date === selectedDateString)
+    ? sessions.filter(s => s.date === selectedDateString)
     : [];
   
-  const allSessionDates = currentSessions.map(s => parseISO(s.date)).filter(isValid);
+  const allSessionDates = sessions.map(s => parseISO(s.date)).filter(isValid);
 
   // Calculate stats
-  const activeClientsCount = isLoadingClients ? 0 : clients.filter(client => client.isActive === true || client.isActive === undefined).length;
+  const activeClientsCount = isLoadingData ? 0 : clients.filter(client => client.isActive === true || client.isActive === undefined).length;
   
   const today = startOfDay(new Date());
-  const oneWeekFromToday = addDays(today, 6); // 7-day window from today
+  const oneWeekFromToday = addDays(today, 6); 
 
-  const upcomingSessionsCount = currentSessions.filter(session => {
+  const upcomingSessionsCount = isLoadingData ? 0 : sessions.filter(session => {
     if (session.status !== 'Scheduled') return false;
     const sessionDate = parseISO(session.date);
     if (!isValid(sessionDate)) return false;
     return isWithinInterval(startOfDay(sessionDate), { start: today, end: oneWeekFromToday });
   }).length;
   
-  const incomeThisMonth = 2350.00; // Placeholder, real calculation needed
+  // Placeholder for finance - will require Firestore integration for transactions
+  const incomeThisMonth = 2350.00; 
 
   return (
     <div className="flex flex-col gap-8"> 
@@ -80,7 +82,7 @@ export default function HomePage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingClients ? (
+            {isLoadingData ? (
                 <Loader2 className="h-6 w-6 animate-spin text-primary my-1" />
             ) : (
                 <div className="text-2xl font-bold">{activeClientsCount}</div>
@@ -99,7 +101,11 @@ export default function HomePage() {
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{upcomingSessionsCount} This Week</div>
+             {isLoadingData ? (
+                <Loader2 className="h-6 w-6 animate-spin text-primary my-1" />
+            ) : (
+                <div className="text-2xl font-bold">{upcomingSessionsCount} This Week</div>
+            )}
             <p className="text-xs text-muted-foreground">
               View your schedule
             </p>
@@ -114,6 +120,7 @@ export default function HomePage() {
             <IconDollarSign className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
+            {/* Finance data is still mock/placeholder */}
             <div className="text-2xl font-bold">£{incomeThisMonth.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Income this month
@@ -125,53 +132,59 @@ export default function HomePage() {
         </Card>
       </div>
 
-      {/* Calendar Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Session Calendar Overview</CardTitle>
           <CardDescription>Quick view of your scheduled sessions. For detailed management, go to the Sessions page.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-2 shadow-md">
-              <CardContent className="p-2 md:p-4 flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedCalendarDate}
-                  onSelect={setSelectedCalendarDate}
-                  className="rounded-md"
-                  modifiers={{ 
-                    scheduled: allSessionDates
-                  }}
-                  modifiersStyles={{ 
-                    scheduled: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
-                  }}
-                />
-              </CardContent>
-            </Card>
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle>
-                  {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {sessionsOnSelectedDate.length > 0 ? (
-                  <ul className="space-y-3">
-                    {sessionsOnSelectedDate.map(session => (
-                      <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="font-semibold">{session.clientName} & {session.dogName}</div>
-                        <div className="text-sm text-muted-foreground">{session.time}</div>
-                        <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1">{session.status}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No sessions scheduled for this day.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+           {isLoadingData ? (
+             <div className="flex justify-center items-center py-10">
+               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2">Loading calendar data...</p>
+              </div>
+           ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="md:col-span-2 shadow-md">
+                <CardContent className="p-2 md:p-4 flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedCalendarDate}
+                    onSelect={setSelectedCalendarDate}
+                    className="rounded-md"
+                    modifiers={{ 
+                      scheduled: allSessionDates
+                    }}
+                    modifiersStyles={{ 
+                      scheduled: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
+                    }}
+                  />
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle>
+                    {selectedCalendarDate && isValid(selectedCalendarDate) ? format(selectedCalendarDate, 'MMMM d, yyyy') : 'Select a date'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {sessionsOnSelectedDate.length > 0 ? (
+                    <ul className="space-y-3">
+                      {sessionsOnSelectedDate.map(session => (
+                        <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors">
+                          <div className="font-semibold">{session.clientName} & {session.dogName}</div>
+                          <div className="text-sm text-muted-foreground">{session.time}</div>
+                          <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1">{session.status}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground">No sessions scheduled for this day.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+           )}
         </CardContent>
       </Card>
     </div>

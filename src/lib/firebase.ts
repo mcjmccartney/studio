@@ -25,7 +25,7 @@ import {
   where,
   limit
 } from 'firebase/firestore';
-import type { Client, BehaviouralBrief, BehaviourQuestionnaire, Address } from './types';
+import type { Client, BehaviouralBrief, BehaviourQuestionnaire, Address, Session } from './types';
 import { format } from 'date-fns';
 
 // This type is for the full form data coming from behavioural-brief/page.tsx
@@ -133,7 +133,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       lastSession: client.lastSession || 'N/A',
       nextSession: client.nextSession || 'Not Scheduled',
       isMember: client.isMember === undefined ? false : client.isMember,
-      isActive: client.isActive === undefined ? true : client.isActive, // Default to true if undefined
+      isActive: client.isActive === undefined ? true : client.isActive,
       dogName: client.dogName || null, 
       address: client.address || null, 
       howHeardAboutServices: client.howHeardAboutServices || null, 
@@ -148,7 +148,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
         } else if (key === 'isMember') {
             dataToSave[key] = false;
         } else if (key === 'isActive') {
-            dataToSave[key] = true; // Default to true
+            dataToSave[key] = true; 
         }
          else {
           delete dataToSave[key]; 
@@ -170,7 +170,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       howHeardAboutServices: data.howHeardAboutServices || undefined,
       dogName: data.dogName || undefined,
       isMember: data.isMember === undefined ? false : data.isMember,
-      isActive: data.isActive === undefined ? true : data.isActive, // Default to true if undefined
+      isActive: data.isActive === undefined ? true : data.isActive,
       behaviouralBriefId: data.behaviouralBriefId || undefined,
       behaviourQuestionnaireId: data.behaviourQuestionnaireId || undefined,
       submissionDate: data.submissionDate || '',
@@ -226,6 +226,7 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
         if (['sociabilityWithDogs', 'sociabilityWithPeople'].includes(key)) {
             dataToSave[key] = '';
         } else {
+            // Keep optional fields as null if undefined, rather than deleting
             dataToSave[key] = null; 
         }
       }
@@ -288,10 +289,36 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
   }
 };
 
+const sessionConverter: FirestoreDataConverter<Session> = {
+  toFirestore(session: Omit<Session, 'id'>): DocumentData {
+    return {
+      ...session,
+      createdAt: session.createdAt instanceof Date || session.createdAt instanceof Timestamp ? session.createdAt : serverTimestamp(),
+      notes: session.notes || null, // Ensure notes is null if undefined
+    };
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot<DocumentData>): Session {
+    const data = snapshot.data();
+    return {
+      id: snapshot.id,
+      clientId: data.clientId,
+      clientName: data.clientName,
+      dogName: data.dogName,
+      date: data.date, // Should be 'yyyy-MM-dd'
+      time: data.time, // Should be 'HH:MM AM/PM'
+      status: data.status,
+      notes: data.notes === null ? undefined : data.notes,
+      createdAt: data.createdAt, // Firestore Timestamp
+    } as Session;
+  }
+};
+
 
 const clientsCollectionRef = collection(db, 'clients').withConverter(clientConverter);
 const behaviouralBriefsCollectionRef = collection(db, 'behaviouralBriefs').withConverter(behaviouralBriefConverter);
 const behaviourQuestionnairesCollectionRef = collection(db, 'behaviourQuestionnaires').withConverter(behaviourQuestionnaireConverter);
+const sessionsCollectionRef = collection(db, 'sessions').withConverter(sessionConverter);
+
 
 export const getClients = async (): Promise<Client[]> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -330,12 +357,8 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   };
 
   const docRef = await addDoc(clientsCollectionRef, dataToSave);
-  
-  return { 
-    id: docRef.id, 
-    ...dataToSave,
-    createdAt: new Date().toISOString(), 
-  } as Client; 
+  const newClientData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Client; // Simulate server timestamp for immediate use
+  return newClientData;
 };
 
 export type EditableClientData = {
@@ -366,6 +389,9 @@ export const updateClientInFirestore = async (clientId: string, clientData: Edit
     const K = key as keyof EditableClientData;
     if (clientData[K] !== undefined) {
       updateData[K] = clientData[K];
+    } else if (clientData[K] === undefined && (K === 'dogName' || K === 'address' || K === 'howHeardAboutServices')) {
+      // Explicitly set to null if being cleared and it's an optional field that should be null
+      updateData[K] = null;
     }
   });
   
@@ -408,7 +434,7 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
     postcode: formData.postcode, 
     dogName: formData.dogName, 
     isMember: false, 
-    isActive: true, // New clients from brief are active by default
+    isActive: true, 
     submissionDate: submissionTimestamp,
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -462,11 +488,10 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
   if (!querySnapshot.empty) {
     const existingClientDoc = querySnapshot.docs[0];
     targetClientId = existingClientDoc.id;
-    clientDataForReturn = existingClientDoc.data(); // This will have isActive status from Firestore
+    clientDataForReturn = existingClientDoc.data();
     console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
     
-    // If existing client, update their address and howHeardAboutServices from questionnaire if provided
-    const updates: Partial<Client> = {};
+    const updates: Partial<Client> = { isActive: true }; // Ensure client is marked active
     if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
         updates.address = {
             addressLine1: formData.addressLine1,
@@ -474,14 +499,17 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             city: formData.city,
             country: formData.country,
         };
-        updates.postcode = formData.postcode; // Also update top-level postcode
+        updates.postcode = formData.postcode; 
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
     }
+    if (formData.dogName && !clientDataForReturn.dogName) { // Only update dog name if it wasn't set
+        updates.dogName = formData.dogName;
+    }
      if (Object.keys(updates).length > 0) {
         await updateDoc(doc(clientsCollectionRef, targetClientId), updates);
-        clientDataForReturn = { ...clientDataForReturn, ...updates }; // Reflect updates in returned data
+        clientDataForReturn = { ...clientDataForReturn, ...updates };
     }
 
   } else {
@@ -501,7 +529,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
       postcode: formData.postcode,
       dogName: formData.dogName,
       isMember: false,
-      isActive: true, // New clients from questionnaire are active by default
+      isActive: true, 
       address: clientAddress,
       howHeardAboutServices: formData.howHeardAboutServices || undefined,
       submissionDate: submissionTimestamp,
@@ -572,7 +600,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     behaviourQuestionnaireId: newQuestionnaireId,
   });
   
-  clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId; // Ensure this is set on the returned client
+  clientDataForReturn.behaviourQuestionnaireId = newQuestionnaireId; 
 
   const finalQuestionnaireData: BehaviourQuestionnaire = { ...questionnaireRecord, id: newQuestionnaireId, createdAt: new Date().toISOString() } as BehaviourQuestionnaire;
 
@@ -617,6 +645,51 @@ export const getBehaviourQuestionnaireById = async (questionnaireId: string): Pr
     return null;
   }
 };
+
+// SESSION FIRESTORE FUNCTIONS
+export const getSessionsFromFirestore = async (): Promise<Session[]> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    console.warn("Firebase project ID is not set. Skipping Firestore fetch for sessions.");
+    return [];
+  }
+  try {
+    const snapshot = await getDocs(sessionsCollectionRef);
+    return snapshot.docs.map(doc => doc.data());
+  } catch (error) {
+    console.error("Error fetching sessions from Firestore:", error);
+    return [];
+  }
+};
+
+export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'createdAt'>): Promise<Session> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    throw new Error("Firebase project ID is not set. Cannot add session.");
+  }
+  const dataToSave = {
+    ...sessionData,
+    createdAt: serverTimestamp() as Timestamp,
+  };
+  const docRef = await addDoc(sessionsCollectionRef, dataToSave);
+  const newSessionData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Session; // Simulate server timestamp
+  return newSessionData;
+};
+
+export const deleteSessionFromFirestore = async (sessionId: string): Promise<void> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    throw new Error("Firebase project ID is not set. Cannot delete session.");
+  }
+  if (!sessionId) {
+    throw new Error("Session ID is required to delete a session.");
+  }
+  try {
+    const sessionDocRef = doc(sessionsCollectionRef, sessionId);
+    await deleteDoc(sessionDocRef);
+  } catch (error) {
+    console.error("Error deleting session from Firestore:", error);
+    throw error;
+  }
+};
+
 
 export const signInUser = async (email: string, pass: string) => {
   return signInWithEmailAndPassword(auth, email, pass);

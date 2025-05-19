@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck, Eye } from 'lucide-react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -52,8 +52,16 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { getClients, addClientToFirestore as fbAddClient, deleteClientFromFirestore, getBehaviouralBriefByBriefId, getBehaviourQuestionnaireById, updateClientInFirestore, type EditableClientData } from '@/lib/firebase';
-import { mockSessions } from '@/lib/mockData';
+import { 
+  getClients, 
+  addClientToFirestore as fbAddClient, 
+  deleteClientFromFirestore, 
+  getBehaviouralBriefByBriefId, 
+  getBehaviourQuestionnaireById, 
+  updateClientInFirestore, 
+  getSessionsFromFirestore, // Import getSessionsFromFirestore
+  type EditableClientData 
+} from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -69,7 +77,7 @@ const internalClientFormSchema = z.object({
   dogName: z.string().optional(),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  submissionDate: z.string().optional(),
+  submissionDate: z.string().optional(), // This is handled internally
 });
 
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
@@ -79,6 +87,7 @@ type SheetViewMode = 'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [allSessions, setAllSessions] = useState<Session[]>([]); // Store all sessions
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +100,6 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // State for the new View Sheet
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
   const [clientForViewSheet, setClientForViewSheet] = useState<Client | null>(null);
   const [sheetViewMode, setSheetViewMode] = useState<SheetViewMode>('clientInfo');
@@ -102,7 +110,7 @@ export default function ClientsPage() {
   const [questionnaireForSheet, setQuestionnaireForSheet] = useState<BehaviourQuestionnaire | null>(null);
   const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
   
-  const [clientSessions, setClientSessions] = useState<Session[]>([]);
+  const [clientSessionsForViewSheet, setClientSessionsForViewSheet] = useState<Session[]>([]);
 
   const { toast } = useToast();
 
@@ -116,7 +124,7 @@ export default function ClientsPage() {
       postcode: '',
       dogName: '',
       isMember: false,
-      isActive: true, // Default new clients from modal to active
+      isActive: true, 
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
@@ -136,28 +144,33 @@ export default function ClientsPage() {
   });
 
 
-  const fetchClients = async () => {
+  const fetchInitialData = async () => {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       toast({
         title: "Firebase Not Configured",
-        description: "Firebase project ID is missing. Cannot fetch clients.",
+        description: "Firebase project ID is missing. Cannot fetch data.",
         variant: "destructive",
       });
       setIsLoading(false);
       setClients([]);
+      setAllSessions([]);
       return;
     }
     try {
       setIsLoading(true);
       setError(null);
-      const firestoreClients = await getClients();
+      const [firestoreClients, firestoreSessions] = await Promise.all([
+        getClients(),
+        getSessionsFromFirestore()
+      ]);
       setClients(firestoreClients.sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
+      setAllSessions(firestoreSessions);
     } catch (err) {
-      console.error("Error fetching clients:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to load clients.";
+      console.error("Error fetching data:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to load data.";
       setError(errorMessage);
       toast({
-        title: "Error Loading Clients",
+        title: "Error Loading Data",
         description: errorMessage,
         variant: "destructive",
       });
@@ -167,8 +180,8 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    fetchClients();
-  }, [toast]); // Added toast to dependency array as it's used in fetchClients
+    fetchInitialData();
+  }, [toast]);
 
   useEffect(() => {
     if (clientToEdit) {
@@ -297,9 +310,9 @@ export default function ClientsPage() {
     setSheetViewMode('clientInfo');
     setIsViewSheetOpen(true);
     
-    const sessions = mockSessions.filter(session => session.clientId === client.id)
+    const sessionsForThisClient = allSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-    setClientSessions(sessions);
+    setClientSessionsForViewSheet(sessionsForThisClient);
     
     setBriefForSheet(null);
     setQuestionnaireForSheet(null);
@@ -321,7 +334,7 @@ export default function ClientsPage() {
       }
     };
     fetchBriefForSheet();
-  }, [clientForViewSheet, sheetViewMode, briefForSheet, toast]);
+  }, [clientForViewSheet, sheetViewMode, briefForSheet]);
 
   useEffect(() => {
     const fetchQuestionnaireForSheet = async () => {
@@ -339,12 +352,12 @@ export default function ClientsPage() {
       }
     };
     fetchQuestionnaireForSheet();
-  }, [clientForViewSheet, sheetViewMode, questionnaireForSheet, toast]);
+  }, [clientForViewSheet, sheetViewMode, questionnaireForSheet]);
 
 
   const handleViewBriefInSheet = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
-    if (!briefForSheet) setIsLoadingBriefForSheet(true);
+    if (!briefForSheet) setIsLoadingBriefForSheet(true); // Show loader only if not already loaded
     try {
         if (!briefForSheet) { 
             const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
@@ -361,7 +374,7 @@ export default function ClientsPage() {
 
   const handleViewQuestionnaireInSheet = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviourQuestionnaireId) return;
-    if (!questionnaireForSheet) setIsLoadingQuestionnaireForSheet(true);
+    if (!questionnaireForSheet) setIsLoadingQuestionnaireForSheet(true); // Show loader only if not already loaded
     try {
         if (!questionnaireForSheet) {
             const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
@@ -491,7 +504,7 @@ export default function ClientsPage() {
         </Dialog>
       </div>
       
-      <div className="mt-0">
+      <div className="mt-0"> {/* Removed outer Card */}
           {isLoading && (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -521,7 +534,7 @@ export default function ClientsPage() {
                   <div className="flex items-center gap-3">
                     {client.isMember && (
                       <Image
-                        src="https://iili.io/34300ox.md.jpg"
+                        src="https://iili.io/34300ox.md.jpg" 
                         alt="Member Icon"
                         width={32}
                         height={32}
@@ -720,7 +733,7 @@ export default function ClientsPage() {
                           )}
                            <div className="pt-2">
                               <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Initial Submission:</strong>
-                              <p className="mt-1 text-muted-foreground">{clientForViewSheet.submissionDate ? format(new Date(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                              <p className="mt-1 text-muted-foreground">{clientForViewSheet.submissionDate && isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</p>
                           </div>
                           <div className="pt-2">
                               <strong className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Membership:</strong>
@@ -751,9 +764,9 @@ export default function ClientsPage() {
                           <CardTitle className="text-lg flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" /> Session History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          {clientSessions.length > 0 ? (
+                          {clientSessionsForViewSheet.length > 0 ? (
                             <ul className="space-y-3">
-                              {clientSessions.map(session => (
+                              {clientSessionsForViewSheet.map(session => (
                                 <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
                                   <div className="flex justify-between items-center">
                                     <div>
@@ -813,7 +826,7 @@ export default function ClientsPage() {
                         )}
                         <div className="pt-2">
                             <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
-                            <p className="mt-1 text-muted-foreground">{briefForSheet.submissionDate ? format(new Date(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                            <p className="mt-1 text-muted-foreground">{briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -855,7 +868,7 @@ export default function ClientsPage() {
                             {/* Add more questionnaire fields here as needed */}
                             <div className="pt-2">
                                 <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
-                                <p className="mt-1 text-muted-foreground">{questionnaireForSheet.submissionDate ? format(new Date(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                                <p className="mt-1 text-muted-foreground">{questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
                             </div>
                         </CardContent>
                      </Card>
@@ -895,7 +908,7 @@ export default function ClientsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {setClientToDelete(null); setIsDeleteDialogOpen(false);}} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90" disabled={isSubmittingForm}>
+            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingForm}>
               {isSubmittingForm && clientToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Delete
             </AlertDialogAction>

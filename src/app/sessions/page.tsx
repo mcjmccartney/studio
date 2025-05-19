@@ -3,7 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import type { Session, Client } from '@/lib/types';
-import { mockSessions as initialMockSessions, mockClients, addSession as apiAddSession, deleteSession as apiDeleteSession } from '@/lib/mockData'; // Added deleteSession
+import { 
+  getSessionsFromFirestore, 
+  addSessionToFirestore, 
+  deleteSessionFromFirestore,
+  getClients // Import getClients to fetch clients for the dropdown
+} from '@/lib/firebase'; 
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid } from 'date-fns';
@@ -72,6 +77,7 @@ const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s(AM|PM)$/i, { message: "Invalid time format. Use HH:MM AM/PM." }),
+  notes: z.string().optional(),
 });
 
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
@@ -110,9 +116,7 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Users className="mr-2 h-5 w-5 text-primary" /> Client & Dog
-              </CardTitle>
+              <CardTitle className="text-lg flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Client & Dog</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Client:</strong> {session.clientName}</div>
@@ -122,9 +126,7 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <CalendarIconLucide className="mr-2 h-5 w-5 text-primary" /> Date & Time
-              </CardTitle>
+              <CardTitle className="text-lg flex items-center"><CalendarIconLucide className="mr-2 h-5 w-5 text-primary" /> Date & Time</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Date:</strong> {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
@@ -134,9 +136,7 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Info className="mr-2 h-5 w-5 text-primary" /> Status
-              </CardTitle>
+              <CardTitle className="text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-primary" /> Status</CardTitle>
             </CardHeader>
             <CardContent>
               <Badge
@@ -154,9 +154,7 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
           {session.notes && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <ClipboardList className="mr-2 h-5 w-5 text-primary" /> Session Notes
-                </CardTitle>
+                <CardTitle className="text-lg flex items-center"><ClipboardList className="mr-2 h-5 w-5 text-primary" /> Session Notes</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
                 <p className="whitespace-pre-wrap text-muted-foreground">{session.notes}</p>
@@ -171,47 +169,86 @@ function SessionDetailView({ session, onBack, onDelete }: SessionDetailViewProps
 
 
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>(initialMockSessions);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [clients, setClients] = useState<Client[]>([]); // State for clients
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, register, formState: { errors, isSubmitting } } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: new Date(),
-      time: format(new Date(), "hh:mm a")
+      time: format(new Date(), "hh:mm a"),
+      notes: '',
+      clientId: '',
     }
   });
 
   useEffect(() => {
-    setSessions(initialMockSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
-  }, []);
+    const fetchData = async () => {
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        toast({ title: "Firebase Not Configured", description: "Cannot fetch data.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [firestoreSessions, firestoreClients] = await Promise.all([
+          getSessionsFromFirestore(),
+          getClients() 
+        ]);
+        setSessions(firestoreSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+        setClients(firestoreClients);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to load data.";
+        setError(errorMessage);
+        toast({ title: "Error Loading Data", description: errorMessage, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [toast]);
 
-  const handleAddSession: SubmitHandler<SessionFormValues> = (data) => {
-    const selectedClient = mockClients.find(c => c.id === data.clientId);
+  const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
+    const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
       toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
       return;
     }
     
-    const sessionData = {
+    const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
+      clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
+      dogName: selectedClient.dogName || 'N/A',
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
+      status: 'Scheduled',
+      notes: data.notes || undefined,
     };
 
-    const newSession = apiAddSession(sessionData, selectedClient);
-    setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
-    
-    toast({
-      title: "Session Added",
-      description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
-    });
-    reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '' });
-    setIsAddSessionModalOpen(false);
+    try {
+      const newSession = await addSessionToFirestore(sessionData);
+      setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+      
+      toast({
+        title: "Session Added",
+        description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
+      });
+      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '', notes: '' });
+      setIsAddSessionModalOpen(false);
+    } catch (err) {
+      console.error("Error adding session to Firestore:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
+      toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
+    }
   };
 
   const groupSessionsByMonth = (sessionsToGroup: Session[]): GroupedSessions => {
@@ -235,30 +272,37 @@ export default function SessionsPage() {
     setSelectedSession(null);
   };
   
-  const handleDeleteSession = (session: Session | null) => {
+  const handleDeleteSessionRequest = (session: Session | null) => {
     if (!session) return;
     setSessionToDelete(session);
     setIsSessionDeleteDialogOpen(true);
   };
 
-  const handleConfirmDeleteSession = () => {
+  const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    apiDeleteSession(sessionToDelete.id); 
-    setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
-    toast({
-      title: "Session Deleted",
-      description: `Session with ${sessionToDelete.clientName} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
-    });
-    setIsSessionDeleteDialogOpen(false);
-    setSessionToDelete(null);
-    if (selectedSession && selectedSession.id === sessionToDelete.id) {
-      setSelectedSession(null); 
+    try {
+      await deleteSessionFromFirestore(sessionToDelete.id); 
+      setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
+      toast({
+        title: "Session Deleted",
+        description: `Session with ${sessionToDelete.clientName} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
+      });
+      if (selectedSession && selectedSession.id === sessionToDelete.id) {
+        setSelectedSession(null); 
+      }
+    } catch (err) {
+      console.error("Error deleting session from Firestore:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
+      toast({ title: "Error Deleting Session", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsSessionDeleteDialogOpen(false);
+      setSessionToDelete(null);
     }
   };
 
 
   if (selectedSession) {
-    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSession} />;
+    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} />;
   }
 
   const groupedSessions = groupSessionsByMonth(sessions);
@@ -295,14 +339,14 @@ export default function SessionsPage() {
                     name="clientId"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isLoading}>
                         <SelectTrigger className={cn(errors.clientId ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
                             <SelectLabel>Clients</SelectLabel>
-                            {mockClients.map(client => (
+                            {clients.map(client => (
                               <SelectItem key={client.id} value={client.id}>
                                 {client.ownerFirstName} {client.ownerLastName} (Dog: {client.dogName || 'N/A'})
                               </SelectItem>
@@ -383,6 +427,13 @@ export default function SessionsPage() {
                   {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="notes" className="text-right">Notes</Label>
+                <div className="col-span-3">
+                  <Input id="notes" {...register("notes")} className={cn(errors.notes ? "border-destructive" : "")} disabled={isSubmitting} />
+                  {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>}
+                </div>
+              </div>
               <DialogFooter>
                 <DialogClose asChild>
                    <Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button>
@@ -397,8 +448,22 @@ export default function SessionsPage() {
         </Dialog>
       </div>
       
-      {/* Outer Card removed, Accordion is now the main list container */}
-      {sortedMonthKeys.length > 0 ? (
+      {isLoading && (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading sessions...</p>
+        </div>
+      )}
+      {!isLoading && error && (
+        <div className="text-destructive text-center py-10">
+          <p>Error loading sessions: {error}</p>
+          <p>Please ensure Firebase is configured correctly and you are online.</p>
+        </div>
+      )}
+      {!isLoading && !error && sortedMonthKeys.length === 0 && (
+        <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
+      )}
+      {!isLoading && !error && sortedMonthKeys.length > 0 && (
         <Accordion type="multiple" className="w-full" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
             <AccordionItem value={monthYear} key={monthYear} className="border-b bg-card shadow-sm rounded-md mb-2">
@@ -425,7 +490,7 @@ export default function SessionsPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Badge variant={session.status === 'Scheduled' ? 'default' : 'secondary'} className="mt-1 whitespace-nowrap">
+                            <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'} className="mt-1 whitespace-nowrap">
                             {session.status}
                             </Badge>
                             <DropdownMenu>
@@ -448,7 +513,7 @@ export default function SessionsPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                     className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                                    onClick={(e) => {e.stopPropagation(); handleDeleteSession(session);}}
+                                    onClick={(e) => {e.stopPropagation(); handleDeleteSessionRequest(session);}}
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete Session
@@ -467,8 +532,6 @@ export default function SessionsPage() {
             </AccordionItem>
           ))}
         </Accordion>
-      ) : (
-        <p className="text-muted-foreground text-center py-10">No sessions scheduled yet. Add a new session to get started.</p>
       )}
 
       <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
@@ -477,7 +540,7 @@ export default function SessionsPage() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the session
-              with {sessionToDelete?.clientName} on {sessionToDelete ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+              with {sessionToDelete?.clientName} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
