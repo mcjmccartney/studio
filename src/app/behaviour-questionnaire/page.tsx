@@ -19,6 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation'; // Import useSearchParams
 
 const addressSchema = z.object({
   addressLine1: z.string().min(1, "Address Line 1 is required."),
@@ -28,8 +29,9 @@ const addressSchema = z.object({
   postcode: z.string().min(1, "Postcode is required."),
 });
 
+// Zod schema based on the HTML structure provided by the user
 const behaviourQuestionnaireSchema = z.object({
-  // Owner Info
+  // Owner Info (Required if new client, optional if linking to existing, but form will collect)
   ownerFirstName: z.string().min(1, { message: "First Name is required." }),
   ownerLastName: z.string().min(1, { message: "Last Name is required." }),
   contactEmail: z.string().email({ message: "Please enter a valid email address." }),
@@ -47,14 +49,14 @@ const behaviourQuestionnaireSchema = z.object({
   dogSex: z.enum(['Male', 'Female'], { required_error: "Sex is required." }),
   dogBreed: z.string().min(1, { message: "Dog breed is required." }),
   neuteredSpayedDetails: z.string().min(1, { message: "Neutered/Spayed status and age is required." }),
-  mainProblem: z.string().optional(),
-  problemTendencyFirstNoticed: z.string().optional(),
-  problemFrequencyDetails: z.string().optional(),
-  problemRecentChanges: z.string().optional(),
-  problemAnticipationDetails: z.string().optional(),
-  dogMotivationForProblem: z.string().optional(),
-  problemAddressingAttempts: z.string().optional(),
-  idealTrainingOutcome: z.string().optional(),
+  mainProblem: z.string().min(1, { message: "This field is required." }), // Made required based on common form logic
+  problemTendencyFirstNoticed: z.string().min(1, { message: "This field is required." }), // Made required
+  problemFrequencyDetails: z.string().min(1, { message: "This field is required." }), // Made required
+  problemRecentChanges: z.string().min(1, { message: "This field is required." }), // Made required
+  problemAnticipationDetails: z.string().min(1, { message: "This field is required." }), // Made required
+  dogMotivationForProblem: z.string().min(1, { message: "This field is required." }), // Made required
+  problemAddressingAttempts: z.string().min(1, { message: "This field is required." }), // Made required
+  idealTrainingOutcome: z.string().min(1, { message: "This field is required." }), // Made required
   otherHelpNeeded: z.string().optional(),
 
   // Health and Veterinary Information
@@ -68,7 +70,7 @@ const behaviourQuestionnaireSchema = z.object({
 
   // Diet and Feeding
   dietDetails: z.string().optional(),
-  foodMotivationLevel: z.string().optional(), 
+  foodMotivationLevel: z.string().optional(), // Should be string if options are "1", "2", etc.
   mealtimeRoutine: z.string().optional(),
   treatRoutine: z.string().optional(),
   externalTreatsConsent: z.string().optional(),
@@ -85,16 +87,16 @@ const behaviourQuestionnaireSchema = z.object({
 
   // Temperament
   dogLikes: z.string().optional(),
-  dogChallenges: z.string().optional(),
+  dogChallenges: z.string().min(1, { message: "This field is required." }), // Made required
 
   // Training
-  positiveReinforcementMethods: z.string().optional(),
-  favoriteRewards: z.string().optional(),
-  correctionMethods: z.string().optional(),
-  correctionEffects: z.string().optional(),
-  previousProfessionalTraining: z.string().optional(),
-  previousTrainingMethodsUsed: z.string().optional(),
-  previousTrainingExperienceResults: z.string().optional(),
+  positiveReinforcementMethods: z.string().min(1, { message: "This field is required." }),
+  favoriteRewards: z.string().min(1, { message: "This field is required." }),
+  correctionMethods: z.string().min(1, { message: "This field is required." }),
+  correctionEffects: z.string().min(1, { message: "This field is required." }),
+  previousProfessionalTraining: z.string().min(1, { message: "This field is required." }),
+  previousTrainingMethodsUsed: z.string().min(1, { message: "This field is required." }),
+  previousTrainingExperienceResults: z.string().min(1, { message: "This field is required." }),
 
   // Sociability
   sociabilityWithDogs: z.enum(['Sociable', 'Nervous', 'Reactive', 'Disinterested', ''], {invalid_type_error: "Select a valid option for dog sociability."}).optional(),
@@ -121,7 +123,9 @@ export default function BehaviourQuestionnairePage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [currentSubmissionDate, setCurrentSubmissionDate] = useState('');
   const { toast } = useToast();
-  
+  const searchParams = useSearchParams(); // Get search params
+  const existingClientId = searchParams.get('clientId'); // Get clientId if present
+
   useEffect(() => {
     setCurrentSubmissionDate(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   }, []);
@@ -134,12 +138,12 @@ export default function BehaviourQuestionnairePage() {
     addressLine1: '',
     addressLine2: '',
     city: '',
-    country: 'GB', 
+    country: 'GB', // Default to GB
     postcode: '',
     howHeardAboutServices: '',
     dogName: '',
     dogAge: '',
-    dogSex: undefined,
+    dogSex: undefined, // For select placeholder
     dogBreed: '',
     neuteredSpayedDetails: '',
     mainProblem: '',
@@ -157,7 +161,7 @@ export default function BehaviourQuestionnairePage() {
     rescueBackground: '',
     dogAgeWhenAcquired: '',
     dietDetails: '',
-    foodMotivationLevel: undefined,
+    foodMotivationLevel: undefined, // For select placeholder
     mealtimeRoutine: '',
     treatRoutine: '',
     externalTreatsConsent: '',
@@ -178,11 +182,11 @@ export default function BehaviourQuestionnairePage() {
     previousProfessionalTraining: '',
     previousTrainingMethodsUsed: '',
     previousTrainingExperienceResults: '',
-    sociabilityWithDogs: '',
-    sociabilityWithPeople: '',
+    sociabilityWithDogs: '', // Default to empty string for RadioGroup
+    sociabilityWithPeople: '', // Default to empty string for RadioGroup
     additionalInformation: '',
     timeDedicatedToTraining: '',
-    submissionDate: '',
+    submissionDate: '', // Will be set by useEffect
   }), []);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<BehaviourQuestionnaireFormValues>({
@@ -213,7 +217,8 @@ export default function BehaviourQuestionnairePage() {
         submissionDate: submissionTimestamp,
       };
       
-      await addClientAndBehaviourQuestionnaireToFirestore(submissionData);
+      // Pass existingClientId to the Firestore function
+      await addClientAndBehaviourQuestionnaireToFirestore(submissionData, existingClientId || undefined);
       toast({
         title: "Submission Successful!",
         description: "Thank you for submitting your Behaviour Questionnaire. We will be in touch shortly.",
@@ -298,42 +303,42 @@ export default function BehaviourQuestionnairePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ownerFirstName" className="text-xs text-muted-foreground">First Name</Label>
-                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={cn(inputClassName, errors.ownerFirstName && errorInputClassName)} disabled={isSubmitting} />
+                  <Input id="ownerFirstName" {...register("ownerFirstName")} className={cn(inputClassName, errors.ownerFirstName && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
                   {errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{errors.ownerFirstName.message}</p>}
                 </div>
                 <div>
                   <Label htmlFor="ownerLastName" className="text-xs text-muted-foreground">Last Name</Label>
-                  <Input id="ownerLastName" {...register("ownerLastName")} className={cn(inputClassName, errors.ownerLastName && errorInputClassName)} disabled={isSubmitting} />
+                  <Input id="ownerLastName" {...register("ownerLastName")} className={cn(inputClassName, errors.ownerLastName && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
                   {errors.ownerLastName && <p className="text-xs text-destructive mt-1">{errors.ownerLastName.message}</p>}
                 </div>
               </div>
             </FormFieldWrapper>
             <FormFieldWrapper label="Email" htmlForProp="contactEmail" error={errors.contactEmail?.message} required>
-              <Input id="contactEmail" type="email" {...register("contactEmail")} className={cn(inputClassName, errors.contactEmail && errorInputClassName)} disabled={isSubmitting} />
+              <Input id="contactEmail" type="email" {...register("contactEmail")} className={cn(inputClassName, errors.contactEmail && errorInputClassName)} disabled={isSubmitting || !!existingClientId} />
             </FormFieldWrapper>
             <FormFieldWrapper label="Contact Number" htmlForProp="contactNumber" error={errors.contactNumber?.message} required>
-              <Input id="contactNumber" type="tel" {...register("contactNumber")} className={cn(inputClassName, errors.contactNumber && errorInputClassName)} disabled={isSubmitting}/>
+              <Input id="contactNumber" type="tel" {...register("contactNumber")} className={cn(inputClassName, errors.contactNumber && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
             </FormFieldWrapper>
 
             <FormFieldWrapper label="Address" htmlForProp="addressLine1" error={errors.addressLine1?.message || errors.city?.message || errors.postcode?.message || errors.country?.message} required>
                 <div>
                     <Label htmlFor="addressLine1" className="text-xs text-muted-foreground">Address Line 1</Label>
-                    <Input id="addressLine1" {...register("addressLine1")} className={cn(inputClassName, errors.addressLine1 && errorInputClassName)} disabled={isSubmitting}/>
+                    <Input id="addressLine1" {...register("addressLine1")} className={cn(inputClassName, errors.addressLine1 && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
                     {errors.addressLine1 && <p className="text-xs text-destructive mt-1">{errors.addressLine1.message}</p>}
                 </div>
                 <div className="mt-2">
                     <Label htmlFor="addressLine2" className="text-xs text-muted-foreground">Address Line 2 (Optional)</Label>
-                    <Input id="addressLine2" {...register("addressLine2")} className={cn(inputClassName, errors.addressLine2 && errorInputClassName)} disabled={isSubmitting}/>
+                    <Input id="addressLine2" {...register("addressLine2")} className={cn(inputClassName, errors.addressLine2 && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-2">
                     <div>
                         <Label htmlFor="city" className="text-xs text-muted-foreground">City / Town</Label>
-                        <Input id="city" {...register("city")} className={cn(inputClassName, errors.city && errorInputClassName)} disabled={isSubmitting}/>
+                        <Input id="city" {...register("city")} className={cn(inputClassName, errors.city && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
                         {errors.city && <p className="text-xs text-destructive mt-1">{errors.city.message}</p>}
                     </div>
                     <div>
                         <Label htmlFor="postcode" className="text-xs text-muted-foreground">Postcode</Label>
-                        <Input id="postcode" {...register("postcode")} className={cn(inputClassName, errors.postcode && errorInputClassName)} disabled={isSubmitting}/>
+                        <Input id="postcode" {...register("postcode")} className={cn(inputClassName, errors.postcode && errorInputClassName)} disabled={isSubmitting || !!existingClientId}/>
                         {errors.postcode && <p className="text-xs text-destructive mt-1">{errors.postcode.message}</p>}
                     </div>
                 </div>
@@ -343,7 +348,7 @@ export default function BehaviourQuestionnairePage() {
                         name="country"
                         control={control}
                         render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || !!existingClientId}>
                             <SelectTrigger className={cn(inputClassName, errors.country && errorInputClassName)}>
                             <SelectValue placeholder="Select Country" />
                             </SelectTrigger>
@@ -359,7 +364,7 @@ export default function BehaviourQuestionnairePage() {
             </FormFieldWrapper>
 
             <FormFieldWrapper label="How did you hear about my services?" htmlForProp="howHeardAboutServices" error={errors.howHeardAboutServices?.message}>
-              <Textarea id="howHeardAboutServices" {...register("howHeardAboutServices")} className={cn(inputClassName, errors.howHeardAboutServices && errorInputClassName)} disabled={isSubmitting} rows={3}/>
+              <Textarea id="howHeardAboutServices" {...register("howHeardAboutServices")} className={cn(inputClassName, errors.howHeardAboutServices && errorInputClassName)} disabled={isSubmitting || !!existingClientId} rows={3}/>
             </FormFieldWrapper>
 
 
@@ -388,28 +393,28 @@ export default function BehaviourQuestionnairePage() {
             <FormFieldWrapper label="Neutered/Spayed? At what age?" htmlForProp="neuteredSpayedDetails" error={errors.neuteredSpayedDetails?.message} required>
               <Input id="neuteredSpayedDetails" {...register("neuteredSpayedDetails")} className={cn(inputClassName, errors.neuteredSpayedDetails && errorInputClassName)} disabled={isSubmitting} />
             </FormFieldWrapper>
-             <FormFieldWrapper label="What is the main thing you would like help with?" htmlForProp="mainProblem" error={errors.mainProblem?.message}>
+             <FormFieldWrapper label="What is the main thing you would like help with?" htmlForProp="mainProblem" error={errors.mainProblem?.message} required>
               <Textarea id="mainProblem" {...register("mainProblem")} className={cn(inputClassName, errors.mainProblem && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="When did you first notice tendencies of this behaviour?" htmlForProp="problemTendencyFirstNoticed" error={errors.problemTendencyFirstNoticed?.message}>
+            <FormFieldWrapper label="When did you first notice tendencies of this behaviour?" htmlForProp="problemTendencyFirstNoticed" error={errors.problemTendencyFirstNoticed?.message} required>
               <Textarea id="problemTendencyFirstNoticed" {...register("problemTendencyFirstNoticed")} className={cn(inputClassName, errors.problemTendencyFirstNoticed && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="When, where and how often does it happen? Be specific" htmlForProp="problemFrequencyDetails" error={errors.problemFrequencyDetails?.message}>
+            <FormFieldWrapper label="When, where and how often does it happen? Be specific" htmlForProp="problemFrequencyDetails" error={errors.problemFrequencyDetails?.message} required>
               <Textarea id="problemFrequencyDetails" {...register("problemFrequencyDetails")} className={cn(inputClassName, errors.problemFrequencyDetails && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="Has there been a recent change in the behaviour?" description="More frequent? More intense? Different circumstances?" htmlForProp="problemRecentChanges" error={errors.problemRecentChanges?.message}>
+            <FormFieldWrapper label="Has there been a recent change in the behaviour?" description="More frequent? More intense? Different circumstances?" htmlForProp="problemRecentChanges" error={errors.problemRecentChanges?.message} required>
               <Textarea id="problemRecentChanges" {...register("problemRecentChanges")} className={cn(inputClassName, errors.problemRecentChanges && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="Can you anticipate when it is likely to happen?" description="Location, who is present, trigger, etc." htmlForProp="problemAnticipationDetails" error={errors.problemAnticipationDetails?.message}>
+            <FormFieldWrapper label="Can you anticipate when it is likely to happen?" description="Location, who is present, trigger, etc." htmlForProp="problemAnticipationDetails" error={errors.problemAnticipationDetails?.message} required>
               <Textarea id="problemAnticipationDetails" {...register("problemAnticipationDetails")} className={cn(inputClassName, errors.problemAnticipationDetails && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="Why do you think your dog is doing this?" htmlForProp="dogMotivationForProblem" error={errors.dogMotivationForProblem?.message}>
+            <FormFieldWrapper label="Why do you think your dog is doing this?" htmlForProp="dogMotivationForProblem" error={errors.dogMotivationForProblem?.message} required>
               <Textarea id="dogMotivationForProblem" {...register("dogMotivationForProblem")} className={cn(inputClassName, errors.dogMotivationForProblem && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="What have you done so far to address this problem? With what effect?" htmlForProp="problemAddressingAttempts" error={errors.problemAddressingAttempts?.message}>
+            <FormFieldWrapper label="What have you done so far to address this problem? With what effect?" htmlForProp="problemAddressingAttempts" error={errors.problemAddressingAttempts?.message} required>
               <Textarea id="problemAddressingAttempts" {...register("problemAddressingAttempts")} className={cn(inputClassName, errors.problemAddressingAttempts && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="What would you consider your ideal goal/outcome of a training program?" htmlForProp="idealTrainingOutcome" error={errors.idealTrainingOutcome?.message}>
+            <FormFieldWrapper label="What would you consider your ideal goal/outcome of a training program?" htmlForProp="idealTrainingOutcome" error={errors.idealTrainingOutcome?.message} required>
               <Textarea id="idealTrainingOutcome" {...register("idealTrainingOutcome")} className={cn(inputClassName, errors.idealTrainingOutcome && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
             <FormFieldWrapper label="Is there anything else you would like help with if possible?" htmlForProp="otherHelpNeeded" error={errors.otherHelpNeeded?.message}>
@@ -493,30 +498,30 @@ export default function BehaviourQuestionnairePage() {
              <FormFieldWrapper label="What do you like about your dog?" htmlForProp="dogLikes" error={errors.dogLikes?.message}>
                 <Textarea id="dogLikes" {...register("dogLikes")} className={cn(inputClassName, errors.dogLikes && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-             <FormFieldWrapper label="What do you find most challenging about your dog?" htmlForProp="dogChallenges" error={errors.dogChallenges?.message}>
+             <FormFieldWrapper label="What do you find most challenging about your dog?" htmlForProp="dogChallenges" error={errors.dogChallenges?.message} required>
                 <Textarea id="dogChallenges" {...register("dogChallenges")} className={cn(inputClassName, errors.dogChallenges && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
 
             <SectionTitle title="TRAINING" />
-            <FormFieldWrapper label="How do you let your dog know when they have done something &quot;good&quot;?" htmlForProp="positiveReinforcementMethods" error={errors.positiveReinforcementMethods?.message}>
+            <FormFieldWrapper label="How do you let your dog know when they have done something &quot;good&quot;?" htmlForProp="positiveReinforcementMethods" error={errors.positiveReinforcementMethods?.message} required>
                 <Textarea id="positiveReinforcementMethods" {...register("positiveReinforcementMethods")} className={cn(inputClassName, errors.positiveReinforcementMethods && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="What are your dog’s favourite rewards?" htmlForProp="favoriteRewards" error={errors.favoriteRewards?.message}>
+            <FormFieldWrapper label="What are your dog’s favourite rewards?" htmlForProp="favoriteRewards" error={errors.favoriteRewards?.message} required>
                 <Textarea id="favoriteRewards" {...register("favoriteRewards")} className={cn(inputClassName, errors.favoriteRewards && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="Do you let your dog know when they have done something “bad”? How?" htmlForProp="correctionMethods" error={errors.correctionMethods?.message}>
+            <FormFieldWrapper label="Do you let your dog know when they have done something “bad”? How?" htmlForProp="correctionMethods" error={errors.correctionMethods?.message} required>
                 <Textarea id="correctionMethods" {...register("correctionMethods")} className={cn(inputClassName, errors.correctionMethods && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="What effect does your method of telling them they've done something bad have?" description="ie: no change, stopped behaviour, got worse, only worked with certain person, etc." htmlForProp="correctionEffects" error={errors.correctionEffects?.message}>
+            <FormFieldWrapper label="What effect does your method of telling them they've done something bad have?" description="ie: no change, stopped behaviour, got worse, only worked with certain person, etc." htmlForProp="correctionEffects" error={errors.correctionEffects?.message} required>
                 <Textarea id="correctionEffects" {...register("correctionEffects")} className={cn(inputClassName, errors.correctionEffects && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="Has your dog participated in any professional training before? If yes, please describe." htmlForProp="previousProfessionalTraining" error={errors.previousProfessionalTraining?.message}>
+            <FormFieldWrapper label="Has your dog participated in any professional training before? If yes, please describe." htmlForProp="previousProfessionalTraining" error={errors.previousProfessionalTraining?.message} required>
                 <Textarea id="previousProfessionalTraining" {...register("previousProfessionalTraining")} className={cn(inputClassName, errors.previousProfessionalTraining && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="What type of methods were used?" htmlForProp="previousTrainingMethodsUsed" error={errors.previousTrainingMethodsUsed?.message}>
+            <FormFieldWrapper label="What type of methods were used?" htmlForProp="previousTrainingMethodsUsed" error={errors.previousTrainingMethodsUsed?.message} required>
                 <Textarea id="previousTrainingMethodsUsed" {...register("previousTrainingMethodsUsed")} className={cn(inputClassName, errors.previousTrainingMethodsUsed && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
-            <FormFieldWrapper label="How was your experience and the results?" htmlForProp="previousTrainingExperienceResults" error={errors.previousTrainingExperienceResults?.message}>
+            <FormFieldWrapper label="How was your experience and the results?" htmlForProp="previousTrainingExperienceResults" error={errors.previousTrainingExperienceResults?.message} required>
                 <Textarea id="previousTrainingExperienceResults" {...register("previousTrainingExperienceResults")} className={cn(inputClassName, errors.previousTrainingExperienceResults && errorInputClassName)} disabled={isSubmitting} rows={3}/>
             </FormFieldWrapper>
 
@@ -580,10 +585,5 @@ export default function BehaviourQuestionnairePage() {
     </div>
   );
 }
-
-    
-
-    
-
 
     
