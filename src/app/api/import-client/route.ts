@@ -45,21 +45,38 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const clientDataFromForm: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt'> = {
-    name: validationResult.data.name,
+  const clientDataFromForm: Omit<Client, 'id' | 'lastSession' | 'nextSession' | 'createdAt' | 'ownerFirstName' | 'ownerLastName' | 'contactNumber' | 'postcode' | 'submissionDate'> & { name: string, dogName: string, dogBreed: string, contactEmail: string, contactPhone: string, behaviorHistory?: string } = {
+    name: validationResult.data.name, // This 'name' will need to be split or handled for ownerFirstName/LastName
     dogName: validationResult.data.dogName,
-    dogBreed: validationResult.data.dogBreed,
+    dogBreed: validationResult.data.dogBreed, // This assumes dogBreed is a simple string
     contactEmail: validationResult.data.contactEmail,
-    contactPhone: validationResult.data.contactPhone,
+    contactPhone: validationResult.data.contactPhone, // This assumes contactPhone maps to client.contactNumber
     behaviorHistory: validationResult.data.behaviorHistory || '',
   };
+
+  // Adapt clientDataFromForm to the structure expected by addClientToFirestore
+  // This is a simplified adaptation; you might need more sophisticated logic
+  // to split 'name' into 'ownerFirstName' and 'ownerLastName'.
+  const clientDataForFirestore = {
+    ownerFirstName: clientDataFromForm.name.split(' ')[0] || clientDataFromForm.name, // Simple split
+    ownerLastName: clientDataFromForm.name.split(' ').slice(1).join(' ') || '', // Simple split
+    contactEmail: clientDataFromForm.contactEmail,
+    contactNumber: clientDataFromForm.contactPhone,
+    postcode: '', // Postcode is not in ImportClientSchema, add if needed or handle default
+    dogName: clientDataFromForm.dogName,
+    // dogBreed: clientDataFromForm.dogBreed, // Not directly on Client type, part of BehaviouralBrief/Questionnaire
+    // behaviorHistory: clientDataFromForm.behaviorHistory, // Not directly on Client type
+    // isMember: false, // Default value
+    // submissionDate will be set by addClientToFirestore
+  };
+
 
   try {
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       console.error("API Error: Firebase project ID is not set. Cannot add client.");
       return NextResponse.json({ success: false, error: 'Firebase not configured on server' }, { status: 500 });
     }
-    const newClient = await addClientToFirestore(clientDataFromForm);
+    const newClient = await addClientToFirestore(clientDataForFirestore);
     return NextResponse.json({ success: true, clientId: newClient.id, message: 'Client imported successfully' });
   } catch (error) {
     console.error('Error importing client to Firestore:', error);
@@ -67,3 +84,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
+// Example Google Apps Script (simplified):
+    /*
+    function onFormSubmit(e) {
+      // Assuming 'e.namedValues' contains the form data as an object
+      // where keys are column headers. You might need to adjust how you get row data.
+      // Example: e.namedValues['Client Name'][0], e.namedValues['Dog Name'][0]
+
+      var clientData = {
+        name: e.namedValues['Client Name'] ? e.namedValues['Client Name'][0] : '', 
+        dogName: e.namedValues['Dog Name'] ? e.namedValues['Dog Name'][0] : '',     
+        dogBreed: e.namedValues['Dog Breed'] ? e.namedValues['Dog Breed'][0] : '', 
+        contactEmail: e.namedValues['Email'] ? e.namedValues['Email'][0] : '', 
+        contactPhone: e.namedValues['Phone'] ? e.namedValues['Phone'][0] : '', 
+        behaviorHistory: e.namedValues['Behavior History'] ? e.namedValues['Behavior History'][0] : '' 
+      };
+
+      var options = {
+        'method' : 'post',
+        'contentType': 'application/json',
+        // 'headers': { 'X-Squarespace-Secret': 'YOUR_SECRET_KEY_IF_IMPLEMENTED' },
+        'payload' : JSON.stringify(clientData)
+      };
+
+      // Replace with your actual API endpoint URL
+      // When you deploy your Next.js app, this URL will change to your production URL (e.g., `https://your-raisingmyrescue-app.com/api/import-client`).
+      var apiUrl = 'YOUR_NEXTJS_APP_URL/api/import-client'; 
+      // For local testing: var apiUrl = 'http://localhost:9002/api/import-client';
+
+
+      try {
+        var response = UrlFetchApp.fetch(apiUrl, options);
+        Logger.log(response.getContentText());
+      } catch (error) {
+        Logger.log('Error sending data: ' + error.toString());
+      }
+    }
+    */
