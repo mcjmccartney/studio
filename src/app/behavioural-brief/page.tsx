@@ -75,7 +75,7 @@ export default function BehaviouralBriefPage() {
 
   useEffect(() => {
     if (currentSubmissionDate) {
-      setValue("submissionDate", currentSubmissionDate, { shouldValidate: true, shouldDirty: true });
+      setValue("submissionDate", currentSubmissionDate, { shouldValidate: false, shouldDirty: false });
     }
   }, [currentSubmissionDate, setValue]);
 
@@ -170,8 +170,8 @@ export default function BehaviouralBriefPage() {
         <Image 
           src="https://iili.io/3PLgTAb.png" 
           alt="Behavioural Brief Title" 
-          width={420} 
-          height={70}
+          width={504} 
+          height={84}
           data-ai-hint="form title"
         />
       </div>
@@ -333,6 +333,3 @@ export default function BehaviouralBriefPage() {
     </div>
   );
 }
-    
-
-    
