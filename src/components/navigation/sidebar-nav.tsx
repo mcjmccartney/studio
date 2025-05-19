@@ -18,12 +18,12 @@ import { cn } from '@/lib/utils';
 export function SidebarNav() {
   const pathname = usePathname();
 
-  // Filter out public items for the logged-in user's sidebar
-  const privateNavItems = navItems.filter(item => !item.isPublic);
+  // No longer filtering out public items, show all navItems
+  // const privateNavItems = navItems.filter(item => !item.isPublic);
 
   return (
     <SidebarMenu>
-      {privateNavItems.map((item) => (
+      {navItems.map((item) => ( // Map over all navItems
         <SidebarMenuItem key={item.label}>
           <Link href={item.href} passHref legacyBehavior>
             <SidebarMenuButton
@@ -48,3 +48,4 @@ export function SidebarNav() {
     </SidebarMenu>
   );
 }
+
