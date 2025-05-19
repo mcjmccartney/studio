@@ -85,14 +85,13 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined, // Initialize to undefined for client-side setting
-      time: '', // Initialize to empty for client-side setting
+      date: new Date(),
+      time: format(new Date(), "HH:mm"),
       clientId: '',
       sessionType: '',
     }
   });
 
-  // Set initial date/time on mount to avoid hydration issues
   useEffect(() => {
     if (isAddSessionSheetOpen) {
         addSessionForm.reset({
@@ -154,25 +153,14 @@ export default function HomePage() {
   }, [toast]);
 
 
-  const nextSession = useMemo(() => {
-    const today = startOfDay(new Date());
-    return sessions
-      .filter(s => s.status === 'Scheduled' && isValid(parseISO(s.date)) && differenceInCalendarDays(parseISO(s.date), today) >= 0)
-      .sort((a, b) => {
-        const dateTimeA = new Date(`${format(parseISO(a.date), 'yyyy-MM-dd')}T${a.time}:00`);
-        const dateTimeB = new Date(`${format(parseISO(b.date), 'yyyy-MM-dd')}T${b.time}:00`);
-        return dateTimeA.getTime() - dateTimeB.getTime();
-      })[0];
-  }, [sessions]);
-
-
   const filteredSessions = useMemo(() => {
     if (!searchTerm.trim()) return sessions;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return sessions.filter(session =>
-      (session.clientName && session.clientName.toLowerCase().includes(lowerSearchTerm)) ||
-      (session.dogName && session.dogName.toLowerCase().includes(lowerSearchTerm))
-    );
+    return sessions.filter(session => {
+      const clientNameMatch = session.clientName && session.clientName.toLowerCase().includes(lowerSearchTerm);
+      const dogNameMatch = session.dogName && session.dogName.toLowerCase().includes(lowerSearchTerm);
+      return clientNameMatch || dogNameMatch;
+    });
   }, [sessions, searchTerm]);
 
   const handleAddSessionSubmit: SubmitHandler<SessionFormValues> = async (data) => {
@@ -230,7 +218,7 @@ export default function HomePage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true); // Reuse this state for loading indicator on delete button
+    setIsSubmittingSheet(true); 
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
@@ -279,7 +267,7 @@ export default function HomePage() {
           className={cn(
             "absolute top-1 right-1 text-xs",
             isToday(props.date)
-              ? "text-[#92351f] font-semibold" // Specific color for today's date number
+              ? "text-[#92351f] font-semibold" 
               : "text-muted-foreground"
           )}
         >
@@ -287,7 +275,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1"> {/* Added mt-5 to push pills down */}
+          <ScrollArea className="w-full mt-5 pr-1"> 
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -322,7 +310,6 @@ export default function HomePage() {
             </div>
         )}
 
-      {/* Calendar Header Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-x-4 py-3 px-4 border-b">
             <div className="flex items-center gap-2">
@@ -352,7 +339,7 @@ export default function HomePage() {
                   <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
                 </SheetHeader>
                 <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
+                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
                     <div className="col-span-3">
                       <Controller
@@ -376,7 +363,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 items-start gap-4">
+                 <div className="grid grid-cols-4 items-start gap-4">
                     <Label htmlFor="date-dashboard" className="text-right col-span-1 pt-2 self-start">Date</Label>
                     <div className="col-span-3">
                       <Controller name="date" control={addSessionForm.control}
@@ -389,7 +376,6 @@ export default function HomePage() {
                             disabled={isSubmittingSheet}
                             id="date-dashboard"
                             className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
-                            
                           />
                         )}
                       />
@@ -436,7 +422,7 @@ export default function HomePage() {
               </SheetContent>
             </Sheet>
         </CardHeader>
-        <CardContent className="p-0"> {/* Ensure no padding on the CardContent itself */}
+        <CardContent className="p-0"> 
           {isLoadingData ? (
             <div className="flex justify-center items-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-3">Loading calendar...</p></div>
           ) : (
@@ -446,23 +432,23 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full !p-0 !m-0" // Remove padding and margin from DayPicker root
+              className="w-full !p-0 !m-0" 
               classNames={{
-                caption_label: "hidden", // Hide default caption label
-                caption: "hidden", // Hide default caption (which includes nav buttons)
+                caption_label: "hidden", 
+                caption: "hidden", 
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
                 head_row: "flex border-b",
-                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", // Each day header cell
-                row: "flex w-full mt-0 border-b last:border-b-0", // Each week row
-                cell: cn( // Each day cell
+                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", 
+                row: "flex w-full mt-0 border-b last:border-b-0", 
+                cell: cn( 
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
-                day: "h-full w-full p-0", // Wrapper for DayContent
+                day: "h-full w-full p-0", 
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1", // Red ring for today
+                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -479,13 +465,13 @@ export default function HomePage() {
               <SheetHeader className="p-6 border-b">
                 <div className="flex justify-between items-center">
                   <SheetTitle className="text-xl">Session Details</SheetTitle>
-                  <SheetClose asChild><Button variant="ghost" size="icon" className="h-7 w-7"><X className="h-4 w-4" /></Button></SheetClose>
+                  {/* Removed the SheetClose button from here */}
                 </div>
                 <SheetDescription>
                   {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-160px)]"> {/* Adjusted height for footer */}
+              <ScrollArea className="h-[calc(100vh-160px)]"> 
                 <div className="p-6 space-y-4">
                   <Card>
                     <CardHeader><CardTitle className="text-base flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
