@@ -62,7 +62,7 @@ import {
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { cn, formatFullNameAndDogName, getSessionTypeBadgeClasses } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -585,7 +585,7 @@ export default function SessionsPage() {
                         <div className="flex justify-between items-start">
                           <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
                             <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                                 <span className="flex items-center">
                                     <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
                                     {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
@@ -608,9 +608,13 @@ export default function SessionsPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge 
-                              className={cn("mt-1 whitespace-nowrap", getSessionTypeBadgeClasses(session.sessionType))}
+                              variant={
+                                session.status === 'Scheduled' ? 'default' :
+                                session.status === 'Completed' ? 'secondary' : 'outline'
+                              }
+                              className="mt-1 whitespace-nowrap"
                             >
-                              {session.sessionType}
+                              {session.status}
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
