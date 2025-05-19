@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Briefcase, Users as UsersIcon, ExternalLink } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
@@ -90,8 +90,8 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: new Date(), 
-      time: format(new Date(), "HH:mm"),
+      date: undefined, // Initialize as undefined for client-side effect
+      time: '',       // Initialize as empty for client-side effect
       clientId: '',
       sessionType: '',
     }
@@ -101,7 +101,7 @@ export default function HomePage() {
     if (isAddSessionModalOpen) {
       addSessionForm.reset({
         date: new Date(),
-        time: format(new Date(), "HH:mm"),
+        time: format(new Date(), "HH:mm"), // 24-hour format
         clientId: '',
         sessionType: '',
       });
@@ -172,7 +172,7 @@ export default function HomePage() {
       clientName: ownerFullName,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time,
+      time: data.time, // Already in HH:mm
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -246,35 +246,55 @@ export default function HomePage() {
         const sessionDate = parseISO(s.date);
         return isValid(sessionDate) && isSameDay(sessionDate, props.date);
     }).sort((a,b) => {
+        // Assuming time is "HH:mm"
         const timeA = parse(a.time, 'HH:mm', new Date());
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
-        <div className={cn(
-          "absolute top-1 right-1 text-xs",
-          isToday(props.date) ? "text-destructive font-semibold" : "text-muted-foreground"
-        )}>{format(props.date, 'd')}</div>
+      // This div IS the day cell content. It gets h-full, w-full from 'day' class.
+      // Add flex, flex-col, and p-1 for internal padding and layout.
+      <div className="flex flex-col h-full p-1">
+        {/* Day number div - centered horizontally at the top */}
+        <div
+          className={cn(
+            "text-center text-xs", 
+            isToday(props.date)
+              ? "text-destructive font-semibold" 
+              : "text-muted-foreground"
+          )}
+        >
+          {format(props.date, "d")}
+        </div>
+
+        {/* Session pills area */}
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1">
+          <ScrollArea className="w-full mt-1 flex-1 pr-1"> {/* flex-1 to take available space, mt-1 for space */}
             <div className="space-y-1">
-            {daySessions.map(session => (
-              <Badge
-                key={session.id}
-                className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80"
-                onClick={() => { setSelectedSessionForSheet(session); setIsSessionSheetOpen(true); }}
-              >
-                {session.time} - {formatFullNameAndDogName(session.clientName, session.dogName)}
-              </Badge>
-            ))}
+              {daySessions.map((session) => (
+                <Badge
+                  key={session.id}
+                  className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80"
+                  onClick={() => {
+                    setSelectedSessionForSheet(session);
+                    setIsSessionSheetOpen(true);
+                  }}
+                >
+                  {session.time} -{" "}
+                  {formatFullNameAndDogName(
+                    session.clientName,
+                    session.dogName
+                  )}
+                </Badge>
+              ))}
             </div>
           </ScrollArea>
         )}
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-col gap-6"> 
@@ -311,10 +331,10 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full !p-0 !m-0"
+              className="w-full !p-0 !m-0" // Ensure no margin/padding on DayPicker itself
               classNames={{
                 caption_label: "hidden", 
-                caption: "hidden", 
+                caption: "hidden", // Hides the default DayPicker caption and nav
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
@@ -325,9 +345,9 @@ export default function HomePage() {
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" 
                 ),
-                day: "h-full w-full p-0", 
+                day: "h-full w-full p-0", // Day element (replaced by DayContent) should also have no padding
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
+                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1", // Red ring for today
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -344,13 +364,14 @@ export default function HomePage() {
             <DialogDescription>Schedule a new session. Select a client, date, time, and session type.</DialogDescription>
           </DialogHeader>
           <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="space-y-4 py-4">
+            
             <div className="grid gap-1.5">
               <Label htmlFor="clientId-dashboard">Client</Label>
               <Controller
                 name="clientId" control={addSessionForm.control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal || isLoadingData}>
-                    <SelectTrigger id="clientId-dashboard" className={cn(addSessionForm.formState.errors.clientId && "border-destructive")}>
+                    <SelectTrigger id="clientId-dashboard" className={cn("w-full", addSessionForm.formState.errors.clientId && "border-destructive")}>
                       <SelectValue placeholder="Select a client" />
                     </SelectTrigger>
                     <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -365,7 +386,8 @@ export default function HomePage() {
               />
               {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
             </div>
-             <div className="grid gap-1.5">
+            
+            <div className="grid gap-1.5">
               <Label htmlFor="date-dashboard">Date</Label>
               <Controller name="date" control={addSessionForm.control}
                 render={({ field }) => (
@@ -374,19 +396,21 @@ export default function HomePage() {
               />
               {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
             </div>
+
             <div className="grid gap-1.5">
               <Label htmlFor="time-dashboard">Time (24h)</Label>
               <Controller name="time" control={addSessionForm.control}
-                render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn(addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
+                render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full",addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
               />
               {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
             </div>
+
             <div className="grid gap-1.5">
               <Label htmlFor="sessionType-dashboard">Type</Label>
               <Controller name="sessionType" control={addSessionForm.control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal}>
-                    <SelectTrigger id="sessionType-dashboard" className={cn(addSessionForm.formState.errors.sessionType && "border-destructive")}>
+                    <SelectTrigger id="sessionType-dashboard" className={cn("w-full", addSessionForm.formState.errors.sessionType && "border-destructive")}>
                       <SelectValue placeholder="Select session type" />
                     </SelectTrigger>
                     <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -397,6 +421,7 @@ export default function HomePage() {
               />
               {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
             </div>
+
             <DialogFooter>
               <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingModal}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={isSubmittingModal}>
@@ -484,4 +509,3 @@ export default function HomePage() {
     </div>
   );
 }
-
