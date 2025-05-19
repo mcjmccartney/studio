@@ -97,7 +97,7 @@ export default function HomePage() {
     }
   });
 
-  useEffect(() => {
+ useEffect(() => {
     if (isAddSessionModalOpen) {
       addSessionForm.reset({
         date: new Date(),
@@ -108,9 +108,15 @@ export default function HomePage() {
     }
   }, [isAddSessionModalOpen, addSessionForm]);
 
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        toast({
+          title: "Firebase Not Configured",
+          description: "Cannot fetch dashboard data. Please check your Firebase setup.",
+          variant: "destructive",
+        });
         setIsLoadingData(false);
         return;
       }
@@ -121,12 +127,20 @@ export default function HomePage() {
           getSessionsFromFirestore()
         ]);
         setClients(firestoreClients);
-        setSessions(firestoreSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+        setSessions(firestoreSessions.sort((a, b) => {
+             // Handle potentially invalid dates gracefully
+            const dateA = parseISO(a.date);
+            const dateB = parseISO(b.date);
+            if (!isValid(dateA) && !isValid(dateB)) return 0;
+            if (!isValid(dateA)) return 1; // Put invalid dates at the end
+            if (!isValid(dateB)) return -1; // Put invalid dates at the end
+            return dateB.getTime() - dateA.getTime();
+        }));
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         toast({
           title: "Error Loading Dashboard Data",
-          description: "Could not fetch client or session data.",
+          description: "Could not fetch client or session data from Firestore.",
           variant: "destructive",
         });
       } finally {
@@ -157,7 +171,14 @@ export default function HomePage() {
 
     try {
       const newSession = await addSessionToFirestore(sessionData);
-      setSessions(prev => [newSession, ...prev].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
+      setSessions(prev => [newSession, ...prev].sort((a, b) => {
+            const dateA = parseISO(a.date);
+            const dateB = parseISO(b.date);
+            if (!isValid(dateA) && !isValid(dateB)) return 0;
+            if (!isValid(dateA)) return 1;
+            if (!isValid(dateB)) return -1;
+            return dateB.getTime() - dateA.getTime();
+        }));
       toast({ title: "Session Added", description: `Session on ${format(data.date, 'PPP')} at ${data.time} scheduled.` });
       setIsAddSessionModalOpen(false);
     } catch (err) {
@@ -180,7 +201,7 @@ export default function HomePage() {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       toast({ title: "Session Deleted", description: "The session has been deleted." });
-      setIsSessionSheetOpen(false); // Close sheet if open
+      setIsSessionSheetOpen(false); 
       setSelectedSessionForSheet(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
@@ -196,26 +217,35 @@ export default function HomePage() {
      alert(`Edit session for ${session.clientName} on ${format(parseISO(session.date), 'PPP')} (not implemented).`);
   };
 
-  const activeClientsCount = isLoadingData ? 0 : clients.filter(client => client.isActive === true || client.isActive === undefined).length;
+  const activeClientsCount = useMemo(() => {
+    return clients.filter(client => client.isActive === true || client.isActive === undefined).length;
+  }, [clients]);
   
   const today = startOfDay(new Date());
   const oneWeekFromToday = addDays(today, 6); 
 
-  const upcomingSessionsCount = isLoadingData ? 0 : sessions.filter(session => {
-    if (session.status !== 'Scheduled') return false;
-    const sessionDate = parseISO(session.date);
-    if (!isValid(sessionDate)) return false;
-    return isWithinInterval(startOfDay(sessionDate), { start: today, end: oneWeekFromToday });
-  }).length;
+  const upcomingSessionsCount = useMemo(() => {
+    return sessions.filter(session => {
+      if (session.status !== 'Scheduled') return false;
+      const sessionDate = parseISO(session.date);
+      if (!isValid(sessionDate)) return false;
+      return isWithinInterval(startOfDay(sessionDate), { start: today, end: oneWeekFromToday });
+    }).length;
+  }, [sessions, today, oneWeekFromToday]);
   
   const incomeThisMonth = 2350.00; // Placeholder
 
   const formatCaption: DateFormatter = (month) => {
+    // This formatter is primarily for ARIA attributes if caption_label is hidden.
+    // We display the month/year in our custom header.
     return format(month, 'MMMM yyyy');
   };
 
   function CustomDayContent(props: DayProps) {
-    const daySessions = sessions.filter(s => isSameDay(parseISO(s.date), props.date));
+    const daySessions = sessions.filter(s => {
+        const sessionDate = parseISO(s.date);
+        return isValid(sessionDate) && isSameDay(sessionDate, props.date);
+    });
     return (
       <div className="relative h-full min-h-[6rem] p-1 flex flex-col items-start">
         <div className="absolute top-1 right-1 text-xs text-muted-foreground">{format(props.date, 'd')}</div>
@@ -306,15 +336,16 @@ export default function HomePage() {
               formatters={{ formatCaption }}
               className="w-full p-4"
               classNames={{
+                caption: "hidden", // Hides the entire default caption div
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
-                caption_label: "hidden", // Hidden as we have custom month/year display
+                caption_label: "hidden", // Redundant if caption is hidden, but safe to keep
                 nav_button: "h-8 w-8",
                 nav_button_previous: "absolute left-2 top-1/2 -translate-y-1/2",
                 nav_button_next: "absolute right-2 top-1/2 -translate-y-1/2",
                 table: "w-full border-collapse",
                 head_row: "flex border-b",
-                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", // Adjusted width for 7 days
+                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", 
                 row: "flex w-full mt-0 border-b last:border-b-0",
                 cell: "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                 day: "h-full w-full p-0",
@@ -355,7 +386,7 @@ export default function HomePage() {
                 {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
+             <div className="grid grid-cols-4 items-start gap-4">
               <Label htmlFor="date" className="text-right pt-2">Date</Label>
               <div className="col-span-3">
                 <Controller name="date" control={addSessionForm.control}
@@ -417,12 +448,12 @@ export default function HomePage() {
                   {selectedSessionForSheet.clientName} & {selectedSessionForSheet.dogName}
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-160px)]"> {/* Adjusted height */}
+              <ScrollArea className="h-[calc(100vh-160px)]">
                 <div className="p-6 space-y-4">
                   <Card>
                     <CardHeader><CardTitle className="text-base flex items-center"><CalendarIconLucide className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1">
-                      <p><strong>Date:</strong> {format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy')}</p>
+                      <p><strong>Date:</strong> {isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</p>
                       <p><strong>Time:</strong> {selectedSessionForSheet.time}</p>
                     </CardContent>
                   </Card>
@@ -480,5 +511,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
