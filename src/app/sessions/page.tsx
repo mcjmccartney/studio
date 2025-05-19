@@ -160,33 +160,6 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center"><Info className="mr-2 h-5 w-5 text-primary" /> Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge
-                variant={
-                  session.status === 'Scheduled' ? 'default' :
-                    session.status === 'Completed' ? 'secondary' : 'outline'
-                }
-                className="text-sm px-3 py-1"
-              >
-                {session.status}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          {session.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><ClipboardList className="mr-2 h-5 w-5 text-primary" /> Session Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <p className="whitespace-pre-wrap text-muted-foreground">{session.notes}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </ScrollArea>
     </div>
@@ -217,7 +190,7 @@ export default function SessionsPage() {
       cost: undefined,
     }
   });
-
+  
   useEffect(() => {
     if (isAddSessionSheetOpen) {
       addSessionForm.reset({
@@ -281,7 +254,6 @@ export default function SessionsPage() {
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
-      status: 'Scheduled', // Default status
       sessionType: data.sessionType,
       cost: data.cost,
     };
@@ -558,7 +530,7 @@ export default function SessionsPage() {
         <Accordion type="multiple" className="w-full space-y-0" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
             <AccordionItem value={monthYear} key={monthYear} className="bg-card shadow-sm rounded-md mb-2">
-              <AccordionTrigger className="text-lg font-medium hover:no-underline px-4 py-3">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-4 py-3">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
               <AccordionContent className="px-4">
@@ -642,9 +614,7 @@ export default function SessionsPage() {
                             </DropdownMenu>
                           </div>
                         </div>
-                        {session.notes && (
-                          <p className="mt-2 text-sm text-muted-foreground border-t pt-2 cursor-pointer" onClick={() => handleSessionClick(session)}>Notes: {session.notes}</p>
-                        )}
+                      
                       </li>
                     ))}
                 </ul>
