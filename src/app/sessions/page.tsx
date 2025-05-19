@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import type { Session, Client } from '@/lib/types';
-import { 
-  getSessionsFromFirestore, 
-  addSessionToFirestore, 
+import {
+  getSessionsFromFirestore,
+  addSessionToFirestore,
   deleteSessionFromFirestore,
-  getClients 
-} from '@/lib/firebase'; 
+  getClients
+} from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
@@ -83,13 +83,13 @@ const sessionFormSchema = z.object({
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
 
 const sessionTypeOptions = [
-  "In-Person", 
-  "Online", 
-  "Training", 
-  "Online Catchup", 
-  "Group", 
-  "Phone Call", 
-  "RMR Live", 
+  "In-Person",
+  "Online",
+  "Training",
+  "Online Catchup",
+  "Group",
+  "Phone Call",
+  "RMR Live",
   "Coaching"
 ];
 
@@ -101,7 +101,7 @@ interface SessionDetailViewProps {
   session: Session;
   onBack: () => void;
   onDelete: (session: Session) => void;
-  onEdit: (session: Session) => void; 
+  onEdit: (session: Session) => void;
 }
 
 function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
@@ -190,7 +190,7 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [clients, setClients] = useState<Client[]>([]); 
+  const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
@@ -198,19 +198,27 @@ export default function SessionsPage() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
-  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false); 
+  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
 
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors }, watch } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors }, watch, setValue } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: new Date(),
-      time: format(new Date(), "hh:mm a"), 
+      date: undefined,
+      time: '',
       clientId: '',
       sessionType: '',
     }
   });
+
+  useEffect(() => {
+    // Set initial date and time on client mount to avoid hydration issues
+    setValue("date", new Date(), { shouldValidate: false, shouldDirty: false });
+    setValue("time", format(new Date(), "hh:mm a"), { shouldValidate: false, shouldDirty: false });
+  }, [setValue]);
+
+
   const watchedDate = watch("date");
   const watchedTime = watch("time");
 
@@ -227,7 +235,7 @@ export default function SessionsPage() {
         setError(null);
         const [firestoreSessions, firestoreClients] = await Promise.all([
           getSessionsFromFirestore(),
-          getClients() 
+          getClients()
         ]);
         setSessions(firestoreSessions.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
         setClients(firestoreClients);
@@ -251,7 +259,7 @@ export default function SessionsPage() {
       setIsSubmittingForm(false);
       return;
     }
-    
+
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
@@ -265,7 +273,7 @@ export default function SessionsPage() {
     try {
       const newSession = await addSessionToFirestore(sessionData);
       setSessions(prevSessions => [...prevSessions, newSession].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()));
-      
+
       toast({
         title: "Session Added",
         description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
@@ -302,7 +310,7 @@ export default function SessionsPage() {
   const handleBackToSessionList = () => {
     setSelectedSession(null);
   };
-  
+
   const handleDeleteSessionRequest = (session: Session | null) => {
     if (!session) return;
     setSessionToDelete(session);
@@ -311,16 +319,16 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingForm(true); 
+    setIsSubmittingForm(true);
     try {
-      await deleteSessionFromFirestore(sessionToDelete.id); 
+      await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
       toast({
         title: "Session Deleted",
         description: `Session with ${sessionToDelete.clientName} on ${format(parseISO(sessionToDelete.date), 'PPP')} has been deleted.`,
       });
       if (selectedSession && selectedSession.id === sessionToDelete.id) {
-        setSelectedSession(null); 
+        setSelectedSession(null);
       }
     } catch (err) {
       console.error("Error deleting session from Firestore:", err);
@@ -418,8 +426,8 @@ export default function SessionsPage() {
                         disabled={isSubmittingForm}
                       >
                         <CalendarIconLucide className="mr-2 h-4 w-4" />
-                        {watchedDate && isValid(watchedDate) && watchedTime ? 
-                          `${format(watchedDate, "PPP")} at ${watchedTime}` : 
+                        {watchedDate && isValid(watchedDate) && watchedTime ?
+                          `${format(watchedDate, "PPP")} at ${watchedTime}` :
                           <span>Pick a date & time</span>}
                       </Button>
                     </PopoverTrigger>
@@ -450,15 +458,15 @@ export default function SessionsPage() {
                                 const parsedDate = parse(time12h, "hh:mm a", new Date(2000, 0, 1));
                                 if (isValid(parsedDate)) return format(parsedDate, "HH:mm");
                               } catch (e) { console.error("Error parsing time for input:", time12h, e); }
-                              return ""; 
+                              return "";
                             };
                             return (
-                              <Input 
-                                id="time-popover" 
-                                type="time" 
+                              <Input
+                                id="time-popover"
+                                type="time"
                                 value={convertTo24HourFormat(field.value)}
                                 onChange={(e) => {
-                                  const time24 = e.target.value; 
+                                  const time24 = e.target.value;
                                   if (time24) {
                                     try {
                                       const [hours, minutes] = time24.split(':');
@@ -532,7 +540,7 @@ export default function SessionsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      
+
       {isLoading && (
         <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -558,10 +566,10 @@ export default function SessionsPage() {
               <AccordionContent className="px-4">
                 <ul className="space-y-3 pt-2 pb-3">
                   {groupedSessions[monthYear]
-                    .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate()) 
+                    .sort((a,b) => parseISO(a.date).getDate() - parseISO(b.date).getDate())
                     .map(session => (
-                    <li 
-                      key={session.id} 
+                    <li
+                      key={session.id}
                       className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors shadow-sm"
                     >
                       <div className="flex justify-between items-start">
@@ -600,7 +608,7 @@ export default function SessionsPage() {
                                     Edit Session
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     className="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
                                     onClick={(e) => {e.stopPropagation(); handleDeleteSessionRequest(session);}}
                                 >
@@ -644,3 +652,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+    
