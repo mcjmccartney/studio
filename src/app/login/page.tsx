@@ -69,8 +69,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#fafafa] p-4">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="flex items-center justify-center min-h-screen bg-[#92351f] p-4">
+      <Card className="w-full max-w-sm shadow-xl bg-card text-card-foreground"> {/* Adjusted max-w-sm for a more square shape */}
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Raising My Rescue</CardTitle>
           <CardDescription>Please sign in to continue</CardDescription>
