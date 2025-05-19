@@ -338,72 +338,64 @@ export default function HomePage() {
 
       {/* Add Session Modal */}
        <Dialog open={isAddSessionModalOpen} onOpenChange={setIsAddSessionModalOpen}>
-        <DialogContent className="sm:max-w-[525px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Session</DialogTitle>
             <DialogDescription>Schedule a new session. Select a client, date, time, and session type.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
-              <div className="col-span-3">
-                <Controller
-                  name="clientId" control={addSessionForm.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal || isLoadingData}>
-                      <SelectTrigger id="clientId-dashboard" className={cn(addSessionForm.formState.errors.clientId && "border-destructive")}>
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                      <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
-                        {clients.map(client => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
-                            </SelectItem>
-                          ))}
-                      </SelectGroup></SelectContent>
-                    </Select>
-                  )}
-                />
-                {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
-              </div>
+          <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="space-y-4 py-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="clientId-dashboard">Client</Label>
+              <Controller
+                name="clientId" control={addSessionForm.control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal || isLoadingData}>
+                    <SelectTrigger id="clientId-dashboard" className={cn(addSessionForm.formState.errors.clientId && "border-destructive")}>
+                      <SelectValue placeholder="Select a client" />
+                    </SelectTrigger>
+                    <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
+                      {clients.map(client => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup></SelectContent>
+                  </Select>
+                )}
+              />
+              {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
             </div>
-             <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="date-dashboard" className="text-right pt-2">Date</Label>
-              <div className="col-span-3">
-                <Controller name="date" control={addSessionForm.control}
-                  render={({ field }) => (
-                    <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingModal} id="date-dashboard" className={cn("rounded-md border w-full inline-block", addSessionForm.formState.errors.date && "border-destructive")} />
-                  )}
-                />
-                {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
-              </div>
+             <div className="grid gap-1.5">
+              <Label htmlFor="date-dashboard">Date</Label>
+              <Controller name="date" control={addSessionForm.control}
+                render={({ field }) => (
+                  <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingModal} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
+                )}
+              />
+              {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
-              <div className="col-span-3">
-                <Controller name="time" control={addSessionForm.control}
-                  render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn(addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
-                />
-                {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="time-dashboard">Time (24h)</Label>
+              <Controller name="time" control={addSessionForm.control}
+                render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn(addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingModal}/>)}
+              />
+              {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
-              <div className="col-span-3">
-                <Controller name="sessionType" control={addSessionForm.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal}>
-                      <SelectTrigger id="sessionType-dashboard" className={cn(addSessionForm.formState.errors.sessionType && "border-destructive")}>
-                        <SelectValue placeholder="Select session type" />
-                      </SelectTrigger>
-                      <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
-                        {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
-                      </SelectGroup></SelectContent>
-                    </Select>
-                  )}
-                />
-                {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="sessionType-dashboard">Type</Label>
+              <Controller name="sessionType" control={addSessionForm.control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingModal}>
+                    <SelectTrigger id="sessionType-dashboard" className={cn(addSessionForm.formState.errors.sessionType && "border-destructive")}>
+                      <SelectValue placeholder="Select session type" />
+                    </SelectTrigger>
+                    <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
+                      {sessionTypeOptions.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}
+                    </SelectGroup></SelectContent>
+                  </Select>
+                )}
+              />
+              {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
             </div>
             <DialogFooter>
               <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingModal}>Cancel</Button></DialogClose>

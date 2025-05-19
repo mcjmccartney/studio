@@ -209,9 +209,9 @@ export default function SessionsPage() {
   useEffect(() => {
     if (isAddSessionModalOpen) {
       reset({
-        date: new Date(), 
-        time: format(new Date(), "HH:mm"), 
-        clientId: '', 
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
+        clientId: '',
         sessionType: ''
       });
     }
@@ -258,9 +258,9 @@ export default function SessionsPage() {
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
-      dogName: selectedClient.dogName || 'N/A',
+      dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time, 
+      time: data.time,
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -312,7 +312,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingForm(true);
+    setIsSubmittingForm(true); // Use isSubmittingForm to disable buttons
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -330,7 +330,7 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingForm(false);
+      setIsSubmittingForm(false); // Reset isSubmittingForm
     }
   };
 
@@ -368,114 +368,103 @@ export default function SessionsPage() {
               Add New Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add New Session</DialogTitle>
               <DialogDescription>
                 Schedule a new training session. Select a client, date, time, and session type.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit(handleAddSession)} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="clientId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
-                        <SelectTrigger id="clientId-sessionpage" className={cn(errors.clientId ? "border-destructive" : "")}>
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Clients</SelectLabel>
-                            {clients.map(client => {
-                               const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
-                               return (
-                                <SelectItem key={client.id} value={client.id}>
-                                  {formatFullNameAndDogName(ownerFullName, client.dogName)}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.clientId && <p className="text-xs text-destructive mt-1">{errors.clientId.message}</p>}
-                </div>
+            <form onSubmit={handleSubmit(handleAddSession)} className="space-y-4 py-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="clientId-sessionpage">Client</Label>
+                <Controller
+                  name="clientId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm || isLoading}>
+                      <SelectTrigger id="clientId-sessionpage" className={cn(errors.clientId ? "border-destructive" : "")}>
+                        <SelectValue placeholder="Select a client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Clients</SelectLabel>
+                          {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.clientId && <p className="text-xs text-destructive mt-1">{errors.clientId.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="date"
-                    control={control}
-                    render={({ field }) => (
-                      <ShadCalendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        disabled={isSubmittingForm}
-                        id="date-sessionpage"
-                        className={cn("rounded-md border", errors.date ? "border-destructive" : "")}
-                      />
-                    )}
-                  />
-                  {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
-                </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="date-sessionpage">Date</Label>
+                <Controller
+                  name="date"
+                  control={control}
+                  render={({ field }) => (
+                    <ShadCalendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                      disabled={isSubmittingForm}
+                      id="date-sessionpage"
+                      className={cn("rounded-md border w-full", errors.date ? "border-destructive" : "")}
+                    />
+                  )}
+                />
+                {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="time"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        id="time-sessionpage"
-                        type="time"
-                        {...field}
-                        className={cn(errors.time ? "border-destructive" : "")}
-                        disabled={isSubmittingForm}
-                      />
-                    )}
-                  />
-                  {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
-                </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="time-sessionpage">Time (24h)</Label>
+                <Controller
+                  name="time"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="time-sessionpage"
+                      type="time"
+                      {...field}
+                      className={cn(errors.time ? "border-destructive" : "")}
+                      disabled={isSubmittingForm}
+                    />
+                  )}
+                />
+                {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
               </div>
 
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="sessionType"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
-                        <SelectTrigger id="sessionType-sessionpage" className={cn(errors.sessionType ? "border-destructive" : "")}>
-                          <SelectValue placeholder="Select session type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Session Types</SelectLabel>
-                            {sessionTypeOptions.map(type => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.sessionType && <p className="text-xs text-destructive mt-1">{errors.sessionType.message}</p>}
-                </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="sessionType-sessionpage">Type</Label>
+                <Controller
+                  name="sessionType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingForm}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn(errors.sessionType ? "border-destructive" : "")}>
+                        <SelectValue placeholder="Select session type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Session Types</SelectLabel>
+                          {sessionTypeOptions.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.sessionType && <p className="text-xs text-destructive mt-1">{errors.sessionType.message}</p>}
               </div>
 
               <DialogFooter>
