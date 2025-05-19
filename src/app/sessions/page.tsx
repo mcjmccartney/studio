@@ -404,8 +404,8 @@ export default function SessionsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date-sessionpage" className="text-right">Date</Label>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label>
                 <div className="col-span-3">
                   <Controller
                     name="date"
@@ -419,10 +419,17 @@ export default function SessionsPage() {
                         disabled={isSubmittingForm}
                         id="date-sessionpage"
                         className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                        classNames={{
+                            day: cn(
+                              "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                              "hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground" 
+                            ),
+                            day_selected: "!bg-primary !text-primary-foreground",
+                          }}
                       />
                     )}
                   />
-                  {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.date.message}</p>}
+                  {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
                 </div>
               </div>
 
@@ -516,15 +523,15 @@ export default function SessionsPage() {
                     .sort((a, b) => {
                         const dateA = parseISO(a.date);
                         const dateB = parseISO(b.date);
-                        if (!isValid(dateA) || !isValid(dateB)) return 0; // Should not happen if data is clean
+                        if (!isValid(dateA) || !isValid(dateB)) return 0; 
                         const dayDiff = dateA.getDate() - dateB.getDate();
                         if (dayDiff !== 0) return dayDiff;
-                        // If same day, sort by time
+                        
                         try {
                             const timeA = parse(a.time, 'HH:mm', new Date());
                             const timeB = parse(b.time, 'HH:mm', new Date());
                             return timeA.getTime() - timeB.getTime();
-                        } catch { return 0; } // Fallback if time parsing fails
+                        } catch { return 0; } 
                     })
                     .map(session => (
                       <li
@@ -611,3 +618,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+

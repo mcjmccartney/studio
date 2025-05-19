@@ -77,6 +77,8 @@ export default function HomePage() {
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isDeleteSessionDialogOpen, setIsDeleteSessionDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
 
   const { toast } = useToast();
 
@@ -149,6 +151,15 @@ export default function HomePage() {
     };
     fetchDashboardData();
   }, [toast]);
+
+  const filteredSessions = useMemo(() => {
+    if (!searchTerm.trim()) return sessions;
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return sessions.filter(session =>
+      (session.clientName && session.clientName.toLowerCase().includes(lowerSearchTerm)) ||
+      (session.dogName && session.dogName.toLowerCase().includes(lowerSearchTerm))
+    );
+  }, [sessions, searchTerm]);
 
   const handleAddSessionSubmit: SubmitHandler<SessionFormValues> = async (data) => {
     setIsSubmittingSheet(true);
@@ -235,7 +246,7 @@ export default function HomePage() {
   };
 
   function CustomDayContent(props: DayProps) {
-    const daySessions = sessions.filter(s => {
+    const daySessions = filteredSessions.filter(s => {
       const sessionDate = parseISO(s.date);
       return isValid(sessionDate) && isSameDay(sessionDate, props.date);
     }).sort((a, b) => {
@@ -244,7 +255,7 @@ export default function HomePage() {
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
       } catch {
-        return 0; // Fallback if time parsing fails
+        return 0; 
       }
     });
 
@@ -306,7 +317,13 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <div className="relative md:w-[200px] lg:w-[250px]">
               <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search sessions..." className="h-9 pl-8 w-full" />
+              <Input 
+                type="search" 
+                placeholder="Search sessions..." 
+                className="h-9 pl-8 w-full" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
               <SheetTrigger asChild>
@@ -342,15 +359,30 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="date-dashboard" className="text-right">Date</Label>
+                  <div className="grid grid-cols-4 items-start gap-4"> {/* Changed items-center to items-start */}
+                    <Label htmlFor="date-dashboard" className="text-right pt-2">Date</Label> {/* Added pt-2 for alignment */}
                     <div className="col-span-3">
                       <Controller name="date" control={addSessionForm.control}
                         render={({ field }) => (
-                          <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")} />
+                          <ShadCalendar 
+                            mode="single" 
+                            selected={field.value} 
+                            onSelect={field.onChange} 
+                            initialFocus 
+                            disabled={isSubmittingSheet} 
+                            id="date-dashboard" 
+                            className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
+                            classNames={{
+                                day: cn(
+                                  "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                                  "hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground" 
+                                ),
+                                day_selected: "!bg-primary !text-primary-foreground",
+                              }}
+                          />
                         )}
                       />
-                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.date.message}</p>}
+                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>} {/* Adjusted error to not rely on col-start */}
                     </div>
                   </div>
 
@@ -510,3 +542,4 @@ export default function HomePage() {
     </div>
   );
 }
+

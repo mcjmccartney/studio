@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck, Eye } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck, Eye, Filter } from 'lucide-react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -47,6 +47,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,6 +89,7 @@ const internalClientFormSchema = z.object({
 type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
 
 type SheetViewMode = 'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire';
+type MemberFilterType = 'all' | 'members' | 'nonMembers';
 
 
 export default function ClientsPage() {
@@ -110,6 +118,7 @@ export default function ClientsPage() {
   const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
   
   const [clientSessionsForViewSheet, setClientSessionsForViewSheet] = useState<Session[]>([]);
+  const [memberFilter, setMemberFilter] = useState<MemberFilterType>('all');
 
   const { toast } = useToast();
 
@@ -391,119 +400,144 @@ export default function ClientsPage() {
     }
   };
 
+  const filteredClients = useMemo(() => {
+    if (memberFilter === 'all') {
+      return clients;
+    } else if (memberFilter === 'members') {
+      return clients.filter(client => client.isMember === true);
+    } else { // nonMembers
+      return clients.filter(client => client.isMember === false || client.isMember === undefined);
+    }
+  }, [clients, memberFilter]);
+
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
-        <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
-            <DialogHeader>
-              <DialogTitle>Add New Client (Quick Add)</DialogTitle>
-              <DialogDescription>
-                Add essential contact and dog information. Full details can be submitted via public forms.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-ownerFirstName" className="text-right">First Name</Label>
-                <div className="col-span-3">
-                  <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={addClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                  {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="memberFilter" className="text-sm font-medium">Show:</Label>
+            <Select value={memberFilter} onValueChange={(value: MemberFilterType) => setMemberFilter(value)}>
+              <SelectTrigger id="memberFilter" className="w-[180px] h-9">
+                <SelectValue placeholder="Filter by membership" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                <SelectItem value="members">Members Only</SelectItem>
+                <SelectItem value="nonMembers">Non-Members</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Add New Client
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[525px]">
+              <DialogHeader>
+                <DialogTitle>Add New Client (Quick Add)</DialogTitle>
+                <DialogDescription>
+                  Add essential contact and dog information. Full details can be submitted via public forms.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-ownerFirstName" className="text-right">First Name</Label>
+                  <div className="col-span-3">
+                    <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={addClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                    {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-ownerLastName" className="text-right">Last Name</Label>
-                <div className="col-span-3">
-                  <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={addClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                  {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-ownerLastName" className="text-right">Last Name</Label>
+                  <div className="col-span-3">
+                    <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={addClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                    {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                  </div>
                 </div>
-              </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-dogName" className="text-right">Dog's Name</Label>
-                <div className="col-span-3">
-                  <Input id="add-dogName" {...addClientForm.register("dogName")} className={addClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-dogName" className="text-right">Dog's Name</Label>
+                  <div className="col-span-3">
+                    <Input id="add-dogName" {...addClientForm.register("dogName")} className={addClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-contactEmail" className="text-right">Email</Label>
-                <div className="col-span-3">
-                  <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={addClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-contactEmail" className="text-right">Email</Label>
+                  <div className="col-span-3">
+                    <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={addClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-contactNumber" className="text-right">Number</Label>
-                <div className="col-span-3">
-                  <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={addClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-contactNumber" className="text-right">Number</Label>
+                  <div className="col-span-3">
+                    <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={addClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="add-postcode" className="text-right">Postcode</Label>
-                <div className="col-span-3">
-                  <Input id="add-postcode" {...addClientForm.register("postcode")} className={addClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="add-postcode" className="text-right">Postcode</Label>
+                  <div className="col-span-3">
+                    <Input id="add-postcode" {...addClientForm.register("postcode")} className={addClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="add-isMember" className="text-right pt-2">Is Member?</Label>
-                <div className="col-span-3 flex items-center">
-                   <Controller
-                    name="isMember"
-                    control={addClientForm.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="add-isMember"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                        className="mr-2"
-                      />
-                    )}
-                  />
-                  <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="add-isMember" className="text-right pt-2">Is Member?</Label>
+                  <div className="col-span-3 flex items-center">
+                     <Controller
+                      name="isMember"
+                      control={addClientForm.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="add-isMember"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmittingForm}
+                          className="mr-2"
+                        />
+                      )}
+                    />
+                    <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
+                  </div>
                 </div>
-              </div>
-               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="add-isActive" className="text-right pt-2">Is Active?</Label>
-                <div className="col-span-3 flex items-center">
-                   <Controller
-                    name="isActive"
-                    control={addClientForm.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="add-isActive"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                        className="mr-2"
-                      />
-                    )}
-                  />
-                  <span className="text-sm text-muted-foreground">Untick if client is inactive.</span>
+                 <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="add-isActive" className="text-right pt-2">Is Active?</Label>
+                  <div className="col-span-3 flex items-center">
+                     <Controller
+                      name="isActive"
+                      control={addClientForm.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="add-isActive"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmittingForm}
+                          className="mr-2"
+                        />
+                      )}
+                    />
+                    <span className="text-sm text-muted-foreground">Untick if client is inactive.</span>
+                  </div>
                 </div>
-              </div>
-              <input type="hidden" {...addClientForm.register("submissionDate")} />
-              <DialogFooter>
-                <DialogClose asChild>
-                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                </DialogClose>
-                <Button type="submit" disabled={isSubmittingForm}>
-                  {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Client
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <input type="hidden" {...addClientForm.register("submissionDate")} />
+                <DialogFooter>
+                  <DialogClose asChild>
+                     <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isSubmittingForm}>
+                    {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Client
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
       <div className="mt-0"> 
@@ -519,15 +553,15 @@ export default function ClientsPage() {
               <p>Please ensure Firebase is configured correctly and you are online.</p>
             </div>
           )}
-          {!isLoading && !error && clients.length === 0 && (
+          {!isLoading && !error && filteredClients.length === 0 && (
             <p className="text-muted-foreground text-center py-10">
-              No clients found. Add a new client or submit a form.
+              No clients found for the current filter.
               {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && " (Firebase may not be configured)"}
             </p>
           )}
-          {!isLoading && !error && clients.length > 0 && (
+          {!isLoading && !error && filteredClients.length > 0 && (
              <div className="space-y-0">
-              {clients.map((client) => {
+              {filteredClients.map((client) => {
                 const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
                 const displayName = formatFullNameAndDogName(ownerFullName, client.dogName);
                 return (
@@ -549,7 +583,6 @@ export default function ClientsPage() {
                       )}
                       <div>
                         <h3 className="font-semibold text-base">{displayName}</h3>
-                        {/* Removed sub-dog name display as it's part of displayName now */}
                       </div>
                     </div>
                     <DropdownMenu>
@@ -694,7 +727,6 @@ export default function ClientsPage() {
                   {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
                 </SheetTitle>
                 <div className="flex flex-col space-y-1 text-sm">
-                  {/* Dog name already in title */}
                   <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit">
                     {clientForViewSheet.isActive ? "Active" : "Inactive"}
                   </Badge>
@@ -919,3 +951,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+
