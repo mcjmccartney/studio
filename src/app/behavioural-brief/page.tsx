@@ -158,11 +158,11 @@ export default function BehaviouralBriefPage() {
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
         <CardHeader className="relative pt-6 pb-4">
-            <CardTitle className="font-title text-3xl font-bold text-foreground text-center">
-            Behavioural Brief
+            <CardTitle className="font-title text-lg font-semibold uppercase text-foreground text-center">
+            BEHAVIOURAL BRIEF
             </CardTitle>
             <div className="absolute top-4 right-4">
-            <Image src="https://iili.io/34300ox.md.jpg" alt="Logo" width={24} height={24} className="rounded-sm" data-ai-hint="company logo"/>
+            <Image src="https://iili.io/34300ox.md.jpg" alt="Logo" width={40} height={40} className="rounded-sm" data-ai-hint="company logo"/>
             </div>
         </CardHeader>
         <CardContent className="p-6 sm:p-8 pt-0">
@@ -322,3 +322,5 @@ export default function BehaviouralBriefPage() {
     </div>
   );
 }
+
+    
