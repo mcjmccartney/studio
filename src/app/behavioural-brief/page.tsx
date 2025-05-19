@@ -157,7 +157,7 @@ export default function BehaviouralBriefPage() {
   const errorInputClassName = "border-destructive";
 
   return (
-    <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <div className="flex justify-center items-center gap-4 mb-10">
         <Image
           src="https://iili.io/34300ox.md.jpg"
