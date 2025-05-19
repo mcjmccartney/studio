@@ -404,8 +404,8 @@ export default function SessionsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label>
+               <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="date-sessionpage" className="text-right col-span-1 pt-2 self-start">Date</Label>
                 <div className="col-span-3">
                   <Controller
                     name="date"
@@ -422,9 +422,9 @@ export default function SessionsPage() {
                         classNames={{
                             day: cn(
                               "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                              "hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground" 
+                              "hover:!bg-[#92351f] hover:!text-white focus:!bg-[#92351f] focus:!text-white" 
                             ),
-                            day_selected: "!bg-primary !text-primary-foreground",
+                            day_selected: "!bg-[#92351f] !text-white hover:!bg-[#92351f]/90 focus:!bg-[#92351f]",
                           }}
                       />
                     )}

@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react"; // Renamed CalendarDays import
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import type { Session, Client } from '@/lib/types';
@@ -92,7 +92,7 @@ export default function HomePage() {
     }
   });
 
-  useEffect(() => {
+   useEffect(() => {
     if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         date: new Date(),
@@ -260,12 +260,12 @@ export default function HomePage() {
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center">
         <div
           className={cn(
-            "absolute top-1 right-1 text-xs",
+            "text-xs mb-1", // Centered by parent's `items-center text-center`
             isToday(props.date)
-              ? "text-[#92351f] font-semibold"
+              ? "text-[#92351f] font-semibold" // Specific color for today's date number
               : "text-muted-foreground"
           )}
         >
@@ -273,7 +273,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1">
+          <ScrollArea className="w-full flex-grow pr-1">
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -359,8 +359,8 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 items-start gap-4"> {/* Changed items-center to items-start */}
-                    <Label htmlFor="date-dashboard" className="text-right pt-2">Date</Label> {/* Added pt-2 for alignment */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="date-dashboard" className="text-right col-span-1 pt-2 self-start">Date</Label>
                     <div className="col-span-3">
                       <Controller name="date" control={addSessionForm.control}
                         render={({ field }) => (
@@ -375,14 +375,14 @@ export default function HomePage() {
                             classNames={{
                                 day: cn(
                                   "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                                  "hover:!bg-primary hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground" 
+                                  "hover:!bg-[#92351f] hover:!text-white focus:!bg-[#92351f] focus:!text-white" 
                                 ),
-                                day_selected: "!bg-primary !text-primary-foreground",
+                                day_selected: "!bg-[#92351f] !text-white hover:!bg-[#92351f]/90 focus:!bg-[#92351f]",
                               }}
                           />
                         )}
                       />
-                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>} {/* Adjusted error to not rely on col-start */}
+                      {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
                     </div>
                   </div>
 
