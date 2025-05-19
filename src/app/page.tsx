@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react"; // Renamed CalendarDays import
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import type { Session, Client } from '@/lib/types';
@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay, differenceInCalendarDays } from 'date-fns';
 import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
@@ -85,21 +85,22 @@ export default function HomePage() {
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
-      date: undefined,
-      time: '',
+      date: undefined, // Initialize to undefined for client-side setting
+      time: '', // Initialize to empty for client-side setting
       clientId: '',
       sessionType: '',
     }
   });
 
-   useEffect(() => {
+  // Set initial date/time on mount to avoid hydration issues
+  useEffect(() => {
     if (isAddSessionSheetOpen) {
-      addSessionForm.reset({
-        date: new Date(),
-        time: format(new Date(), "HH:mm"),
-        clientId: '',
-        sessionType: '',
-      });
+        addSessionForm.reset({
+            date: new Date(),
+            time: format(new Date(), "HH:mm"),
+            clientId: '',
+            sessionType: '',
+        });
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
 
@@ -151,6 +152,19 @@ export default function HomePage() {
     };
     fetchDashboardData();
   }, [toast]);
+
+
+  const nextSession = useMemo(() => {
+    const today = startOfDay(new Date());
+    return sessions
+      .filter(s => s.status === 'Scheduled' && isValid(parseISO(s.date)) && differenceInCalendarDays(parseISO(s.date), today) >= 0)
+      .sort((a, b) => {
+        const dateTimeA = new Date(`${format(parseISO(a.date), 'yyyy-MM-dd')}T${a.time}:00`);
+        const dateTimeB = new Date(`${format(parseISO(b.date), 'yyyy-MM-dd')}T${b.time}:00`);
+        return dateTimeA.getTime() - dateTimeB.getTime();
+      })[0];
+  }, [sessions]);
+
 
   const filteredSessions = useMemo(() => {
     if (!searchTerm.trim()) return sessions;
@@ -216,7 +230,7 @@ export default function HomePage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true);
+    setIsSubmittingSheet(true); // Reuse this state for loading indicator on delete button
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
@@ -255,15 +269,15 @@ export default function HomePage() {
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
       } catch {
-        return 0; 
+        return 0;
       }
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center">
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
         <div
           className={cn(
-            "text-xs mb-1", // Centered by parent's `items-center text-center`
+            "absolute top-1 right-1 text-xs",
             isToday(props.date)
               ? "text-[#92351f] font-semibold" // Specific color for today's date number
               : "text-muted-foreground"
@@ -273,7 +287,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full flex-grow pr-1">
+          <ScrollArea className="w-full mt-5 pr-1"> {/* Added mt-5 to push pills down */}
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -298,34 +312,37 @@ export default function HomePage() {
     );
   }
 
+
   return (
     <div className="flex flex-col gap-6">
+        {isLoadingData && (
+            <div className="flex justify-center items-center py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2">Loading dashboard data...</p>
+            </div>
+        )}
 
-      {isLoadingData && (
-        <div className="flex justify-center items-center py-6">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
-
+      {/* Calendar Header Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-x-4 py-3 px-4 border-b">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-            <h2 className="text-lg font-semibold text-center min-w-[140px]">{format(currentMonth, 'MMMM yyyy')}</h2>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative md:w-[200px] lg:w-[250px]">
-              <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="search" 
-                placeholder="Search sessions..." 
-                className="h-9 pl-8 w-full" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+                <h2 className="text-lg font-semibold text-center min-w-[140px]">{format(currentMonth, 'MMMM yyyy')}</h2>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-            <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
+            <div className="flex-1 max-w-xs">
+                <div className="relative">
+                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search sessions..."
+                        className="h-9 pl-8 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+             <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
               <SheetTrigger asChild>
                 <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
               </SheetTrigger>
@@ -364,21 +381,15 @@ export default function HomePage() {
                     <div className="col-span-3">
                       <Controller name="date" control={addSessionForm.control}
                         render={({ field }) => (
-                          <ShadCalendar 
-                            mode="single" 
-                            selected={field.value} 
-                            onSelect={field.onChange} 
-                            initialFocus 
-                            disabled={isSubmittingSheet} 
-                            id="date-dashboard" 
+                          <ShadCalendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                            disabled={isSubmittingSheet}
+                            id="date-dashboard"
                             className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
-                            classNames={{
-                                day: cn(
-                                  "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                                  "hover:!bg-[#92351f] hover:!text-white focus:!bg-[#92351f] focus:!text-white" 
-                                ),
-                                day_selected: "!bg-[#92351f] !text-white hover:!bg-[#92351f]/90 focus:!bg-[#92351f]",
-                              }}
+                            
                           />
                         )}
                       />
@@ -424,9 +435,8 @@ export default function HomePage() {
                 </form>
               </SheetContent>
             </Sheet>
-          </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0"> {/* Ensure no padding on the CardContent itself */}
           {isLoadingData ? (
             <div className="flex justify-center items-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-3">Loading calendar...</p></div>
           ) : (
@@ -436,23 +446,23 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full !p-0 !m-0"
+              className="w-full !p-0 !m-0" // Remove padding and margin from DayPicker root
               classNames={{
-                caption_label: "hidden",
-                caption: "hidden",
+                caption_label: "hidden", // Hide default caption label
+                caption: "hidden", // Hide default caption (which includes nav buttons)
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
                 head_row: "flex border-b",
-                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2",
-                row: "flex w-full mt-0 border-b last:border-b-0",
-                cell: cn(
+                head_cell: "text-muted-foreground font-normal text-xs w-[14.28%] text-center p-2", // Each day header cell
+                row: "flex w-full mt-0 border-b last:border-b-0", // Each week row
+                cell: cn( // Each day cell
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
-                day: "h-full w-full p-0",
+                day: "h-full w-full p-0", // Wrapper for DayContent
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1",
+                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1", // Red ring for today
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -461,6 +471,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
+      {/* Session Detail Sheet */}
       <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
         <SheetContent className="sm:max-w-lg w-[90vw] max-w-[600px] p-0">
           {selectedSessionForSheet && (
@@ -474,7 +485,7 @@ export default function HomePage() {
                   {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-160px)]">
+              <ScrollArea className="h-[calc(100vh-160px)]"> {/* Adjusted height for footer */}
                 <div className="p-6 space-y-4">
                   <Card>
                     <CardHeader><CardTitle className="text-base flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
@@ -514,8 +525,9 @@ export default function HomePage() {
                 <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1">
                   <Edit className="mr-2 h-4 w-4" /> Edit
                 </Button>
-                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1" disabled={isSubmittingSheet}>
+                  {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Delete
                 </Button>
               </SheetFooter>
             </>
@@ -523,18 +535,19 @@ export default function HomePage() {
         </SheetContent>
       </Sheet>
 
+      {/* Delete Session Confirmation Dialog */}
       <AlertDialog open={isDeleteSessionDialogOpen} onOpenChange={setIsDeleteSessionDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the session with {selectedSessionForSheet ? formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName) : 'this client'} on {selectedSessionForSheet && isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : ''}.
+              This will permanently delete the session with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : 'this client'} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
-              {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirm Delete
+              {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -542,4 +555,3 @@ export default function HomePage() {
     </div>
   );
 }
-

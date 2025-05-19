@@ -419,13 +419,7 @@ export default function SessionsPage() {
                         disabled={isSubmittingForm}
                         id="date-sessionpage"
                         className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
-                        classNames={{
-                            day: cn(
-                              "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                              "hover:!bg-[#92351f] hover:!text-white focus:!bg-[#92351f] focus:!text-white" 
-                            ),
-                            day_selected: "!bg-[#92351f] !text-white hover:!bg-[#92351f]/90 focus:!bg-[#92351f]",
-                          }}
+                        
                       />
                     )}
                   />
@@ -513,7 +507,7 @@ export default function SessionsPage() {
       {!isLoading && !error && sortedMonthKeys.length > 0 && (
         <Accordion type="multiple" className="w-full space-y-0" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
-            <AccordionItem value={monthYear} key={monthYear} className="border-b-0 bg-card shadow-sm rounded-md mb-2">
+            <AccordionItem value={monthYear} key={monthYear} className="bg-card shadow-sm rounded-md mb-2">
               <AccordionTrigger className="text-lg font-medium hover:no-underline px-4 py-3">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
@@ -523,7 +517,7 @@ export default function SessionsPage() {
                     .sort((a, b) => {
                         const dateA = parseISO(a.date);
                         const dateB = parseISO(b.date);
-                        if (!isValid(dateA) || !isValid(dateB)) return 0; 
+                        if (!isValid(dateA) || !isValid(dateB)) return 0;
                         const dayDiff = dateA.getDate() - dateB.getDate();
                         if (dayDiff !== 0) return dayDiff;
                         
@@ -531,7 +525,7 @@ export default function SessionsPage() {
                             const timeA = parse(a.time, 'HH:mm', new Date());
                             const timeB = parse(b.time, 'HH:mm', new Date());
                             return timeA.getTime() - timeB.getTime();
-                        } catch { return 0; } 
+                        } catch { return 0; }
                     })
                     .map(session => (
                       <li
@@ -618,4 +612,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
