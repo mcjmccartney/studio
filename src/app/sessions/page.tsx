@@ -52,11 +52,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Calendar as ShadCalendar } from "@/components/ui/calendar";
 import {
   Accordion,
@@ -76,7 +71,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s(AM|PM)$/i, { message: "Invalid time format. Use HH:MM AM/PM." }),
+  time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
   sessionType: z.string().min(1, { message: "Session type is required." }),
 });
 
@@ -194,7 +189,6 @@ export default function SessionsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
-  const [isDateTimePopoverOpen, setIsDateTimePopoverOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
@@ -202,7 +196,7 @@ export default function SessionsPage() {
 
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, formState: { errors }, watch, setValue } = useForm<SessionFormValues>({
+  const { control, handleSubmit, reset, formState: { errors }, setValue } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       date: undefined,
@@ -214,13 +208,14 @@ export default function SessionsPage() {
 
   useEffect(() => {
     // Set initial date and time on client mount to avoid hydration issues
-    setValue("date", new Date(), { shouldValidate: false, shouldDirty: false });
-    setValue("time", format(new Date(), "hh:mm a"), { shouldValidate: false, shouldDirty: false });
-  }, [setValue]);
-
-
-  const watchedDate = watch("date");
-  const watchedTime = watch("time");
+    // and when the modal opens for a new session.
+    if (isAddSessionModalOpen) {
+      setValue("date", new Date(), { shouldValidate: false, shouldDirty: false });
+      setValue("time", format(new Date(), "HH:mm"), { shouldValidate: false, shouldDirty: false });
+      setValue("clientId", "", { shouldValidate: false, shouldDirty: false });
+      setValue("sessionType", "", { shouldValidate: false, shouldDirty: false });
+    }
+  }, [setValue, isAddSessionModalOpen]);
 
 
   useEffect(() => {
@@ -265,7 +260,7 @@ export default function SessionsPage() {
       clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || 'N/A',
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time,
+      time: data.time, // Already in HH:mm
       status: 'Scheduled',
       sessionType: data.sessionType,
     };
@@ -278,9 +273,8 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${selectedClient.ownerFirstName} ${selectedClient.ownerLastName} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      reset({ date: new Date(), time: format(new Date(), "hh:mm a"), clientId: '', sessionType: '' });
+      reset({ date: undefined, time: '', clientId: '', sessionType: '' });
       setIsAddSessionModalOpen(false);
-      setIsDateTimePopoverOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -411,90 +405,44 @@ export default function SessionsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date-time" className="text-right">Date & Time</Label>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="date" className="text-right pt-2">Date</Label>
                 <div className="col-span-3">
-                  <Popover open={isDateTimePopoverOpen} onOpenChange={setIsDateTimePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          (!watchedDate || !watchedTime) && "text-muted-foreground",
-                          (errors.date || errors.time) && "border-destructive"
-                        )}
+                  <Controller
+                    name="date"
+                    control={control}
+                    render={({ field }) => (
+                      <ShadCalendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
                         disabled={isSubmittingForm}
-                      >
-                        <CalendarIconLucide className="mr-2 h-4 w-4" />
-                        {watchedDate && isValid(watchedDate) && watchedTime ?
-                          `${format(watchedDate, "PPP")} at ${watchedTime}` :
-                          <span>Pick a date & time</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Controller
-                        name="date"
-                        control={control}
-                        render={({ field }) => (
-                          <ShadCalendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                            disabled={isSubmittingForm}
-                            className="p-3"
-                          />
-                        )}
+                        className={cn("rounded-md border", errors.date ? "border-destructive" : "")}
                       />
-                      <div className="p-3 border-t border-border">
-                        <Label htmlFor="time-popover" className="text-sm font-medium">Time</Label>
-                        <Controller
-                          name="time"
-                          control={control}
-                          render={({ field }) => {
-                            const convertTo24HourFormat = (time12h: string): string => {
-                              if (!time12h) return "";
-                              try {
-                                const parsedDate = parse(time12h, "hh:mm a", new Date(2000, 0, 1));
-                                if (isValid(parsedDate)) return format(parsedDate, "HH:mm");
-                              } catch (e) { console.error("Error parsing time for input:", time12h, e); }
-                              return "";
-                            };
-                            return (
-                              <Input
-                                id="time-popover"
-                                type="time"
-                                value={convertTo24HourFormat(field.value)}
-                                onChange={(e) => {
-                                  const time24 = e.target.value;
-                                  if (time24) {
-                                    try {
-                                      const [hours, minutes] = time24.split(':');
-                                      const dateForFormatting = new Date(1970,0,1, parseInt(hours), parseInt(minutes));
-                                      if(isValid(dateForFormatting)) field.onChange(format(dateForFormatting, "hh:mm a"));
-                                      else field.onChange('');
-                                    } catch(error) {
-                                      console.error("Error processing time input:", time24, error);
-                                      field.onChange('');
-                                    }
-                                  } else {
-                                    field.onChange('');
-                                  }
-                                }}
-                                className={cn("w-full mt-1", errors.time ? "border-destructive" : "")}
-                                disabled={isSubmittingForm}
-                              />
-                            );
-                          }}
-                        />
-                      </div>
-                       <div className="p-3 border-t border-border flex justify-end">
-                        <Button size="sm" onClick={() => setIsDateTimePopoverOpen(false)}>Done</Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                    )}
+                  />
                   {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
-                  {errors.time && !errors.date && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time" className="text-right">Time (24h)</Label>
+                <div className="col-span-3">
+                  <Controller
+                    name="time"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        id="time"
+                        type="time"
+                        {...field}
+                        className={cn(errors.time ? "border-destructive" : "")}
+                        disabled={isSubmittingForm}
+                      />
+                    )}
+                  />
+                  {errors.time && <p className="text-xs text-destructive mt-1">{errors.time.message}</p>}
                 </div>
               </div>
 
@@ -652,5 +600,4 @@ export default function SessionsPage() {
     </div>
   );
 }
-
     
