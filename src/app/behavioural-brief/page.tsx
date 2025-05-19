@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Updated function name
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -156,23 +156,24 @@ export default function BehaviouralBriefPage() {
 
   return (
     <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <Image 
-        src="https://iili.io/3PLgTAb.png" 
-        alt="Behavioural Brief Title" 
-        width={360} 
-        height={60}
-        className="mx-auto mb-10"
-        data-ai-hint="form title"
-      />
-      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf] relative">
-        <Image 
-          src="https://iili.io/34300ox.md.jpg" 
-          alt="Logo" 
-          width={40} 
-          height={40} 
-          className="rounded-sm absolute top-4 right-4 z-10"
+      <div className="flex justify-center items-center gap-4 mb-10">
+        <Image
+          src="https://iili.io/34300ox.md.jpg"
+          alt="RMR Logo"
+          width={50}
+          height={50}
+          className="rounded-sm"
           data-ai-hint="company logo"
         />
+        <Image 
+          src="https://iili.io/3PLgTAb.png" 
+          alt="Behavioural Brief Title" 
+          width={360} 
+          height={60}
+          data-ai-hint="form title"
+        />
+      </div>
+      <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
         <CardContent className="p-6 sm:p-8">
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0">
             
@@ -331,3 +332,4 @@ export default function BehaviouralBriefPage() {
   );
 }
     
+
