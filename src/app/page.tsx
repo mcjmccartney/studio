@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css'; 
 import type { Session, Client } from '@/lib/types'; 
@@ -50,7 +50,7 @@ import { Label } from '@/components/ui/label';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse } from 'date-fns'; 
+import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay } from 'date-fns'; 
 import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase'; 
 import { useToast } from "@/hooks/use-toast"; 
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
@@ -166,9 +166,10 @@ export default function HomePage() {
       return;
     }
 
+    const ownerFullName = `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`.trim();
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
-      clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
+      clientName: ownerFullName,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
@@ -265,7 +266,6 @@ export default function HomePage() {
 
 
   const formatCaption: DateFormatter = (month) => {
-    // This is not used because caption_label is hidden
     return format(month, 'MMMM yyyy');
   };
 
@@ -274,20 +274,19 @@ export default function HomePage() {
         const sessionDate = parseISO(s.date);
         return isValid(sessionDate) && isSameDay(sessionDate, props.date);
     }).sort((a,b) => {
-        // Sort sessions by time for display within the day cell
         const timeA = parse(a.time, 'HH:mm', new Date());
         const timeB = parse(b.time, 'HH:mm', new Date());
         return compareAsc(timeA, timeB);
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left"> {/* Increased min-h for more space */}
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
         <div className={cn(
           "absolute top-1 right-1 text-xs",
           isToday(props.date) ? "text-destructive font-semibold" : "text-muted-foreground"
         )}>{format(props.date, 'd')}</div>
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1"> {/* Increased mt */}
+          <ScrollArea className="w-full mt-5 pr-1">
             <div className="space-y-1">
             {daySessions.map(session => (
               <Badge
@@ -317,16 +316,20 @@ export default function HomePage() {
           <CardHeader className="pb-2 pt-3">
             <CardTitle className="text-base font-medium flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" />Next Session</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm py-3">
-             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="flex items-centerwhitespace-nowrap">
-                    {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'PP') : 'Invalid Date'} at {nextUpcomingSession.time}
-                </span>
-                <span className="text-muted-foreground">•</span>
-                <span className="flex items-center"><TagIcon className="inline h-4 w-4 mr-1 text-muted-foreground" />{nextUpcomingSession.sessionType}</span>
-            </div>
+          <CardContent className="text-sm space-y-1 py-3">
+             <p className="font-semibold">{formatFullNameAndDogName(nextUpcomingSession.clientName, nextUpcomingSession.dogName)}</p>
+             <p className="flex items-center">
+                <CalendarIconLucide className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
+                {isValid(parseISO(nextUpcomingSession.date)) ? format(parseISO(nextUpcomingSession.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}
+            </p>
+            <p className="flex items-center">
+                <Clock className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
+                {nextUpcomingSession.time}
+            </p>
+            <p className="flex items-center">
+                <TagIcon className="inline h-4 w-4 mr-1.5 text-muted-foreground" />
+                {nextUpcomingSession.sessionType}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -357,7 +360,7 @@ export default function HomePage() {
             <Button onClick={() => setIsAddSessionModalOpen(true)} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0"> {/* Ensure no padding from CardContent */}
+        <CardContent className="p-0">
           {isLoadingData ? (
             <div className="flex justify-center items-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-3">Loading calendar...</p></div>
           ) : (
@@ -367,10 +370,10 @@ export default function HomePage() {
               showOutsideDays
               fixedWeeks
               formatters={{ formatCaption }}
-              className="w-full" // Remove p-4, rely on internal or cell padding
+              className="w-full"
               classNames={{
-                caption_label: "hidden", // Hides default MMMM yyyy label
-                caption: "hidden", // Hides the entire caption div including nav buttons
+                caption_label: "hidden", 
+                caption: "hidden", 
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
                 table: "w-full border-collapse",
@@ -379,9 +382,9 @@ export default function HomePage() {
                 row: "flex w-full mt-0 border-b last:border-b-0",
                 cell: cn(
                   "w-[14.28%] text-center text-sm p-0 relative border-r last:border-r-0 focus-within:relative focus-within:z-20",
-                  "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" // Kept selected style for potential future use
+                  "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md" 
                 ),
-                day: "h-full w-full p-0", // Day button itself has no padding
+                day: "h-full w-full p-0", 
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "ring-2 ring-destructive ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
@@ -549,3 +552,4 @@ export default function HomePage() {
   );
 }
 
+    
