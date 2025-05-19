@@ -189,7 +189,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [toast]);
+  }, [toast]); // Added toast to dependency array as it's used in fetchInitialData
 
   useEffect(() => {
     if (clientToEdit) {
@@ -583,6 +583,7 @@ export default function ClientsPage() {
                       )}
                       <div>
                         <h3 className="font-semibold text-base">{displayName}</h3>
+                        {client.dogName && <p className="text-sm text-muted-foreground flex items-center"><PawPrint className="h-3 w-3 mr-1.5 text-muted-foreground" />{client.dogName}</p>}
                       </div>
                     </div>
                     <DropdownMenu>
@@ -631,7 +632,7 @@ export default function ClientsPage() {
           </SheetHeader>
           {clientToEdit && (
             <ScrollArea className="h-[calc(100vh-150px)] pr-3">
-            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-6 py-4">
+            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-ownerFirstName">First Name</Label>
                 <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={editClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
