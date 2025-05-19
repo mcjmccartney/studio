@@ -6,7 +6,7 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,7 @@ import { addClientAndBehaviourQuestionnaireToFirestore, type BehaviourQuestionna
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const addressSchema = z.object({
   addressLine1: z.string().min(1, "Address Line 1 is required."),
@@ -271,11 +272,16 @@ export default function BehaviourQuestionnairePage() {
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="font-title text-4xl font-bold text-[#ebeadf] text-center mb-10"> {/* Updated font */}
-        Behaviour Questionnaire
-      </h1>
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf]">
-        <CardContent className="p-6 sm:p-8">
+        <CardHeader className="relative pt-6 pb-4">
+            <CardTitle className="font-title text-3xl font-bold text-foreground text-center">
+            Behaviour Questionnaire
+            </CardTitle>
+            <div className="absolute top-4 right-4">
+            <Image src="https://iili.io/34300ox.md.jpg" alt="Logo" width={24} height={24} className="rounded-sm" data-ai-hint="company logo"/>
+            </div>
+        </CardHeader>
+        <CardContent className="p-6 sm:p-8 pt-0">
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-0">
             
             <SectionTitle title="OWNER INFORMATION" />
