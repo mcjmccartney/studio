@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase';
+import { addClientAndBriefToFirestore, type BehaviouralBriefFormValues } from '@/lib/firebase'; // Updated function name
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -156,9 +156,14 @@ export default function BehaviouralBriefPage() {
 
   return (
     <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="font-title text-4xl font-bold text-[#ebeadf] text-center mb-10 uppercase">
-        Behavioural Brief
-      </h1>
+      <Image 
+        src="https://iili.io/3PLgTAb.png" 
+        alt="Behavioural Brief Title" 
+        width={360} 
+        height={60}
+        className="mx-auto mb-10"
+        data-ai-hint="form title"
+      />
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf] relative">
         <Image 
           src="https://iili.io/34300ox.md.jpg" 
@@ -325,5 +330,4 @@ export default function BehaviouralBriefPage() {
     </div>
   );
 }
-
     

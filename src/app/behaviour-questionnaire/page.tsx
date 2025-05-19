@@ -272,9 +272,14 @@ export default function BehaviourQuestionnairePage() {
 
   return (
     <div className="bg-[#4f6749] min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <h1 className="font-title text-4xl font-bold text-[#ebeadf] text-center mb-10 uppercase">
-        Behaviour Questionnaire
-      </h1>
+      <Image 
+        src="https://iili.io/3PLgIHu.png" 
+        alt="Behaviour Questionnaire Title" 
+        width={540} 
+        height={60}
+        className="mx-auto mb-10"
+        data-ai-hint="form title"
+      />
       <Card className="w-full max-w-3xl shadow-2xl bg-[#ebeadf] relative">
         <Image 
           src="https://iili.io/34300ox.md.jpg" 
