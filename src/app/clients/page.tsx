@@ -17,6 +17,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -89,9 +99,9 @@ export default function ClientsPage() {
   const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [isAddClientSheetOpen, setIsAddClientSheetOpen] = useState(false);
 
-  const [isEditClientDialogOpen, setIsEditClientDialogOpen] = useState(false);
+  const [isEditClientSheetOpen, setIsEditClientSheetOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
@@ -233,7 +243,7 @@ export default function ClientsPage() {
       const ownerFullName = `${newClient.ownerFirstName} ${newClient.ownerLastName}`.trim();
       toast({ title: "Client Added", description: `${formatFullNameAndDogName(ownerFullName, newClient.dogName)} has been successfully added.` });
       addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
-      setIsAddClientModalOpen(false);
+      setIsAddClientSheetOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add client.";
@@ -276,7 +286,7 @@ export default function ClientsPage() {
       
       const ownerFullName = `${data.ownerFirstName} ${data.ownerLastName}`.trim();
       toast({ title: "Client Updated", description: `${formatFullNameAndDogName(ownerFullName, data.dogName)} has been successfully updated.` });
-      setIsEditClientDialogOpen(false);
+      setIsEditClientSheetOpen(false);
 
       if (clientForViewDialog && clientForViewDialog.id === clientToEdit.id) {
         setClientForViewDialog(updatedClients.find(c => c.id === clientToEdit.id) || null);
@@ -292,9 +302,9 @@ export default function ClientsPage() {
     }
   };
 
-  const openEditDialog = (client: Client) => {
+  const openEditSheet = (client: Client) => {
     setClientToEdit(client);
-    setIsEditClientDialogOpen(true);
+    setIsEditClientSheetOpen(true);
   };
 
   const handleDeleteRequest = (client: Client | null) => {
@@ -340,8 +350,8 @@ export default function ClientsPage() {
                                 });
     setClientSessionsForViewDialog(sessionsForThisClient);
     
-    setBriefForDialog(null); // Reset brief
-    setQuestionnaireForDialog(null); // Reset questionnaire
+    setBriefForDialog(null); 
+    setQuestionnaireForDialog(null); 
   };
 
   useEffect(() => {
@@ -444,114 +454,94 @@ export default function ClientsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-            <DialogTrigger asChild>
+          <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
+            <SheetTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Client
+                New Client
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px]">
-              <DialogHeader>
-                <DialogTitle>Add New Client (Quick Add)</DialogTitle>
-                <DialogDescription>
-                  Add essential contact and dog information. Full details can be submitted via public forms.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-ownerFirstName" className="text-right">First Name</Label>
-                  <div className="col-span-3">
-                    <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={addClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                    {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
-                  </div>
+            </SheetTrigger>
+            <SheetContent className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>New Client (Quick Add)</SheetTitle>
+                <SheetDescription>
+                  Add essential contact and dog information.
+                </SheetDescription>
+              </SheetHeader>
+              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="add-ownerFirstName">First Name</Label>
+                  <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
+                  {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-ownerLastName" className="text-right">Last Name</Label>
-                  <div className="col-span-3">
-                    <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={addClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                    {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
-                  </div>
+                <div>
+                  <Label htmlFor="add-ownerLastName">Last Name</Label>
+                  <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={cn("mt-1", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingForm} />
+                  {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-dogName" className="text-right">Dog's Name</Label>
-                  <div className="col-span-3">
-                    <Input id="add-dogName" {...addClientForm.register("dogName")} className={addClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
-                  </div>
+                 <div>
+                  <Label htmlFor="add-dogName">Dog's Name</Label>
+                  <Input id="add-dogName" {...addClientForm.register("dogName")} className={cn("mt-1", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-contactEmail" className="text-right">Email</Label>
-                  <div className="col-span-3">
-                    <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={addClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
-                  </div>
+                <div>
+                  <Label htmlFor="add-contactEmail">Email</Label>
+                  <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={cn("mt-1", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-contactNumber" className="text-right">Number</Label>
-                  <div className="col-span-3">
-                    <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={addClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
-                  </div>
+                <div>
+                  <Label htmlFor="add-contactNumber">Number</Label>
+                  <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("mt-1", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="add-postcode" className="text-right">Postcode</Label>
-                  <div className="col-span-3">
-                    <Input id="add-postcode" {...addClientForm.register("postcode")} className={addClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
-                  </div>
+                <div>
+                  <Label htmlFor="add-postcode">Postcode</Label>
+                  <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("mt-1", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                  {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="add-isMember" className="text-right pt-2">Is Member?</Label>
-                  <div className="col-span-3 flex items-center">
-                     <Controller
-                      name="isMember"
-                      control={addClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox
-                          id="add-isMember"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmittingForm}
-                          className="mr-2"
-                        />
-                      )}
-                    />
-                    <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                   <Controller
+                    name="isMember"
+                    control={addClientForm.control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="add-isMember"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmittingForm}
+                      />
+                    )}
+                  />
+                  <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
                 </div>
-                 <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="add-isActive" className="text-right pt-2">Is Active?</Label>
-                  <div className="col-span-3 flex items-center">
-                     <Controller
-                      name="isActive"
-                      control={addClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox
-                          id="add-isActive"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmittingForm}
-                          className="mr-2"
-                        />
-                      )}
-                    />
-                    <span className="text-sm text-muted-foreground">Untick if client is inactive.</span>
-                  </div>
+                 <div className="flex items-center space-x-2">
+                   <Controller
+                    name="isActive"
+                    control={addClientForm.control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="add-isActive"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmittingForm}
+                      />
+                    )}
+                  />
+                  <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
                 </div>
                 <input type="hidden" {...addClientForm.register("submissionDate")} />
-                <DialogFooter>
-                  <DialogClose asChild>
+                <SheetFooter className="mt-4">
+                  <SheetClose asChild>
                      <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                  </DialogClose>
+                  </SheetClose>
                   <Button type="submit" disabled={isSubmittingForm}>
                     {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Client
                   </Button>
-                </DialogFooter>
+                </SheetFooter>
               </form>
-            </DialogContent>
-          </Dialog>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
       
@@ -577,8 +567,7 @@ export default function ClientsPage() {
           {!isLoading && !error && filteredClients.length > 0 && (
              <div className="space-y-0">
               {filteredClients.map((client) => {
-                const ownerFullName = `${client.ownerFirstName} ${client.ownerLastName}`.trim();
-                const displayName = formatFullNameAndDogName(ownerFullName, client.dogName);
+                const displayName = formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName);
                 return (
                   <div
                     key={client.id}
@@ -609,7 +598,7 @@ export default function ClientsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditDialog(client);}}>
+                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Contact
                           </DropdownMenuItem>
@@ -635,114 +624,96 @@ export default function ClientsPage() {
       </div>
 
 
-      {/* Edit Client Dialog */}
-      <Dialog open={isEditClientDialogOpen} onOpenChange={(isOpen) => { setIsEditClientDialogOpen(isOpen); if(!isOpen) setClientToEdit(null);}}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(`${clientToEdit.ownerFirstName} ${clientToEdit.ownerLastName}`, clientToEdit.dogName) : ''}</DialogTitle>
-            <DialogDescription>
+      {/* Edit Client Sheet */}
+      <Sheet open={isEditClientSheetOpen} onOpenChange={(isOpen) => { setIsEditClientSheetOpen(isOpen); if(!isOpen) setClientToEdit(null);}}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(`${clientToEdit.ownerFirstName} ${clientToEdit.ownerLastName}`, clientToEdit.dogName) : ''}</SheetTitle>
+            <SheetDescription>
               Update the client's contact information and details.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           {clientToEdit && (
-            <ScrollArea className="max-h-[70vh] pr-3">
-            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-ownerFirstName" className="text-right">First Name</Label>
-                <div className="col-span-3">
-                    <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={editClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                    {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
-                </div>
+            <ScrollArea className="max-h-[80vh] pr-3 mt-4"> {/* Added mt-4 and adjusted max-h */}
+            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="edit-ownerFirstName">First Name</Label>
+                <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
+                {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-ownerLastName" className="text-right">Last Name</Label>
-                <div className="col-span-3">
-                    <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={editClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                    {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="edit-ownerLastName">Last Name</Label>
+                <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("mt-1", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingForm} />
+                {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-dogName" className="text-right">Dog's Name</Label>
-                <div className="col-span-3">
-                    <Input id="edit-dogName" {...editClientForm.register("dogName")} className={editClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="edit-dogName">Dog's Name</Label>
+                <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("mt-1", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-contactEmail" className="text-right">Email</Label>
-                <div className="col-span-3">
-                    <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={editClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="edit-contactEmail">Email</Label>
+                <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("mt-1", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-contactNumber" className="text-right">Number</Label>
-                <div className="col-span-3">
-                    <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={editClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="edit-contactNumber">Number</Label>
+                <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("mt-1", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-postcode" className="text-right">Postcode</Label>
-                <div className="col-span-3">
-                    <Input id="edit-postcode" {...editClientForm.register("postcode")} className={editClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                    {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="edit-postcode">Postcode</Label>
+                <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("mt-1", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingForm}/>
+                {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
               </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="edit-isMember" className="text-right pt-2 col-span-1">Is Member?</Label>
-                  <div className="col-span-3 flex items-center">
-                     <Controller
-                      name="isMember"
-                      control={editClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox
-                          id="edit-isMember"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmittingForm}
-                          className="mr-2"
-                        />
-                      )}
+              <div className="flex items-center space-x-2">
+                 <Controller
+                  name="isMember"
+                  control={editClientForm.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="edit-isMember"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmittingForm}
                     />
-                  </div>
-                </div>
-               <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="edit-isActive" className="text-right pt-2 col-span-1">Is Active?</Label>
-                  <div className="col-span-3 flex items-center">
-                     <Controller
-                      name="isActive"
-                      control={editClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox
-                          id="edit-isActive"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmittingForm}
-                          className="mr-2"
-                        />
-                      )}
+                  )}
+                />
+                <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
+              </div>
+               <div className="flex items-center space-x-2">
+                 <Controller
+                  name="isActive"
+                  control={editClientForm.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="edit-isActive"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmittingForm}
                     />
-                  </div>
-                </div>
-              <DialogFooter className="mt-4">
-                <DialogClose asChild>
+                  )}
+                />
+                <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
+              </div>
+              <SheetFooter className="mt-4">
+                <SheetClose asChild>
                    <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                </DialogClose>
+                </SheetClose>
                 <Button type="submit" disabled={isSubmittingForm}>
                   {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
-              </DialogFooter>
+              </SheetFooter>
             </form>
             </ScrollArea>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* View Client Dialog */}
       <Dialog open={isViewClientDialogOpen} onOpenChange={(isOpen) => { setIsViewClientDialogOpen(isOpen); if (!isOpen) setClientForViewDialog(null); }}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-lg">
           {clientForViewDialog && (
             <>
               <DialogHeader>
@@ -850,7 +821,7 @@ export default function ClientsPage() {
                                     </Badge>
                                     </div>
                                     {session.sessionType && <div className="text-xs text-muted-foreground mt-1">Type: {session.sessionType}</div>}
-                                    {session.cost !== undefined && <div className="text-xs text-muted-foreground mt-0.5">Cost: £{session.cost.toFixed(2)}</div>}
+                                    {session.amount !== undefined && <div className="text-xs text-muted-foreground mt-0.5">Amount: £{session.amount.toFixed(2)}</div>}
                                     {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
                                 </li>
                                 ))}
@@ -967,3 +938,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+

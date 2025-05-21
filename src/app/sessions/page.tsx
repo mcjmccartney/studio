@@ -20,9 +20,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,17 +104,18 @@ interface GroupedSessions {
   [monthYear: string]: Session[];
 }
 
-interface SessionDetailViewProps {
+interface SessionDetailDialogProps {
   session: Session;
-  onBack: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   onDelete: (session: Session) => void;
   onEdit: (session: Session) => void;
 }
 
-function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
+function SessionDetailDialog({ session, isOpen, onOpenChange, onDelete, onEdit }: SessionDetailDialogProps) {
   const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
-     <Dialog open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
+     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl">Session Details</DialogTitle>
@@ -159,7 +169,7 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
             )}
           </div>
         </ScrollArea>
-        <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
           <Button variant="outline" onClick={() => onEdit(session)} className="flex-1 sm:flex-none">
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
@@ -182,11 +192,13 @@ export default function SessionsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
+  const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Session | null>(null);
+  const [isSessionDetailDialogOpen, setIsSessionDetailDialogOpen] = useState(false);
+
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
-  const [isSubmittingDialog, setIsSubmittingDialog] = useState<boolean>(false);
+  const [isSubmittingSheet, setIsSubmittingSheet] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -202,7 +214,7 @@ export default function SessionsPage() {
   });
   
   useEffect(() => {
-    if (isAddSessionDialogOpen) {
+    if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         clientId: '',
         date: new Date(),
@@ -211,7 +223,7 @@ export default function SessionsPage() {
         amount: undefined,
       });
     }
-  }, [isAddSessionDialogOpen, addSessionForm]);
+  }, [isAddSessionSheetOpen, addSessionForm]);
 
   const { watch: watchSessionForm, setValue: setSessionValue } = addSessionForm;
   const watchedClientId = watchSessionForm("clientId");
@@ -281,11 +293,11 @@ export default function SessionsPage() {
   }, [toast]);
 
   const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
-    setIsSubmittingDialog(true);
+    setIsSubmittingSheet(true);
     const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
       toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
-      setIsSubmittingDialog(false);
+      setIsSubmittingSheet(false);
       return;
     }
 
@@ -315,13 +327,13 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      setIsAddSessionDialogOpen(false);
+      setIsAddSessionSheetOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
       toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmittingDialog(false);
+      setIsSubmittingSheet(false);
     }
   };
 
@@ -339,11 +351,8 @@ export default function SessionsPage() {
   };
 
   const handleSessionClick = (session: Session) => {
-    setSelectedSession(session);
-  };
-
-  const handleBackToSessionList = () => {
-    setSelectedSession(null);
+    setSelectedSessionForDialog(session);
+    setIsSessionDetailDialogOpen(true);
   };
 
   const handleDeleteSessionRequest = (session: Session | null) => {
@@ -354,7 +363,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingDialog(true);
+    setIsSubmittingSheet(true);
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -362,8 +371,9 @@ export default function SessionsPage() {
         title: "Session Deleted",
         description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''} has been deleted.`,
       });
-      if (selectedSession && selectedSession.id === sessionToDelete.id) {
-        setSelectedSession(null);
+      if (selectedSessionForDialog && selectedSessionForDialog.id === sessionToDelete.id) {
+        setSelectedSessionForDialog(null);
+        setIsSessionDetailDialogOpen(false);
       }
     } catch (err) {
       console.error("Error deleting session from Firestore:", err);
@@ -372,7 +382,7 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingDialog(false);
+      setIsSubmittingSheet(false);
     }
   };
 
@@ -382,11 +392,6 @@ export default function SessionsPage() {
       description: `Edit session for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : ''}" (Feature not fully implemented).`,
     });
   };
-
-
-  if (selectedSession && !isAddSessionDialogOpen && !isSessionDeleteDialogOpen) {
-    return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} onEdit={handleEditSession} />;
-  }
 
   const groupedSessions = groupSessionsByMonth(sessions);
   const sortedMonthKeys = Object.keys(groupedSessions).sort((a, b) => {
@@ -401,13 +406,12 @@ export default function SessionsPage() {
     }
   });
 
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
-        <Dialog open={isAddSessionDialogOpen} onOpenChange={(isOpen) => {
-          setIsAddSessionDialogOpen(isOpen);
+        <Sheet open={isAddSessionSheetOpen} onOpenChange={(isOpen) => {
+          setIsAddSessionSheetOpen(isOpen);
           if (isOpen) {
             addSessionForm.reset({
               clientId: '',
@@ -418,29 +422,28 @@ export default function SessionsPage() {
             });
           }
         }}>
-          <DialogTrigger asChild>
+          <SheetTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Session
+              New Session
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Session</DialogTitle>
-              <DialogDescription>
+          </SheetTrigger>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>New Session</SheetTitle>
+              <SheetDescription>
                 Schedule a new training session.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
-                  <div className="col-span-3">
-                    <Controller
+              </SheetDescription>
+            </SheetHeader>
+            <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="clientId-sessionpage">Client</Label>
+                  <Controller
                       name="clientId"
                       control={addSessionForm.control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingDialog || isLoading}>
-                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoading}>
+                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
                           <SelectContent>
@@ -457,82 +460,74 @@ export default function SessionsPage() {
                       )}
                     />
                     {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
-                  </div>
                 </div>
 
-               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="date-sessionpage" className="text-right col-span-1 pt-2 self-start">Date</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="date"
-                    control={addSessionForm.control}
-                    render={({ field }) => (
-                      <ShadCalendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        disabled={isSubmittingDialog}
-                        id="date-sessionpage"
-                        className={cn("!p-1 rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
-                      />
-                    )}
-                  />
-                  {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
-                </div>
+               <div>
+                <Label htmlFor="date-sessionpage" className="block mb-1">Date</Label>
+                <Controller
+                  name="date"
+                  control={addSessionForm.control}
+                  render={({ field }) => (
+                    <ShadCalendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
+                      disabled={isSubmittingSheet}
+                      id="date-sessionpage"
+                      className={cn("!p-1 rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                    />
+                  )}
+                />
+                {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="time"
-                    control={addSessionForm.control}
-                    render={({ field }) => (
-                      <Input
-                        id="time-sessionpage"
-                        type="time"
-                        {...field}
-                        className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
-                        disabled={isSubmittingDialog}
-                      />
-                    )}
-                  />
-                  {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="time-sessionpage">Time (24h)</Label>
+                <Controller
+                  name="time"
+                  control={addSessionForm.control}
+                  render={({ field }) => (
+                    <Input
+                      id="time-sessionpage"
+                      type="time"
+                      {...field}
+                      className={cn("w-full mt-1", addSessionForm.formState.errors.time ? "border-destructive" : "")}
+                      disabled={isSubmittingSheet}
+                    />
+                  )}
+                />
+                {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
-                <div className="col-span-3">
-                  <Controller
-                    name="sessionType"
-                    control={addSessionForm.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingDialog}>
-                        <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
-                          <SelectValue placeholder="Select session type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Session Types</SelectLabel>
-                            {sessionTypeOptions.map(type => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
-                </div>
+              <div>
+                <Label htmlFor="sessionType-sessionpage">Type</Label>
+                <Controller
+                  name="sessionType"
+                  control={addSessionForm.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
+                        <SelectValue placeholder="Select session type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Session Types</SelectLabel>
+                          {sessionTypeOptions.map(type => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount-sessionpage" className="text-right">Amount (£)</Label>
-                <div className="col-span-3">
+              <div>
+                <Label htmlFor="amount-sessionpage">Amount (£)</Label>
                 <Controller name="amount" control={addSessionForm.control}
                     render={({ field }) => (
                     <Input 
@@ -543,28 +538,26 @@ export default function SessionsPage() {
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                        className={cn("w-full", addSessionForm.formState.errors.amount && "border-destructive")}
-                        disabled={isSubmittingDialog} 
+                        className={cn("w-full mt-1", addSessionForm.formState.errors.amount && "border-destructive")}
+                        disabled={isSubmittingSheet} 
                     />
                     )}
                 />
                 {addSessionForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.amount.message}</p>}
-                </div>
               </div>
 
-
-              <DialogFooter className="mt-4">
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" disabled={isSubmittingDialog}>Cancel</Button>
-                </DialogClose>
-                <Button type="submit" disabled={isSubmittingDialog}>
-                  {isSubmittingDialog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <SheetFooter className="mt-4">
+                <SheetClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button>
+                </SheetClose>
+                <Button type="submit" disabled={isSubmittingSheet}>
+                  {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Session
                 </Button>
-              </DialogFooter>
+              </SheetFooter>
             </form>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {isLoading && (
@@ -676,6 +669,16 @@ export default function SessionsPage() {
         </Accordion>
       )}
 
+      {selectedSessionForDialog && (
+        <SessionDetailDialog
+            session={selectedSessionForDialog}
+            isOpen={isSessionDetailDialogOpen}
+            onOpenChange={setIsSessionDetailDialogOpen}
+            onDelete={handleDeleteSessionRequest}
+            onEdit={handleEditSession}
+        />
+      )}
+
       <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -686,9 +689,9 @@ export default function SessionsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingDialog}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingDialog}>
-              {isSubmittingDialog && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
+              {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -697,3 +700,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+
