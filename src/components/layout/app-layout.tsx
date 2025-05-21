@@ -11,13 +11,14 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarTrigger, // Ensure SidebarTrigger is imported if used in header
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
-import { Settings, LogOut, Loader2 } from 'lucide-react';
+import { Settings, LogOut, Loader2, PanelLeft } from 'lucide-react'; // Added PanelLeft for header
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileBottomNav } from '@/components/navigation/mobile-bottom-nav';
+// Removed import for MobileBottomNav as it's being deleted
 import { useAuth } from '@/contexts/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -76,13 +77,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // If on a path that should never show the sidebar (like login, or the public forms)
-  // or if user is not logged in and it's a public path, render children directly.
   if (hideSidebarForCurrentPath || (!user && publicPaths.includes(pathname))) {
     return (
       <main className={cn(
         useSpecialBackground ? "bg-[#4f6749]" : "bg-background",
-        // Ensure public form pages also get min-h-screen if they are the direct children
         (pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire') && "min-h-screen"
       )}>
         {children}
@@ -90,14 +88,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
   
-  // If user is logged in and it's not a noSidebarPath, render with layout
   if (user) {
     return (
       <SidebarProvider defaultOpen={false}>
-        {mounted && !isMobile && (
+        {mounted && !isMobile && !hideSidebarForCurrentPath && (
           <Sidebar variant="sidebar" collapsible="icon" side="left">
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-              {/* Removed Image logo from here */}
+              {/* Logo image removed previously */}
             </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarNav />
@@ -120,33 +117,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
 
         <SidebarInset>
-          {/* Header removed as per previous request */}
+           {/* Header with mobile trigger can be added here if needed for non-noSidebarPaths on mobile */}
+           {mounted && isMobile && !hideSidebarForCurrentPath && (
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+              <SidebarTrigger className="md:hidden" /> {/* Ensure SidebarTrigger is from ui/sidebar */}
+              <div className="flex-1">
+                {/* You can add a page title here if desired */}
+              </div>
+            </header>
+           )}
           <div
             className={cn(
-              "flex-1 overflow-auto", // Base class, always applied
-              // Styles applied *before* client-side mount (SSR and initial client render)
+              "flex-1 overflow-auto",
               !mounted && "bg-background p-6",
-              // Styles applied *after* client-side mount
               mounted && (
                 useSpecialBackground 
-                  ? "bg-[#4f6749]" // For special pages, green bg. Page itself handles padding.
-                  : "bg-[#fafafa] p-6" // For other pages, #fafafa bg with p-6 from layout.
+                  ? "bg-[#4f6749]"
+                  : "bg-[#fafafa] p-6"
               ),
-              // Mobile-specific padding, applied only after mount when isMobile is reliable
-              mounted && isMobile && "pb-16" 
+              // Removed mobile-specific padding: mounted && isMobile && "pb-16" 
             )}
           >
             {children}
           </div>
         </SidebarInset>
 
-        {mounted && isMobile && <MobileBottomNav />}
+        {/* MobileBottomNav component rendering removed */}
       </SidebarProvider>
     );
   }
 
-  // Fallback for unhandled cases (e.g., public path but user is somehow undefined after loading)
-  // This also covers the case where user is null and it's a public path, but it's cleaner
-  // to handle it with the main content rendering logic directly.
   return <main className={cn(useSpecialBackground ? "bg-[#4f6749]" : "bg-background")}>{children}</main>;
 }
