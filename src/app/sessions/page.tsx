@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign, X } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign, X, PawPrint } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -31,7 +31,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -115,8 +114,8 @@ export default function SessionsPage() {
   const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
   const [isSubmittingSheet, setIsSubmittingSheet] = useState<boolean>(false);
 
-  const [selectedSessionForDialog, setSelectedSessionForDialog] = useState<Session | null>(null);
-  const [isSessionDetailDialogOpen, setIsSessionDetailDialogOpen] = useState(false);
+  const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
+  const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
 
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
@@ -139,17 +138,18 @@ export default function SessionsPage() {
   const watchedClientId = watchSessionForm("clientId");
   const watchedSessionType = watchSessionForm("sessionType");
 
-  useEffect(() => {
+ useEffect(() => {
     if (isAddSessionSheetOpen) {
       resetAddSessionForm({
         clientId: '',
-        date: new Date(),
-        time: format(new Date(), "HH:mm"),
+        date: new Date(), // Initialize with current date
+        time: format(new Date(), "HH:mm"), // Initialize with current time in 24-hour format
         sessionType: '',
         amount: undefined,
       });
     }
   }, [isAddSessionSheetOpen, resetAddSessionForm]);
+
 
   useEffect(() => {
     if (watchedClientId && watchedSessionType && clients.length > 0) {
@@ -290,8 +290,8 @@ export default function SessionsPage() {
   };
 
   const handleSessionClick = (session: Session) => {
-    setSelectedSessionForDialog(session);
-    setIsSessionDetailDialogOpen(true);
+    setSelectedSessionForSheet(session);
+    setIsSessionDetailSheetOpen(true);
   };
 
   const handleDeleteSessionRequest = (session: Session | null) => {
@@ -302,7 +302,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true); // Use this for dialog submission too
+    setIsSubmittingSheet(true); 
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -310,9 +310,9 @@ export default function SessionsPage() {
         title: "Session Deleted",
         description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''} has been deleted.`,
       });
-      if (selectedSessionForDialog && selectedSessionForDialog.id === sessionToDelete.id) {
-        setSelectedSessionForDialog(null);
-        setIsSessionDetailDialogOpen(false);
+      if (selectedSessionForSheet && selectedSessionForSheet.id === sessionToDelete.id) {
+        setSelectedSessionForSheet(null);
+        setIsSessionDetailSheetOpen(false);
       }
     } catch (err) {
       console.error("Error deleting session from Firestore:", err);
@@ -321,7 +321,7 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingSheet(false); // Reset indicator
+      setIsSubmittingSheet(false); 
     }
   };
 
@@ -392,7 +392,7 @@ export default function SessionsPage() {
 
                <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="date-sessionpage" className="text-right pt-2 col-span-1">Date</Label>
-                <div className={cn("col-span-3 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                 <div className={cn("col-span-3 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                 <Controller
                   name="date"
                   control={addSessionFormControl}
@@ -405,7 +405,7 @@ export default function SessionsPage() {
                       disabled={isSubmittingSheet}
                       id="date-sessionpage"
                       className={cn("!p-1 rounded-md border", addSessionFormErrors.date && "border-destructive")}
-                      classNames={{ 
+                       classNames={{ 
                         day_selected: "bg-primary text-white focus:bg-primary focus:text-white", 
                         day: cn( "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white" )
                       }}
@@ -552,22 +552,26 @@ export default function SessionsPage() {
                               />
                             <div>
                                <h3 className="font-semibold text-sm">{displayName}</h3>
-                                <p className="text-xs text-muted-foreground mt-0">
+                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                   <span className="flex items-center">
                                     <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                     {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                   </span>
-                                  <span className="flex items-center mt-0.5">
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="flex items-center">
                                     <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                     {session.time}
-                                     {session.amount !== undefined && (
-                                        <span className="flex items-center ml-2">
-                                            <DollarSign className="inline-block mr-1 h-3.5 w-3.5" />
-                                            {session.amount.toFixed(2)}
-                                        </span>
-                                    )}
                                   </span>
-                                </p>
+                                  {session.amount !== undefined && (
+                                    <>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="flex items-center">
+                                          <DollarSign className="inline-block mr-1 h-3.5 w-3.5" />
+                                          £{session.amount.toFixed(2)}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -613,34 +617,34 @@ export default function SessionsPage() {
         </Accordion>
       )}
 
-      {selectedSessionForDialog && (
-         <Dialog open={isSessionDetailDialogOpen} onOpenChange={(isOpen) => {setIsSessionDetailDialogOpen(isOpen); if(!isOpen) setSelectedSessionForDialog(null);}}>
-          <DialogContent className="sm:max-w-lg bg-card">
-            <DialogHeader>
-                <DialogTitle className="text-xl">Session Details</DialogTitle>
-                <DialogDescription>
-                    {formatFullNameAndDogName(selectedSessionForDialog.clientName, selectedSessionForDialog.dogName)}
-                </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] pr-3">
+      {selectedSessionForSheet && (
+         <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => {setIsSessionDetailSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
+          <SheetContent className="sm:max-w-lg bg-card">
+            <SheetHeader>
+                <SheetTitle className="text-xl">Session Details</SheetTitle>
+                <SheetDescription>
+                    {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
+                </SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="max-h-[calc(100vh-220px)] pr-3">
                 <div className="py-4 space-y-3">
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Date:</Label><div className="col-span-2 text-sm">{isValid(parseISO(selectedSessionForDialog.date)) ? format(parseISO(selectedSessionForDialog.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Time:</Label><div className="col-span-2 text-sm">{selectedSessionForDialog.time}</div></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Client:</Label><div className="col-span-2 text-sm">{selectedSessionForDialog.clientName}</div></div>
-                    {selectedSessionForDialog.dogName && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog:</Label><div className="col-span-2 text-sm">{selectedSessionForDialog.dogName}</div></div>}
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Type:</Label><div className="col-span-2 text-sm flex items-center"><TagIcon className="mr-2 h-4 w-4 text-muted-foreground" />{selectedSessionForDialog.sessionType}</div></div>
-                    {selectedSessionForDialog.amount !== undefined && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Amount:</Label><div className="col-span-2 text-sm flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />£{selectedSessionForDialog.amount.toFixed(2)}</div></div>}
-                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label><div className="col-span-2"><Badge variant={selectedSessionForDialog.status === 'Scheduled' ? 'default' : selectedSessionForDialog.status === 'Completed' ? 'secondary' : 'outline'}>{selectedSessionForDialog.status}</Badge></div></div>
-                    {selectedSessionForDialog.notes && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label><div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{selectedSessionForDialog.notes}</div></div>}
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Date:</Label><div className="col-span-2 text-sm">{isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Time:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.time}</div></div>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Client:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.clientName}</div></div>
+                    {selectedSessionForSheet.dogName && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.dogName}</div></div>}
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Type:</Label><div className="col-span-2 text-sm flex items-center"><TagIcon className="mr-2 h-4 w-4 text-muted-foreground" />{selectedSessionForSheet.sessionType}</div></div>
+                    {selectedSessionForSheet.amount !== undefined && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Amount:</Label><div className="col-span-2 text-sm flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />£{selectedSessionForSheet.amount.toFixed(2)}</div></div>}
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label><div className="col-span-2"><Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'}>{selectedSessionForSheet.status}</Badge></div></div>
+                    {selectedSessionForSheet.notes && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label><div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{selectedSessionForSheet.notes}</div></div>}
                 </div>
             </ScrollArea>
-            <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                <Button variant="outline" onClick={() => handleEditSession(selectedSessionForDialog)} className="flex-1 sm:flex-none"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
-                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForDialog)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>{isSubmittingSheet && sessionToDelete?.id === selectedSessionForDialog.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Delete</Button>
-                <DialogClose asChild><Button variant="outline" className="flex-1 sm:flex-none">Close</Button></DialogClose>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <SheetFooter className="pt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+                <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1 sm:flex-none"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
+                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>{isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Delete</Button>
+                <SheetClose asChild><Button variant="outline" className="flex-1 sm:flex-none">Close</Button></SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       )}
 
       <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
@@ -664,4 +668,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
