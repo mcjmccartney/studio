@@ -10,9 +10,8 @@ import {
   getClients
 } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
-import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, DollarSign } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign, X } from 'lucide-react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -105,15 +104,21 @@ interface GroupedSessions {
   [monthYear: string]: Session[];
 }
 
-interface SessionDetailDialogProps {
-  session: Session;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDelete: (session: Session) => void;
+function SessionDetailDialog({ 
+  session, 
+  isOpen, 
+  onOpenChange, 
+  onDelete, 
+  onEdit,
+  isSubmittingSheet 
+}: { 
+  session: Session; 
+  isOpen: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  onDelete: (session: Session) => void; 
   onEdit: (session: Session) => void;
-}
-
-function SessionDetailDialog({ session, isOpen, onOpenChange, onDelete, onEdit }: SessionDetailDialogProps) {
+  isSubmittingSheet: boolean;
+}) {
   const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
      <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -146,12 +151,18 @@ function SessionDetailDialog({ session, isOpen, onOpenChange, onDelete, onEdit }
             )}
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
               <Label className="text-right font-semibold col-span-1">Type:</Label>
-              <div className="col-span-2 text-sm">{session.sessionType}</div>
+              <div className="col-span-2 text-sm flex items-center">
+                <TagIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                {session.sessionType}
+              </div>
             </div>
             {session.amount !== undefined && (
               <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                 <Label className="text-right font-semibold col-span-1">Amount:</Label>
-                <div className="col-span-2 text-sm">£{session.amount.toFixed(2)}</div>
+                <div className="col-span-2 text-sm flex items-center">
+                  <DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />
+                  £{session.amount.toFixed(2)}
+                </div>
               </div>
             )}
             <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
@@ -174,8 +185,9 @@ function SessionDetailDialog({ session, isOpen, onOpenChange, onDelete, onEdit }
           <Button variant="outline" onClick={() => onEdit(session)} className="flex-1 sm:flex-none">
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
-          <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none">
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
+          <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>
+            {isSubmittingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            Delete
           </Button>
           <DialogClose asChild>
              <Button variant="outline" className="flex-1 sm:flex-none">Close</Button>
@@ -226,7 +238,7 @@ export default function SessionsPage() {
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
 
-  const { watch: watchSessionForm, setValue: setSessionValue } = addSessionForm;
+  const { watch: watchSessionForm, setValue: setSessionValue, control: addSessionFormControl } = addSessionForm;
   const watchedClientId = watchSessionForm("clientId");
   const watchedSessionType = watchSessionForm("sessionType");
 
@@ -441,7 +453,7 @@ export default function SessionsPage() {
                   <Label htmlFor="clientId-sessionpage">Client</Label>
                   <Controller
                       name="clientId"
-                      control={addSessionForm.control}
+                      control={addSessionFormControl}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoading}>
                           <SelectTrigger id="clientId-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
@@ -468,7 +480,7 @@ export default function SessionsPage() {
                 <div className="mt-1 flex justify-center">
                 <Controller
                   name="date"
-                  control={addSessionForm.control}
+                  control={addSessionFormControl}
                   render={({ field }) => (
                     <ShadCalendar
                       mode="single"
@@ -479,9 +491,9 @@ export default function SessionsPage() {
                       id="date-sessionpage"
                       className={cn("!p-1 rounded-md border", addSessionForm.formState.errors.date ? "border-destructive" : "")}
                       classNames={{
-                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                        day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                         day: cn(
-                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white"
+                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground"
                         )
                       }}
                     />
@@ -495,7 +507,7 @@ export default function SessionsPage() {
                 <Label htmlFor="time-sessionpage">Time (24h)</Label>
                 <Controller
                   name="time"
-                  control={addSessionForm.control}
+                  control={addSessionFormControl}
                   render={({ field }) => (
                     <Input
                       id="time-sessionpage"
@@ -510,10 +522,10 @@ export default function SessionsPage() {
               </div>
 
               <div>
-                <Label htmlFor="sessionType-sessionpage">Type</Label>
+                <Label htmlFor="sessionType-sessionpage">Session Type</Label>
                 <Controller
                   name="sessionType"
-                  control={addSessionForm.control}
+                  control={addSessionFormControl}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
                       <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
@@ -537,7 +549,7 @@ export default function SessionsPage() {
 
               <div>
                 <Label htmlFor="amount-sessionpage">Amount (£)</Label>
-                <Controller name="amount" control={addSessionForm.control}
+                <Controller name="amount" control={addSessionFormControl}
                     render={({ field }) => (
                     <Input 
                         id="amount-sessionpage" 
@@ -591,8 +603,8 @@ export default function SessionsPage() {
               <AccordionTrigger className="text-lg hover:no-underline px-4 py-3 font-semibold">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
-              <AccordionContent className="px-0"> {/* Changed px-4 to px-0 */}
-                <ul className="space-y-0 pt-0 pb-0"> {/* Changed pt-2 pb-3 to pt-0 pb-0 and space-y-3 to space-y-0 */}
+              <AccordionContent className="px-0"> 
+                <ul className="space-y-0 pt-0 pb-0"> 
                   {groupedSessions[monthYear]
                     .sort((a, b) => {
                         const dateA = parseISO(a.date);
@@ -607,30 +619,33 @@ export default function SessionsPage() {
                             return timeA.getTime() - timeB.getTime();
                         } catch { return 0; }
                     })
-                    .map(session => (
+                    .map(session => {
+                      const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
+                      return (
                       <li
                         key={session.id}
-                        className="bg-card hover:bg-muted/50 transition-colors border-b last:border-b-0" // Added bg-card, border-b, last:border-b-0
+                        className="bg-card hover:bg-muted/50 transition-colors border-b last:border-b-0" 
                       >
-                        <div className="flex justify-between items-center p-4"> {/* Added p-4 here */}
-                          <div className="flex items-center gap-4 flex-grow cursor-pointer" onClick={() => handleSessionClick(session)}> {/* Added flex items-center gap-4 */}
+                        <div className="flex justify-between items-center py-2 px-4"> 
+                          <div className="flex items-center gap-3 flex-grow cursor-pointer" onClick={() => handleSessionClick(session)}> 
                              <Image
                                 src="https://iili.io/34300ox.md.jpg"
                                 alt="RMR Logo"
-                                width={40}
-                                height={40}
+                                width={32} 
+                                height={32}
                                 className="rounded-md"
                                 data-ai-hint="company logo"
                               />
                             <div>
-                               <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
-                                <p className="text-sm text-muted-foreground mt-0.5">
+                               <h3 className="font-semibold text-base">{displayName}</h3>
+                                <p className="text-xs text-muted-foreground">
                                   {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                   , {session.time} • {session.sessionType}
                                 </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                             {/* Badge removed from here */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -661,7 +676,8 @@ export default function SessionsPage() {
                           </div>
                         </div>
                       </li>
-                    ))}
+                    );
+                    })}
                 </ul>
               </AccordionContent>
             </AccordionItem>
@@ -676,6 +692,7 @@ export default function SessionsPage() {
             onOpenChange={setIsSessionDetailDialogOpen}
             onDelete={handleDeleteSessionRequest}
             onEdit={handleEditSession}
+            isSubmittingSheet={isSubmittingSheet}
         />
       )}
 
@@ -700,4 +717,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
