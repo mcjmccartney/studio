@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address, InternalClientFormValues } from '@/lib/types';
+import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, BadgeCheck, SquareCheck, Eye, Filter, Search } from 'lucide-react';
 import Image from 'next/image';
@@ -64,18 +64,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
 
-
+// Schema for the internal "Add New Client" / "Edit Client" form
 const internalClientFormSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First name is required." }),
   ownerLastName: z.string().min(1, { message: "Last name is required." }),
+  dogName: z.string().optional(),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
   postcode: z.string().min(3, { message: "Postcode is required." }),
-  dogName: z.string().optional(),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  submissionDate: z.string().optional(), 
+  submissionDate: z.string().optional(), // Added for consistency, populated automatically
 });
+type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
+
 
 type MemberFilterType = 'all' | 'members' | 'nonMembers';
 
@@ -116,10 +118,10 @@ export default function ClientsPage() {
      defaultValues: {
       ownerFirstName: '',
       ownerLastName: '',
+      dogName: '',
       contactEmail: '',
       contactNumber: '',
       postcode: '',
-      dogName: '',
       isMember: false,
       isActive: true, 
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
@@ -131,10 +133,10 @@ export default function ClientsPage() {
     defaultValues: {
       ownerFirstName: '',
       ownerLastName: '',
+      dogName: '',
       contactEmail: '',
       contactNumber: '',
       postcode: '',
-      dogName: '',
       isMember: false,
       isActive: true,
     }
@@ -191,13 +193,13 @@ export default function ClientsPage() {
       editClientForm.reset({
         ownerFirstName: clientToEdit.ownerFirstName,
         ownerLastName: clientToEdit.ownerLastName,
+        dogName: clientToEdit.dogName || '',
         contactEmail: clientToEdit.contactEmail,
         contactNumber: clientToEdit.contactNumber,
         postcode: clientToEdit.postcode,
-        dogName: clientToEdit.dogName || '',
         isMember: clientToEdit.isMember || false,
         isActive: clientToEdit.isActive === undefined ? true : clientToEdit.isActive,
-        submissionDate: clientToEdit.submissionDate,
+        submissionDate: clientToEdit.submissionDate, // Keep existing submissionDate
       });
     }
   }, [clientToEdit, editClientForm]);
@@ -209,16 +211,17 @@ export default function ClientsPage() {
     }
     setIsSubmittingForm(true);
     try {
+      // Prepare client data for Firestore, ensuring all relevant fields are included
       const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
         contactNumber: data.contactNumber,
         postcode: data.postcode,
-        dogName: data.dogName || undefined,
+        dogName: data.dogName || undefined, // Ensure it's undefined if empty
         isMember: data.isMember || false,
         isActive: data.isActive === undefined ? true : data.isActive,
-        submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"), // Use form's date or new one
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => {
@@ -230,7 +233,7 @@ export default function ClientsPage() {
         }));
       const ownerFullName = `${newClient.ownerFirstName} ${newClient.ownerLastName}`.trim();
       toast({ title: "Client Added", description: `${formatFullNameAndDogName(ownerFullName, newClient.dogName)} has been successfully added.` });
-      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', dogName: '', contactEmail: '', contactNumber: '', postcode: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientSheetOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
@@ -258,14 +261,15 @@ export default function ClientsPage() {
         dogName: data.dogName || undefined,
         isMember: data.isMember || false,
         isActive: data.isActive === undefined ? true : data.isActive,
+        // address and howHeardAboutServices are not part of this form, so they are not updated here
       };
       await updateClientInFirestore(clientToEdit.id, updatedData);
 
       const updatedClients = clients.map(c =>
         c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName, isActive: updatedData.isActive === undefined ? c.isActive : updatedData.isActive } : c
       ).sort((a, b) => {
-          const nameA = `${a.ownerFirstName} ${a.ownerLastName}`.toLowerCase();
-          const nameB = `${b.ownerFirstName} ${b.ownerLastName}`.toLowerCase();
+          const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
+          const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
           if (nameA < nameB) return -1;
           if (nameA > nameB) return 1;
           return 0;
@@ -325,7 +329,7 @@ export default function ClientsPage() {
 
   const openViewSheet = (client: Client) => {
     setClientForViewSheet(client);
-    setSheetViewMode('clientInfo'); // Reset to client info view
+    setSheetViewMode('clientInfo'); 
     setIsViewSheetOpen(true);
     
     const sessionsForThisClient = allSessions.filter(session => session.clientId === client.id)
@@ -420,7 +424,6 @@ export default function ClientsPage() {
                 </SheetDescription>
               </SheetHeader>
               <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="space-y-4 py-4">
-                {/* Form fields - label above input */}
                 <div>
                   <Label htmlFor="add-ownerFirstName">First Name</Label>
                   <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
@@ -587,8 +590,7 @@ export default function ClientsPage() {
           </SheetHeader>
           {clientToEdit && (
             <ScrollArea className="max-h-[calc(100vh-150px)] pr-3 mt-4"> 
-            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-6 py-4">
-              {/* Form fields - label on left, input on right */}
+            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-ownerFirstName" className="text-right">First Name</Label>
                 <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("col-span-3", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
@@ -696,12 +698,10 @@ export default function ClientsPage() {
                         )}
                         {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
                     </SheetTitle>
-                    <SheetDescription>
-                        <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-1">
-                            <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
-                            {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
-                        </Badge>
-                    </SheetDescription>
+                    <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
+                        <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
+                        {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
+                    </Badge>
                 </SheetHeader>
                 <ScrollArea className="max-h-[calc(100vh-250px)] pr-3 mt-2">
                     <div className="py-4 space-y-3">
