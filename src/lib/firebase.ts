@@ -75,7 +75,7 @@ export interface BehaviourQuestionnaireFormValues {
   rescueBackground?: string;
   dogAgeWhenAcquired?: string;
   dietDetails?: string;
-  foodMotivationLevel?: string;
+  foodMotivationLevel?: string; 
   mealtimeRoutine?: string;
   treatRoutine?: string;
   externalTreatsConsent?: string;
@@ -134,9 +134,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
       nextSession: client.nextSession || 'Not Scheduled',
       isMember: client.isMember === undefined ? false : client.isMember,
       isActive: client.isActive === undefined ? true : client.isActive,
-      dogName: client.dogName || null, 
-      address: client.address || null, 
-      howHeardAboutServices: client.howHeardAboutServices || null, 
+      dogName: client.dogName === undefined ? null : client.dogName, 
+      address: client.address === undefined ? null : client.address, 
+      howHeardAboutServices: client.howHeardAboutServices === undefined ? null : client.howHeardAboutServices, 
     };
     if (behaviouralBriefId) dataToSave.behaviouralBriefId = behaviouralBriefId;
     if (behaviourQuestionnaireId) dataToSave.behaviourQuestionnaireId = behaviourQuestionnaireId;
@@ -166,13 +166,13 @@ const clientConverter: FirestoreDataConverter<Client> = {
       contactEmail: data.contactEmail || '',
       contactNumber: data.contactNumber || '',
       postcode: data.postcode || (data.address ? data.address.postcode : ''), 
-      address: data.address || undefined,
-      howHeardAboutServices: data.howHeardAboutServices || undefined,
-      dogName: data.dogName || undefined,
+      address: data.address === null ? undefined : data.address,
+      howHeardAboutServices: data.howHeardAboutServices === null ? undefined : data.howHeardAboutServices,
+      dogName: data.dogName === null ? undefined : data.dogName,
       isMember: data.isMember === undefined ? false : data.isMember,
       isActive: data.isActive === undefined ? true : data.isActive,
-      behaviouralBriefId: data.behaviouralBriefId || undefined,
-      behaviourQuestionnaireId: data.behaviourQuestionnaireId || undefined,
+      behaviouralBriefId: data.behaviouralBriefId === null ? undefined : data.behaviouralBriefId,
+      behaviourQuestionnaireId: data.behaviourQuestionnaireId === null ? undefined : data.behaviourQuestionnaireId,
       submissionDate: data.submissionDate || '',
       lastSession: data.lastSession || 'N/A',
       nextSession: data.nextSession || 'Not Scheduled',
@@ -295,8 +295,8 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       ...session,
       sessionType: session.sessionType || 'Unknown',
       createdAt: session.createdAt instanceof Date || session.createdAt instanceof Timestamp ? session.createdAt : serverTimestamp(),
-      notes: session.notes || null,
-      cost: session.cost === undefined ? null : session.cost,
+      notes: session.notes === undefined ? null : session.notes,
+      amount: session.amount === undefined ? null : session.amount, // Changed from cost to amount
     };
     if (session.dogName === undefined) dataToSave.dogName = null;
     return dataToSave;
@@ -312,7 +312,7 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       time: data.time, 
       status: data.status,
       sessionType: data.sessionType || 'Unknown',
-      cost: data.cost === null ? undefined : data.cost,
+      amount: data.amount === null ? undefined : data.amount, // Changed from cost to amount
       notes: data.notes === null ? undefined : data.notes,
       createdAt: data.createdAt, 
     } as Session;
@@ -505,7 +505,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             city: formData.city,
             country: formData.country,
         };
-        updates.postcode = formData.postcode;
+        updates.postcode = formData.postcode; // Also update the top-level postcode
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
@@ -513,6 +513,18 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     if (formData.dogName && (!clientDataForReturn.dogName || clientDataForReturn.dogName !== formData.dogName)) { 
         updates.dogName = formData.dogName;
     }
+    // Update owner names if they are different - helps keep client record primary
+    if (formData.ownerFirstName && clientDataForReturn.ownerFirstName !== formData.ownerFirstName) {
+        updates.ownerFirstName = formData.ownerFirstName;
+    }
+    if (formData.ownerLastName && clientDataForReturn.ownerLastName !== formData.ownerLastName) {
+        updates.ownerLastName = formData.ownerLastName;
+    }
+    if (formData.contactNumber && clientDataForReturn.contactNumber !== formData.contactNumber) {
+        updates.contactNumber = formData.contactNumber;
+    }
+
+
     if (Object.keys(updates).length > 0) {
         await updateDoc(doc(clientsCollectionRef, targetClientId), updates);
         clientDataForReturn = { ...clientDataForReturn, ...updates };
@@ -675,14 +687,14 @@ export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'c
     ...sessionData,
     createdAt: serverTimestamp() as Timestamp,
   };
-  if (sessionData.cost === undefined) {
-    dataToSave.cost = null; // Store undefined cost as null
+  if (sessionData.amount === undefined) { // Changed from cost to amount
+    dataToSave.amount = null; 
   }
   if (sessionData.dogName === undefined) {
-    dataToSave.dogName = null; // Store undefined dogName as null
+    dataToSave.dogName = null;
   }
   if (sessionData.notes === undefined) {
-    dataToSave.notes = null; // Store undefined notes as null
+    dataToSave.notes = null; 
   }
 
   const docRef = await addDoc(sessionsCollectionRef, dataToSave);

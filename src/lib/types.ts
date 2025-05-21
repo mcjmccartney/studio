@@ -10,14 +10,12 @@ export interface Client {
   ownerLastName: string;
   contactEmail: string;
   contactNumber: string;
-  postcode: string; 
-
+  postcode: string;
   address?: {
     addressLine1: string;
     addressLine2?: string;
     city: string;
     country: string;
-    // Postcode is implicitly part of address if address is filled
   };
   howHeardAboutServices?: string;
 
@@ -135,7 +133,7 @@ export interface Session {
   time: string; // Should be in 'HH:MM' (24-hour) format
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   sessionType: string;
-  cost?: number; // Added cost field
+  amount?: number; // Changed from cost to amount
   notes?: string;
   createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }
