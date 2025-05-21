@@ -409,7 +409,7 @@ export default function SessionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Sessions</h1>
         <Sheet open={isAddSessionSheetOpen} onOpenChange={(isOpen) => {
           setIsAddSessionSheetOpen(isOpen);
           if (isOpen) {
@@ -436,14 +436,15 @@ export default function SessionsPage() {
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="clientId-sessionpage">Client</Label>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
+                  <div className="col-span-3">
                   <Controller
                       name="clientId"
                       control={addSessionForm.control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoading}>
-                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
+                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
                           <SelectContent>
@@ -460,10 +461,12 @@ export default function SessionsPage() {
                       )}
                     />
                     {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
+                    </div>
                 </div>
 
-               <div>
-                <Label htmlFor="date-sessionpage" className="block mb-1">Date</Label>
+               <div className="grid grid-cols-4 items-start gap-4"> {/* Changed to items-start for calendar alignment */}
+                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label> {/* Added pt-2 for alignment */}
+                <div className="col-span-3 flex justify-center"> {/* Added flex justify-center */}
                 <Controller
                   name="date"
                   control={addSessionForm.control}
@@ -475,15 +478,23 @@ export default function SessionsPage() {
                       initialFocus
                       disabled={isSubmittingSheet}
                       id="date-sessionpage"
-                      className={cn("!p-1 rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                      className={cn("!p-1 rounded-md border", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                      classNames={{
+                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                        day: cn(
+                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white"
+                        )
+                      }}
                     />
                   )}
                 />
                 {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="time-sessionpage">Time (24h)</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
+                <div className="col-span-3">
                 <Controller
                   name="time"
                   control={addSessionForm.control}
@@ -492,22 +503,24 @@ export default function SessionsPage() {
                       id="time-sessionpage"
                       type="time"
                       {...field}
-                      className={cn("w-full mt-1", addSessionForm.formState.errors.time ? "border-destructive" : "")}
+                      className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
                       disabled={isSubmittingSheet}
                     />
                   )}
                 />
                 {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="sessionType-sessionpage">Type</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
+                <div className="col-span-3">
                 <Controller
                   name="sessionType"
                   control={addSessionForm.control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
-                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
                         <SelectValue placeholder="Select session type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -524,10 +537,12 @@ export default function SessionsPage() {
                   )}
                 />
                 {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="amount-sessionpage">Amount (£)</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount-sessionpage" className="text-right">Amount (£)</Label>
+                <div className="col-span-3">
                 <Controller name="amount" control={addSessionForm.control}
                     render={({ field }) => (
                     <Input 
@@ -538,12 +553,13 @@ export default function SessionsPage() {
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                        className={cn("w-full mt-1", addSessionForm.formState.errors.amount && "border-destructive")}
+                        className={cn("w-full", addSessionForm.formState.errors.amount && "border-destructive")}
                         disabled={isSubmittingSheet} 
                     />
                     )}
                 />
                 {addSessionForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.amount.message}</p>}
+                </div>
               </div>
 
               <SheetFooter className="mt-4">
