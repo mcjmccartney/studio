@@ -74,6 +74,7 @@ import { z } from 'zod';
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 
 const sessionFormSchema = z.object({
@@ -110,7 +111,7 @@ function SessionDetailDialog({
   onOpenChange, 
   onDelete, 
   onEdit,
-  isSubmittingSheet // Keep this prop even if it's not used for now, for consistency
+  isSubmittingSheet
 }: { 
   session: Session; 
   isOpen: boolean; 
@@ -186,7 +187,7 @@ function SessionDetailDialog({
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
           <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>
-            {isSubmittingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            {isSubmittingSheet && session.id === (sessionToDelete as Session | null)?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
             Delete
           </Button>
           <DialogClose asChild>
@@ -284,7 +285,15 @@ export default function SessionsPage() {
             if (!isValid(dateA) && !isValid(dateB)) return 0;
             if (!isValid(dateA)) return 1;
             if (!isValid(dateB)) return -1;
-            return dateB.getTime() - dateA.getTime();
+
+            const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+            const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+
+            if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+            if (!isValid(dateTimeA)) return 1;
+            if (!isValid(dateTimeB)) return -1;
+
+            return dateTimeB.getTime() - dateTimeA.getTime();
         }));
         setClients(firestoreClients.sort((a, b) => {
           const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
@@ -333,7 +342,13 @@ export default function SessionsPage() {
         if (!isValid(dateA) && !isValid(dateB)) return 0;
         if (!isValid(dateA)) return 1;
         if (!isValid(dateB)) return -1;
-        return dateB.getTime() - dateA.getTime();
+        const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+        const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+
+        if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+        if (!isValid(dateTimeA)) return 1;
+        if (!isValid(dateTimeB)) return -1;
+        return dateTimeB.getTime() - dateTimeA.getTime();
       }));
 
       toast({
@@ -427,7 +442,8 @@ export default function SessionsPage() {
   });
 
   useEffect(() => {
-    if (!isAddSessionSheetOpen) {
+    // Reset form when sheet opens
+    if (isAddSessionSheetOpen) {
       resetAddSessionForm({
         clientId: '',
         date: new Date(),
@@ -497,11 +513,11 @@ export default function SessionsPage() {
                       initialFocus
                       disabled={isSubmittingSheet}
                       id="date-sessionpage"
-                      className={cn("!p-1 rounded-md")}
+                      className={cn("!p-1 rounded-md border", addSessionForm.formState.errors.date && "border-destructive")}
                       classNames={{
-                        day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
                         day: cn(
-                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground"
+                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white"
                         )
                       }}
                     />
@@ -649,6 +665,7 @@ export default function SessionsPage() {
                                 <p className="text-xs text-muted-foreground">
                                   {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                   , {session.time}
+                                   {/* Removed TagIcon and session.sessionType display here */}
                                 </p>
                             </div>
                           </div>
