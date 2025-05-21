@@ -527,7 +527,7 @@ export default function ClientsPage() {
                   <div
                     key={client.id}
                     onClick={() => openViewSheet(client)}
-                    className="bg-card shadow-sm rounded-md mb-2 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
+                    className="border-b px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
                   >
                     <div className="flex items-center gap-3">
                       {client.isMember && (
@@ -541,7 +541,7 @@ export default function ClientsPage() {
                         />
                       )}
                       <div>
-                        <h3 className="text-sm">{displayName}</h3>
+                        <h3 className="text-sm font-semibold">{displayName}</h3>
                       </div>
                     </div>
                     <DropdownMenu>
@@ -684,7 +684,7 @@ export default function ClientsPage() {
             <>
             {sheetViewMode === 'clientInfo' && (
                 <>
-                <SheetHeader>
+                <SheetHeader className="text-left">
                     <SheetTitle className="text-xl">
                         {clientForViewSheet.isMember && (
                             <Image
@@ -753,11 +753,11 @@ export default function ClientsPage() {
             )}
             {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
                 <>
-                <SheetHeader className="flex flex-row justify-between items-center">
+                <SheetHeader className="flex flex-row justify-between items-center text-left">
                     <SheetTitle className="text-xl flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief</SheetTitle>
                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                 </SheetHeader>
-                <SheetDescription>
+                <SheetDescription className="text-left">
                     {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, briefForSheet.dogName)}
                 </SheetDescription>
                 <ScrollArea className="max-h-[calc(100vh-200px)] pr-3 mt-2">
@@ -776,11 +776,11 @@ export default function ClientsPage() {
             )}
             {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
                 <>
-                <SheetHeader className="flex flex-row justify-between items-center">
+                <SheetHeader className="flex flex-row justify-between items-center text-left">
                     <SheetTitle className="text-xl flex items-center"><IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire</SheetTitle>
                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                 </SheetHeader>
-                <SheetDescription>{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
+                <SheetDescription className="text-left">{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
                 <ScrollArea className="max-h-[calc(100vh-200px)] pr-3 mt-2">
                     <div className="py-4 space-y-3 text-sm">
                         <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{questionnaireForSheet.dogName} ({questionnaireForSheet.dogAge}, {questionnaireForSheet.dogSex})</div></div>
@@ -822,3 +822,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+
