@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Tag as TagIcon, ClipboardList, Clock, CalendarDays as CalendarIconLucide, Users as UsersIcon, DollarSign } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Users as UsersIcon, Tag as TagIcon, DollarSign as IconDollarSign, ClipboardList, Clock, CalendarDays as CalendarIconLucide } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import type { Session, Client } from '@/lib/types';
@@ -20,6 +20,16 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,11 +50,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid, startOfDay, isSameDay, startOfMonth, addMonths, subMonths, isToday, isFuture, compareAsc, parse, addDays, endOfDay, getDay, differenceInCalendarDays, closestTo } from 'date-fns';
-import { getClients, getSessionsFromFirestore, addSessionToFirestore, deleteSessionFromFirestore } from '@/lib/firebase';
+import { 
+  getClients, 
+  getSessionsFromFirestore, 
+  addSessionToFirestore, 
+  deleteSessionFromFirestore,
+  addClientToFirestore as fbAddClient 
+} from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -68,12 +85,32 @@ const sessionTypeOptions = [
   "Group", "Phone Call", "RMR Live", "Coaching"
 ];
 
+const internalClientFormSchema = z.object({
+  ownerFirstName: z.string().min(1, { message: "First name is required." }),
+  ownerLastName: z.string().min(1, { message: "Last name is required." }),
+  contactEmail: z.string().email({ message: "Invalid email address." }),
+  contactNumber: z.string().min(5, { message: "Contact number is required." }),
+  postcode: z.string().min(3, { message: "Postcode is required." }),
+  dogName: z.string().optional(),
+  isMember: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  submissionDate: z.string().optional(), 
+});
+type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
+
 export default function HomePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
+  
+  // State for Add Session Sheet
   const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
   const [isSubmittingSheet, setIsSubmittingSheet] = useState(false);
+
+  // State for Add Client Dialog
+  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [isSubmittingClientForm, setIsSubmittingClientForm] = useState<boolean>(false);
+
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
 
@@ -109,6 +146,20 @@ export default function HomePage() {
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
 
+  const addClientForm = useForm<InternalClientFormValues>({
+    resolver: zodResolver(internalClientFormSchema),
+     defaultValues: {
+      ownerFirstName: '',
+      ownerLastName: '',
+      contactEmail: '',
+      contactNumber: '',
+      postcode: '',
+      dogName: '',
+      isMember: false,
+      isActive: true, 
+      submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+    }
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -158,7 +209,6 @@ export default function HomePage() {
     fetchDashboardData();
   }, [toast]);
 
-
   const filteredSessionsForCalendar = useMemo(() => {
     if (!searchTerm.trim()) return sessions;
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -179,13 +229,12 @@ export default function HomePage() {
       return;
     }
 
-    const ownerFullName = `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`.trim();
     const sessionData: Omit<Session, 'id' | 'createdAt'> = {
       clientId: data.clientId,
-      clientName: ownerFullName,
+      clientName: `${selectedClient.ownerFirstName} ${selectedClient.ownerLastName}`,
       dogName: selectedClient.dogName || undefined,
       date: format(data.date, 'yyyy-MM-dd'),
-      time: data.time, // Already in HH:mm
+      time: data.time, 
       status: 'Scheduled',
       sessionType: data.sessionType,
       cost: data.cost,
@@ -216,6 +265,39 @@ export default function HomePage() {
       toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
     } finally {
       setIsSubmittingSheet(false);
+    }
+  };
+
+  const handleAddClientSubmit: SubmitHandler<InternalClientFormValues> = async (data) => {
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      toast({ title: "Firebase Not Configured", description: "Firebase project ID is missing. Cannot add client.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingClientForm(true);
+    try {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
+        ownerFirstName: data.ownerFirstName,
+        ownerLastName: data.ownerLastName,
+        contactEmail: data.contactEmail,
+        contactNumber: data.contactNumber,
+        postcode: data.postcode,
+        dogName: data.dogName || undefined,
+        isMember: data.isMember || false,
+        isActive: data.isActive === undefined ? true : data.isActive,
+        submissionDate: data.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+      };
+      const newClient = await fbAddClient(clientDataForFirestore);
+      setClients(prevClients => [...prevClients, newClient].sort((a, b) => (a.ownerLastName > b.ownerLastName) ? 1 : (a.ownerLastName === b.ownerLastName ? ((a.ownerFirstName > b.ownerFirstName) ? 1: -1) : -1)));
+      const ownerFullName = `${newClient.ownerFirstName} ${newClient.ownerLastName}`.trim();
+      toast({ title: "Client Added", description: `${formatFullNameAndDogName(ownerFullName, newClient.dogName)} has been successfully added.` });
+      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', contactEmail: '', contactNumber: '', postcode: '', dogName: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      setIsAddClientModalOpen(false);
+    } catch (err) {
+      console.error("Error adding client to Firestore:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to add client.";
+      toast({ title: "Error Adding Client", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsSubmittingClientForm(false);
     }
   };
 
@@ -270,10 +352,10 @@ export default function HomePage() {
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center">
         <div
           className={cn(
-            "absolute top-1 right-1 text-xs",
+            "text-xs w-full mb-1", 
             isToday(props.date)
               ? "text-[#92351f] font-semibold" 
               : "text-muted-foreground"
@@ -283,7 +365,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1"> 
+          <ScrollArea className="w-full flex-grow pr-1"> 
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -311,12 +393,12 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-        {isLoadingData && (
-            <div className="flex justify-center items-center py-6">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-2">Loading dashboard data...</p>
-            </div>
-        )}
+      {isLoadingData && (
+          <div className="flex justify-center items-center py-6">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading dashboard data...</p>
+          </div>
+      )}
 
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
@@ -327,16 +409,123 @@ export default function HomePage() {
             </div>
 
             <div className="flex items-center gap-2">
-                <div className="relative">
+                 <div className="relative w-full max-w-xs sm:max-w-sm">
                     <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
                         placeholder="Search sessions..."
-                        className="h-9 pl-8 w-full max-w-xs sm:max-w-sm"
+                        className="h-9 pl-8 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+
+                <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Client</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[525px]">
+                        <DialogHeader>
+                        <DialogTitle>Add New Client (Quick Add)</DialogTitle>
+                        <DialogDescription>
+                            Add essential contact and dog information.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-ownerFirstName-dash" className="text-right">First Name</Label>
+                                <div className="col-span-3">
+                                <Input id="add-ownerFirstName-dash" {...addClientForm.register("ownerFirstName")} className={addClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingClientForm} />
+                                {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-ownerLastName-dash" className="text-right">Last Name</Label>
+                                <div className="col-span-3">
+                                <Input id="add-ownerLastName-dash" {...addClientForm.register("ownerLastName")} className={addClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingClientForm} />
+                                {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-dogName-dash" className="text-right">Dog's Name</Label>
+                                <div className="col-span-3">
+                                <Input id="add-dogName-dash" {...addClientForm.register("dogName")} className={addClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingClientForm}/>
+                                {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-contactEmail-dash" className="text-right">Email</Label>
+                                <div className="col-span-3">
+                                <Input id="add-contactEmail-dash" type="email" {...addClientForm.register("contactEmail")} className={addClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingClientForm}/>
+                                {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-contactNumber-dash" className="text-right">Number</Label>
+                                <div className="col-span-3">
+                                <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={addClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingClientForm}/>
+                                {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="add-postcode-dash" className="text-right">Postcode</Label>
+                                <div className="col-span-3">
+                                <Input id="add-postcode-dash" {...addClientForm.register("postcode")} className={addClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingClientForm}/>
+                                {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-start gap-4">
+                                <Label htmlFor="add-isMember-dash" className="text-right pt-2">Is Member?</Label>
+                                <div className="col-span-3 flex items-center">
+                                    <Controller
+                                    name="isMember"
+                                    control={addClientForm.control}
+                                    render={({ field }) => (
+                                        <Checkbox
+                                        id="add-isMember-dash"
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={isSubmittingClientForm}
+                                        className="mr-2"
+                                        />
+                                    )}
+                                    />
+                                    <span className="text-sm text-muted-foreground">Tick if this client is a member.</span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-start gap-4">
+                                <Label htmlFor="add-isActive-dash" className="text-right pt-2">Is Active?</Label>
+                                <div className="col-span-3 flex items-center">
+                                    <Controller
+                                    name="isActive"
+                                    control={addClientForm.control}
+                                    render={({ field }) => (
+                                        <Checkbox
+                                        id="add-isActive-dash"
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={isSubmittingClientForm}
+                                        className="mr-2"
+                                        />
+                                    )}
+                                    />
+                                    <span className="text-sm text-muted-foreground">Untick if client is inactive.</span>
+                                </div>
+                            </div>
+                            <input type="hidden" {...addClientForm.register("submissionDate")} />
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button type="button" variant="outline" disabled={isSubmittingClientForm}>Cancel</Button>
+                                </DialogClose>
+                                <Button type="submit" disabled={isSubmittingClientForm}>
+                                {isSubmittingClientForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Client
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
               <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
                 <SheetTrigger asChild>
                   <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Session</Button>
@@ -344,7 +533,7 @@ export default function HomePage() {
                 <SheetContent className="sm:max-w-md">
                   <SheetHeader>
                     <SheetTitle>Add New Session</SheetTitle>
-                    <SheetDescription>Schedule a new session. Select a client, date, time, and session type.</SheetDescription>
+                    <SheetDescription>Schedule a new session.</SheetDescription>
                   </SheetHeader>
                   <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -371,8 +560,8 @@ export default function HomePage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-4 items-start gap-4">
-                      <Label htmlFor="date-dashboard" className="text-right col-span-1 pt-2 self-start">Date</Label>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="date-dashboard" className="text-left col-span-1 pt-2 self-start">Date</Label>
                       <div className="col-span-3">
                         <Controller name="date" control={addSessionForm.control}
                           render={({ field }) => (
@@ -384,6 +573,11 @@ export default function HomePage() {
                               disabled={isSubmittingSheet}
                               id="date-dashboard"
                               className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
+                              classNames={{
+                                day_selected: "bg-[#92351f] text-white hover:bg-[#92351f] focus:bg-[#92351f]",
+                                day_today: "text-current", // No special styling for today in picker
+                                day_hover: "bg-[#92351f]/90 text-white",
+                              }}
                             />
                           )}
                         />
@@ -430,7 +624,7 @@ export default function HomePage() {
                                 type="number" 
                                 placeholder="e.g. 75.50"
                                 {...field} 
-                                value={field.value === undefined ? '' : field.value}
+                                value={field.value === undefined ? '' : String(field.value)}
                                 onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                                 className={cn("w-full", addSessionForm.formState.errors.cost && "border-destructive")} 
                                 disabled={isSubmittingSheet} 
@@ -465,7 +659,6 @@ export default function HomePage() {
               formatters={{ formatCaption }}
               className="w-full !p-0 !m-0" 
               classNames={{
-                caption_label: "hidden", 
                 caption: "hidden", 
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
                 month: "space-y-4 w-full",
@@ -494,9 +687,7 @@ export default function HomePage() {
           {selectedSessionForSheet && (
             <>
               <SheetHeader className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                  <SheetTitle className="text-xl">Session Details</SheetTitle>
-                </div>
+                <SheetTitle className="text-xl">Session Details</SheetTitle>
                 <SheetDescription>
                   {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
                 </SheetDescription>
@@ -523,7 +714,7 @@ export default function HomePage() {
                   </Card>
                    {selectedSessionForSheet.cost !== undefined && (
                     <Card>
-                        <CardHeader><CardTitle className="text-base flex items-center"><DollarSign className="mr-2 h-4 w-4 text-primary" /> Cost</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="text-base flex items-center"><IconDollarSign className="mr-2 h-4 w-4 text-primary" /> Cost</CardTitle></CardHeader>
                         <CardContent className="text-sm"><p>£{selectedSessionForSheet.cost.toFixed(2)}</p></CardContent>
                     </Card>
                    )}
