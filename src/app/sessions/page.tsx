@@ -110,7 +110,7 @@ function SessionDetailDialog({
   onOpenChange, 
   onDelete, 
   onEdit,
-  isSubmittingSheet 
+  isSubmittingSheet // Keep this prop even if it's not used for now, for consistency
 }: { 
   session: Session; 
   isOpen: boolean; 
@@ -238,7 +238,7 @@ export default function SessionsPage() {
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
 
-  const { watch: watchSessionForm, setValue: setSessionValue, control: addSessionFormControl } = addSessionForm;
+  const { watch: watchSessionForm, setValue: setSessionValue, control: addSessionFormControl, reset: resetAddSessionForm } = addSessionForm;
   const watchedClientId = watchSessionForm("clientId");
   const watchedSessionType = watchSessionForm("sessionType");
 
@@ -341,6 +341,13 @@ export default function SessionsPage() {
         description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
       setIsAddSessionSheetOpen(false);
+      resetAddSessionForm({
+        clientId: '', 
+        date: new Date(), 
+        time: format(new Date(), "HH:mm"),
+        sessionType: '', 
+        amount: undefined
+      });
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -419,22 +426,23 @@ export default function SessionsPage() {
     }
   });
 
+  useEffect(() => {
+    if (!isAddSessionSheetOpen) {
+      resetAddSessionForm({
+        clientId: '',
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
+        sessionType: '',
+        amount: undefined,
+      });
+    }
+  }, [isAddSessionSheetOpen, resetAddSessionForm]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Sessions</h1>
-        <Sheet open={isAddSessionSheetOpen} onOpenChange={(isOpen) => {
-          setIsAddSessionSheetOpen(isOpen);
-          if (isOpen) {
-            addSessionForm.reset({
-              clientId: '',
-              date: new Date(),
-              time: format(new Date(), "HH:mm"),
-              sessionType: '',
-              amount: undefined,
-            });
-          }
-        }}>
+        <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
           <SheetTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -477,7 +485,7 @@ export default function SessionsPage() {
 
                <div>
                 <Label htmlFor="date-sessionpage">Date</Label>
-                <div className="mt-1 flex justify-center">
+                <div className={cn("mt-1 flex justify-center", addSessionForm.formState.errors.date && "border-destructive border rounded-md")}>
                 <Controller
                   name="date"
                   control={addSessionFormControl}
@@ -489,11 +497,11 @@ export default function SessionsPage() {
                       initialFocus
                       disabled={isSubmittingSheet}
                       id="date-sessionpage"
-                      className={cn("!p-1 rounded-md border", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                      className={cn("!p-1 rounded-md")}
                       classNames={{
                         day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                         day: cn(
-                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground"
+                          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground"
                         )
                       }}
                     />
@@ -637,15 +645,17 @@ export default function SessionsPage() {
                                 data-ai-hint="company logo"
                               />
                             <div>
-                               <h3 className="font-semibold text-base">{displayName}</h3>
+                               <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <p className="text-xs text-muted-foreground">
                                   {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
-                                  , {session.time} • {session.sessionType}
+                                  , {session.time}
                                 </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                             {/* Badge removed from here */}
+                            <Badge variant="default" className={cn("mt-1 whitespace-nowrap")}>
+                                {session.sessionType}
+                            </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -717,3 +727,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+
