@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, PawPrint, Users as UsersIcon, Tag as TagIcon, DollarSign as IconDollarSign, ClipboardList, Clock, CalendarDays as CalendarIconLucide } from "lucide-react";
+import { Loader2, PlusCircle, ChevronLeft, ChevronRight, Search as SearchIcon, Edit, Trash2, Info, X, Users as UsersIcon, Tag as TagIcon, DollarSign as IconDollarSign, ClipboardList, Clock, CalendarDays as CalendarIconLucide } from "lucide-react";
 import { DayPicker, type DateFormatter, type DayProps } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import type { Session, Client } from '@/lib/types';
@@ -133,18 +133,28 @@ export default function HomePage() {
       cost: undefined,
     }
   });
-
+  
   useEffect(() => {
     if (isAddSessionSheetOpen) {
-        addSessionForm.reset({
-            date: new Date(),
-            time: format(new Date(), "HH:mm"),
-            clientId: '',
-            sessionType: '',
-            cost: undefined,
-        });
+      addSessionForm.reset({
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
+        clientId: '',
+        sessionType: '',
+        cost: undefined,
+      });
+    } else {
+       // Reset form when sheet closes to ensure fresh state next time
+      addSessionForm.reset({
+        date: undefined, // Reset to initial default state
+        time: '',
+        clientId: '',
+        sessionType: '',
+        cost: undefined,
+      });
     }
   }, [isAddSessionSheetOpen, addSessionForm]);
+
 
   const addClientForm = useForm<InternalClientFormValues>({
     resolver: zodResolver(internalClientFormSchema),
@@ -352,10 +362,10 @@ export default function HomePage() {
     });
 
     return (
-      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center">
+      <div className="relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left">
         <div
           className={cn(
-            "text-xs w-full mb-1", 
+            "absolute top-1 right-1 text-xs", 
             isToday(props.date)
               ? "text-[#92351f] font-semibold" 
               : "text-muted-foreground"
@@ -365,7 +375,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full flex-grow pr-1"> 
+          <ScrollArea className="w-full mt-5 pr-1"> 
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -533,7 +543,9 @@ export default function HomePage() {
                 <SheetContent className="sm:max-w-md">
                   <SheetHeader>
                     <SheetTitle>Add New Session</SheetTitle>
-                    <SheetDescription>Schedule a new session.</SheetDescription>
+                    <SheetDescription>
+                      Schedule a new training session.
+                    </SheetDescription>
                   </SheetHeader>
                   <form onSubmit={addSessionForm.handleSubmit(handleAddSessionSubmit)} className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -556,12 +568,12 @@ export default function HomePage() {
                             </Select>
                           )}
                         />
-                        {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                        {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="date-dashboard" className="text-left col-span-1 pt-2 self-start">Date</Label>
+                      <Label htmlFor="date-dashboard" className="text-right pt-2 self-start">Date</Label>
                       <div className="col-span-3">
                         <Controller name="date" control={addSessionForm.control}
                           render={({ field }) => (
@@ -573,11 +585,6 @@ export default function HomePage() {
                               disabled={isSubmittingSheet}
                               id="date-dashboard"
                               className={cn("rounded-md border w-full", addSessionForm.formState.errors.date && "border-destructive")}
-                              classNames={{
-                                day_selected: "bg-[#92351f] text-white hover:bg-[#92351f] focus:bg-[#92351f]",
-                                day_today: "text-current", // No special styling for today in picker
-                                day_hover: "bg-[#92351f]/90 text-white",
-                              }}
                             />
                           )}
                         />
@@ -591,7 +598,7 @@ export default function HomePage() {
                       <Controller name="time" control={addSessionForm.control}
                         render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full", addSessionForm.formState.errors.time && "border-destructive")} disabled={isSubmittingSheet} />)}
                       />
-                      {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
+                      {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
                       </div>
                     </div>
 
@@ -610,7 +617,7 @@ export default function HomePage() {
                           </Select>
                         )}
                       />
-                      {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
+                      {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
                       </div>
                     </div>
 
@@ -631,7 +638,7 @@ export default function HomePage() {
                             />
                             )}
                         />
-                        {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.cost.message}</p>}
+                        {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.cost.message}</p>}
                         </div>
                     </div>
 
@@ -693,44 +700,48 @@ export default function HomePage() {
                 </SheetDescription>
               </SheetHeader>
               <ScrollArea className="h-[calc(100vh-160px)]"> 
-                <div className="p-6 space-y-4">
-                  <Card>
-                    <CardHeader><CardTitle className="text-base flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" /> Date & Time</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                      <p><strong>Date:</strong> {isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</p>
-                      <p><strong>Time:</strong> {selectedSessionForSheet.time}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader><CardTitle className="text-base flex items-center"><UsersIcon className="mr-2 h-4 w-4 text-primary" /> Client</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                      <p><strong>Name:</strong> {selectedSessionForSheet.clientName}</p>
-                      {selectedSessionForSheet.dogName && <p><strong>Dog:</strong> {selectedSessionForSheet.dogName}</p>}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader><CardTitle className="text-base flex items-center"><TagIcon className="mr-2 h-4 w-4 text-primary" /> Session Type</CardTitle></CardHeader>
-                    <CardContent className="text-sm"><p>{selectedSessionForSheet.sessionType}</p></CardContent>
-                  </Card>
+                <div className="p-6 space-y-3">
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1">Date:</Label>
+                    <div className="col-span-2 text-sm">{isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1">Time:</Label>
+                    <div className="col-span-2 text-sm">{selectedSessionForSheet.time}</div>
+                  </div>
+                   <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1">Client:</Label>
+                    <div className="col-span-2 text-sm">{selectedSessionForSheet.clientName}</div>
+                  </div>
+                  {selectedSessionForSheet.dogName && (
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right font-semibold col-span-1">Dog:</Label>
+                        <div className="col-span-2 text-sm">{selectedSessionForSheet.dogName}</div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1">Type:</Label>
+                    <div className="col-span-2 text-sm">{selectedSessionForSheet.sessionType}</div>
+                  </div>
                    {selectedSessionForSheet.cost !== undefined && (
-                    <Card>
-                        <CardHeader><CardTitle className="text-base flex items-center"><IconDollarSign className="mr-2 h-4 w-4 text-primary" /> Cost</CardTitle></CardHeader>
-                        <CardContent className="text-sm"><p>£{selectedSessionForSheet.cost.toFixed(2)}</p></CardContent>
-                    </Card>
+                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                        <Label className="text-right font-semibold col-span-1">Cost:</Label>
+                        <div className="col-span-2 text-sm">£{selectedSessionForSheet.cost.toFixed(2)}</div>
+                    </div>
                    )}
-                  <Card>
-                    <CardHeader><CardTitle className="text-base flex items-center"><Info className="mr-2 h-4 w-4 text-primary" /> Status</CardTitle></CardHeader>
-                    <CardContent>
-                      <Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'}>
+                  <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label>
+                    <div className="col-span-2">
+                        <Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'}>
                         {selectedSessionForSheet.status}
-                      </Badge>
-                    </CardContent>
-                  </Card>
+                        </Badge>
+                    </div>
+                  </div>
                   {selectedSessionForSheet.notes && (
-                    <Card>
-                      <CardHeader><CardTitle className="text-base flex items-center"><ClipboardList className="mr-2 h-4 w-4 text-primary" /> Notes</CardTitle></CardHeader>
-                      <CardContent className="text-sm"><p className="whitespace-pre-wrap text-muted-foreground">{selectedSessionForSheet.notes}</p></CardContent>
-                    </Card>
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+                        <Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label>
+                        <div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{selectedSessionForSheet.notes}</div>
+                    </div>
                   )}
                 </div>
               </ScrollArea>
@@ -768,3 +779,4 @@ export default function HomePage() {
     </div>
   );
 }
+

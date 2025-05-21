@@ -639,66 +639,84 @@ export default function ClientsPage() {
           {clientToEdit && (
             <ScrollArea className="h-[calc(100vh-150px)] pr-3">
             <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-ownerFirstName">First Name</Label>
-                <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={editClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-ownerFirstName" className="text-right">First Name</Label>
+                <div className="col-span-3">
+                    <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={editClientForm.formState.errors.ownerFirstName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                    {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-ownerLastName">Last Name</Label>
-                <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={editClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
-                {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-ownerLastName" className="text-right">Last Name</Label>
+                <div className="col-span-3">
+                    <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={editClientForm.formState.errors.ownerLastName ? "border-destructive" : ""} disabled={isSubmittingForm} />
+                    {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-dogName">Dog's Name</Label>
-                <Input id="edit-dogName" {...editClientForm.register("dogName")} className={editClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-dogName" className="text-right">Dog's Name</Label>
+                <div className="col-span-3">
+                    <Input id="edit-dogName" {...editClientForm.register("dogName")} className={editClientForm.formState.errors.dogName ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-contactEmail">Email</Label>
-                <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={editClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-contactEmail" className="text-right">Email</Label>
+                <div className="col-span-3">
+                    <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={editClientForm.formState.errors.contactEmail ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-contactNumber">Number</Label>
-                <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={editClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-contactNumber" className="text-right">Number</Label>
+                <div className="col-span-3">
+                    <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={editClientForm.formState.errors.contactNumber ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-postcode">Postcode</Label>
-                <Input id="edit-postcode" {...editClientForm.register("postcode")} className={editClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
-                {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-postcode" className="text-right">Postcode</Label>
+                <div className="col-span-3">
+                    <Input id="edit-postcode" {...editClientForm.register("postcode")} className={editClientForm.formState.errors.postcode ? "border-destructive" : ""} disabled={isSubmittingForm}/>
+                    {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
+                </div>
               </div>
-              <div className="flex items-center space-x-2 pt-1">
-                 <Controller
-                  name="isMember"
-                  control={editClientForm.control}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="edit-isMember"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isSubmittingForm}
+              <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="edit-isMember" className="text-right pt-2 col-span-1">Is Member?</Label>
+                  <div className="col-span-3 flex items-center">
+                     <Controller
+                      name="isMember"
+                      control={editClientForm.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="edit-isMember"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmittingForm}
+                          className="mr-2"
+                        />
+                      )}
                     />
-                  )}
-                />
-                <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
-              </div>
-               <div className="flex items-center space-x-2 pt-1">
-                 <Controller
-                  name="isActive"
-                  control={editClientForm.control}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="edit-isActive"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isSubmittingForm}
+                  </div>
+                </div>
+               <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="edit-isActive" className="text-right pt-2 col-span-1">Is Active?</Label>
+                  <div className="col-span-3 flex items-center">
+                     <Controller
+                      name="isActive"
+                      control={editClientForm.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="edit-isActive"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSubmittingForm}
+                          className="mr-2"
+                        />
+                      )}
                     />
-                  )}
-                />
-                <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
-              </div>
+                  </div>
+                </div>
               <SheetFooter className="mt-4">
                 <SheetClose asChild>
                    <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
@@ -740,21 +758,23 @@ export default function ClientsPage() {
                 </div>
               </SheetHeader>
               <ScrollArea className="h-[calc(100vh-100px)]">
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-3">
                   {sheetViewMode === 'clientInfo' && (
                     <>
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg flex items-center"><IconUsers className="mr-2 h-5 w-5 text-primary" /> Contact Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                          <div className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Email:</strong> <a href={`mailto:${clientForViewSheet.contactEmail}`} className="ml-1 hover:underline">{clientForViewSheet.contactEmail}</a></div>
-                          <div className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Number:</strong> <a href={`tel:${clientForViewSheet.contactNumber}`} className="ml-1 hover:underline">{clientForViewSheet.contactNumber}</a></div>
+                      <div className="space-y-3 text-sm">
+                          <div className="grid grid-cols-3 items-center gap-x-4">
+                            <Label className="text-right font-semibold col-span-1">Email:</Label>
+                            <div className="col-span-2"><a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a></div>
+                          </div>
+                          <div className="grid grid-cols-3 items-center gap-x-4">
+                            <Label className="text-right font-semibold col-span-1">Number:</Label>
+                            <div className="col-span-2"><a href={`tel:${clientForViewSheet.contactNumber}`} className="hover:underline">{clientForViewSheet.contactNumber}</a></div>
+                          </div>
                           
                           {clientForViewSheet.address ? (
-                            <div className="flex items-start"><MapPin className="mr-2 h-4 w-4 text-muted-foreground mt-0.5"/>
-                              <strong>Address:</strong>
-                              <div className="ml-1">
+                            <div className="grid grid-cols-3 items-start gap-x-4">
+                              <Label className="text-right font-semibold col-span-1 pt-0.5">Address:</Label>
+                              <div className="col-span-2">
                                   {clientForViewSheet.address.addressLine1} <br />
                                   {clientForViewSheet.address.addressLine2 && <>{clientForViewSheet.address.addressLine2} <br /></>}
                                   {clientForViewSheet.address.city}, {clientForViewSheet.postcode} <br /> 
@@ -762,44 +782,50 @@ export default function ClientsPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center"><Home className="mr-2 h-4 w-4 text-muted-foreground"/><strong>Postcode:</strong> {clientForViewSheet.postcode}</div>
+                            <div className="grid grid-cols-3 items-center gap-x-4">
+                                <Label className="text-right font-semibold col-span-1">Postcode:</Label>
+                                <div className="col-span-2">{clientForViewSheet.postcode}</div>
+                            </div>
                           )}
 
                           {clientForViewSheet.howHeardAboutServices && (
-                            <div className="pt-2">
-                                <strong className="flex items-center"><Info className="mr-2 h-4 w-4 text-muted-foreground"/>How heard about services:</strong>
-                                <p className="mt-1 text-muted-foreground">{clientForViewSheet.howHeardAboutServices}</p>
+                            <div className="grid grid-cols-3 items-start gap-x-4">
+                                <Label className="text-right font-semibold col-span-1 pt-0.5">How heard:</Label>
+                                <div className="col-span-2 text-muted-foreground">{clientForViewSheet.howHeardAboutServices}</div>
                             </div>
                           )}
-                           <div className="pt-2">
-                              <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Initial Submission:</strong>
-                              <p className="mt-1 text-muted-foreground">{clientForViewSheet.submissionDate && isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</p>
+                           <div className="grid grid-cols-3 items-center gap-x-4">
+                              <Label className="text-right font-semibold col-span-1">Submitted:</Label>
+                              <div className="col-span-2 text-muted-foreground">{clientForViewSheet.submissionDate && isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</div>
                           </div>
-                          <div className="pt-2">
-                              <strong className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Membership:</strong>
-                              <Badge variant={clientForViewSheet.isMember ? "default" : "outline"} className="ml-1">{clientForViewSheet.isMember ? "Active Member" : "Not a Member"}</Badge>
+                           <div className="grid grid-cols-3 items-start gap-x-4">
+                              <Label className="text-right font-semibold col-span-1 pt-0.5">Membership:</Label>
+                              <div className="col-span-2">
+                                <Badge variant={clientForViewSheet.isMember ? "default" : "outline"} className="ml-0">{clientForViewSheet.isMember ? "Active Member" : "Not a Member"}</Badge>
+                              </div>
                           </div>
-                           <div className="pt-2">
-                              <strong className="flex items-center"><SquareCheck className="mr-2 h-4 w-4 text-muted-foreground"/>Status:</strong>
-                              <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="ml-1">{clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}</Badge>
+                           <div className="grid grid-cols-3 items-start gap-x-4">
+                              <Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label>
+                              <div className="col-span-2">
+                                <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="ml-0">{clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}</Badge>
+                              </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                      </div>
 
                       {clientForViewSheet.behaviouralBriefId && (
-                        <Button variant="outline" className="w-full" onClick={handleViewBriefInSheet} disabled={isLoadingBriefForSheet}>
+                        <Button variant="outline" className="w-full mt-4" onClick={handleViewBriefInSheet} disabled={isLoadingBriefForSheet}>
                           {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           View Behavioural Brief
                         </Button>
                       )}
                       {clientForViewSheet.behaviourQuestionnaireId && (
-                        <Button variant="outline" className="w-full" onClick={handleViewQuestionnaireInSheet} disabled={isLoadingQuestionnaireForSheet}>
+                        <Button variant="outline" className="w-full mt-2" onClick={handleViewQuestionnaireInSheet} disabled={isLoadingQuestionnaireForSheet}>
                            {isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           View Behaviour Questionnaire
                         </Button>
                       )}
 
-                      <Card>
+                      <Card className="mt-4">
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" /> Session History</CardTitle>
                         </CardHeader>
@@ -819,6 +845,8 @@ export default function ClientsPage() {
                                       {session.status}
                                     </Badge>
                                   </div>
+                                  {session.sessionType && <div className="text-xs text-muted-foreground mt-1">Type: {session.sessionType}</div>}
+                                  {session.cost !== undefined && <div className="text-xs text-muted-foreground mt-0.5">Cost: £{session.cost.toFixed(2)}</div>}
                                   {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
                                 </li>
                               ))}
@@ -841,33 +869,27 @@ export default function ClientsPage() {
                         </Button>
                       </CardHeader>
                       <CardContent className="space-y-3 text-sm">
-                        <div><strong>Dog's Name:</strong> {briefForSheet.dogName}</div>
-                        <div><strong>Breed:</strong> {briefForSheet.dogBreed}</div>
-                        <div><strong>Sex:</strong> {briefForSheet.dogSex}</div>
+                        <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{briefForSheet.dogName}</div></div>
+                        <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{briefForSheet.dogBreed}</div></div>
+                        <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Sex:</Label><div className="col-span-2">{briefForSheet.dogSex}</div></div>
+                        
                         {briefForSheet.lifeWithDogAndHelpNeeded && (
-                          <div>
-                            <strong className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Life with Dog & Help Needed:</strong>
-                            <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{briefForSheet.lifeWithDogAndHelpNeeded}</p>
-                          </div>
+                           <div className="grid grid-cols-3 items-start gap-x-4"><Label className="text-right font-semibold col-span-1 pt-0.5">Life & Help Needed:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForSheet.lifeWithDogAndHelpNeeded}</div></div>
                         )}
                         {briefForSheet.bestOutcome && (
-                          <div className="pt-2">
-                            <strong className="flex items-center"><Target className="mr-2 h-4 w-4 text-muted-foreground"/>Best Outcome Desired:</strong>
-                            <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{briefForSheet.bestOutcome}</p>
-                          </div>
+                           <div className="grid grid-cols-3 items-start gap-x-4"><Label className="text-right font-semibold col-span-1 pt-0.5">Best Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForSheet.bestOutcome}</div></div>
                         )}
                         {briefForSheet.idealSessionTypes && briefForSheet.idealSessionTypes.length > 0 && (
-                          <div className="pt-2">
-                            <strong className="flex items-center"><HelpingHand className="mr-2 h-4 w-4 text-muted-foreground"/>Ideal Session Types:</strong>
-                            <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                              {briefForSheet.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
-                            </ul>
+                          <div className="grid grid-cols-3 items-start gap-x-4">
+                            <Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Sessions:</Label>
+                            <div className="col-span-2">
+                                <ul className="list-disc list-inside text-muted-foreground">
+                                {briefForSheet.idealSessionTypes.map(type => <li key={type}>{type}</li>)}
+                                </ul>
+                            </div>
                           </div>
                         )}
-                        <div className="pt-2">
-                            <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Brief Submission Date:</strong>
-                            <p className="mt-1 text-muted-foreground">{briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
-                        </div>
+                        <div className="grid grid-cols-3 items-center gap-x-4 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</div></div>
                       </CardContent>
                     </Card>
                   )}
@@ -898,18 +920,15 @@ export default function ClientsPage() {
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
-                            <div><strong>Dog's Name:</strong> {questionnaireForSheet.dogName} ({questionnaireForSheet.dogAge}, {questionnaireForSheet.dogSex})</div>
-                            <div><strong>Breed:</strong> {questionnaireForSheet.dogBreed}</div>
-                            <div><strong>Neutered/Spayed Details:</strong> {questionnaireForSheet.neuteredSpayedDetails}</div>
-                            {questionnaireForSheet.mainProblem && <div className="pt-1"><strong>Main Problem:</strong> <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{questionnaireForSheet.mainProblem}</p></div>}
-                            {questionnaireForSheet.idealTrainingOutcome && <div className="pt-1"><strong>Ideal Outcome:</strong> <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap">{questionnaireForSheet.idealTrainingOutcome}</p></div>}
-                            {questionnaireForSheet.sociabilityWithDogs && <div className="pt-1"><strong>Sociability with Dogs:</strong> {questionnaireForSheet.sociabilityWithDogs}</div>}
-                            {questionnaireForSheet.sociabilityWithPeople && <div className="pt-1"><strong>Sociability with People:</strong> {questionnaireForSheet.sociabilityWithPeople}</div>}
+                            <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{questionnaireForSheet.dogName} ({questionnaireForSheet.dogAge}, {questionnaireForSheet.dogSex})</div></div>
+                            <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{questionnaireForSheet.dogBreed}</div></div>
+                            <div className="grid grid-cols-3 items-start gap-x-4"><Label className="text-right font-semibold col-span-1 pt-0.5">Neutered/Spayed:</Label><div className="col-span-2 whitespace-pre-wrap">{questionnaireForSheet.neuteredSpayedDetails}</div></div>
+                            {questionnaireForSheet.mainProblem && <div className="grid grid-cols-3 items-start gap-x-4"><Label className="text-right font-semibold col-span-1 pt-0.5">Main Problem:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForSheet.mainProblem}</div></div>}
+                            {questionnaireForSheet.idealTrainingOutcome && <div className="grid grid-cols-3 items-start gap-x-4"><Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForSheet.idealTrainingOutcome}</div></div>}
+                            {questionnaireForSheet.sociabilityWithDogs && <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Sociability (Dogs):</Label><div className="col-span-2">{questionnaireForSheet.sociabilityWithDogs}</div></div>}
+                            {questionnaireForSheet.sociabilityWithPeople && <div className="grid grid-cols-3 items-center gap-x-4"><Label className="text-right font-semibold col-span-1">Sociability (People):</Label><div className="col-span-2">{questionnaireForSheet.sociabilityWithPeople}</div></div>}
                             
-                            <div className="pt-2">
-                                <strong className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground"/>Questionnaire Submission Date:</strong>
-                                <p className="mt-1 text-muted-foreground">{questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</p>
-                            </div>
+                            <div className="grid grid-cols-3 items-center gap-x-4 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</div></div>
                         </CardContent>
                      </Card>
                   )}
@@ -960,4 +979,5 @@ export default function ClientsPage() {
 }
 
     
+
 

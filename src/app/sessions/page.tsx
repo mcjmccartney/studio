@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, PawPrint, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Tag as TagIcon, Users as UsersIcon, DollarSign } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Users as UsersIcon, DollarSign } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -124,42 +124,43 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
       </div>
 
       <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center"><UsersIcon className="mr-2 h-5 w-5 text-primary" /> Client</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><strong>Name:</strong> {displayName}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center"><CalendarIconLucide className="mr-2 h-5 w-5 text-primary" /> Date & Time</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><strong>Date:</strong> {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
-              <div><strong>Time:</strong> {session.time}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center"><TagIcon className="mr-2 h-5 w-5 text-primary" /> Session Type</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <div>{session.sessionType}</div>
-            </CardContent>
-          </Card>
-
-          {session.cost !== undefined && (
-            <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary" /> Cost</CardTitle></CardHeader>
-                <CardContent className="text-sm"><p>£{session.cost.toFixed(2)}</p></CardContent>
-            </Card>
-          )}
-
+        <div className="p-1 space-y-3">
+            <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Client:</Label>
+                <div className="col-span-2 text-sm">{displayName}</div>
+            </div>
+            <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Date:</Label>
+                <div className="col-span-2 text-sm">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
+            </div>
+            <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Time:</Label>
+                <div className="col-span-2 text-sm">{session.time}</div>
+            </div>
+            <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Type:</Label>
+                <div className="col-span-2 text-sm">{session.sessionType}</div>
+            </div>
+            {session.cost !== undefined && (
+                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                    <Label className="text-right font-semibold col-span-1">Cost:</Label>
+                    <div className="col-span-2 text-sm">£{session.cost.toFixed(2)}</div>
+                </div>
+            )}
+            <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label>
+                <div className="col-span-2">
+                    <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'}>
+                    {session.status}
+                    </Badge>
+                </div>
+            </div>
+            {session.notes && (
+            <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label>
+                <div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{session.notes}</div>
+            </div>
+            )}
         </div>
       </ScrollArea>
     </div>
@@ -184,8 +185,8 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined,
-      time: '',
+      date: undefined, // Updated for useEffect init
+      time: '', // Updated for useEffect init
       sessionType: '',
       cost: undefined,
     }
@@ -195,8 +196,16 @@ export default function SessionsPage() {
     if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         clientId: '',
-        date: new Date(),
-        time: format(new Date(), "HH:mm"),
+        date: new Date(), // Set by form now
+        time: format(new Date(), "HH:mm"), // Set by form now
+        sessionType: '',
+        cost: undefined,
+      });
+    } else {
+      addSessionForm.reset({ // Reset when sheet closes
+        clientId: '',
+        date: undefined,
+        time: '',
         sessionType: '',
         cost: undefined,
       });
@@ -256,7 +265,7 @@ export default function SessionsPage() {
       time: data.time,
       sessionType: data.sessionType,
       cost: data.cost,
-      status: 'Scheduled', // Default status
+      status: 'Scheduled', 
     };
 
     try {
@@ -373,7 +382,7 @@ export default function SessionsPage() {
             <SheetHeader>
               <SheetTitle>Add New Session</SheetTitle>
               <SheetDescription>
-                Schedule a new training session. Select a client, date, time, and session type.
+                Schedule a new training session.
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
@@ -401,7 +410,7 @@ export default function SessionsPage() {
                         </Select>
                       )}
                     />
-                    {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.clientId.message}</p>}
+                    {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
                   </div>
                 </div>
 
@@ -420,7 +429,6 @@ export default function SessionsPage() {
                         disabled={isSubmittingForm}
                         id="date-sessionpage"
                         className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
-                        
                       />
                     )}
                   />
@@ -444,7 +452,7 @@ export default function SessionsPage() {
                       />
                     )}
                   />
-                  {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.time.message}</p>}
+                  {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
                 </div>
               </div>
 
@@ -472,7 +480,7 @@ export default function SessionsPage() {
                       </Select>
                     )}
                   />
-                  {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.sessionType.message}</p>}
+                  {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
                 </div>
               </div>
 
@@ -493,7 +501,7 @@ export default function SessionsPage() {
                     />
                     )}
                 />
-                {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionForm.formState.errors.cost.message}</p>}
+                {addSessionForm.formState.errors.cost && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.cost.message}</p>}
                 </div>
               </div>
 
@@ -642,4 +650,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
 
