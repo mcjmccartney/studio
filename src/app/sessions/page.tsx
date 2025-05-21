@@ -14,15 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Users as UsersIcon, DollarSign } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,15 +106,15 @@ interface SessionDetailViewProps {
 function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
   const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
-     <Dialog open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Session Details</DialogTitle>
-          <DialogDescription>
+     <Sheet open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
+      <SheetContent className="sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle className="text-xl">Session Details</SheetTitle>
+          <SheetDescription>
             {displayName}
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-3">
+          </SheetDescription>
+        </SheetHeader>
+        <ScrollArea className="max-h-[70vh] pr-3">
           <div className="py-4 space-y-3">
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
               <Label className="text-right font-semibold col-span-1">Date:</Label>
@@ -160,19 +160,19 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
             )}
           </div>
         </ScrollArea>
-        <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
+        <SheetFooter className="pt-4 flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onEdit(session)} className="flex-1 sm:flex-none">
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
           <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
           </Button>
-          <DialogClose asChild>
+          <SheetClose asChild>
              <Button variant="outline" className="flex-1 sm:flex-none">Close</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -183,7 +183,7 @@ export default function SessionsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false);
+  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
@@ -195,24 +195,24 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined, 
-      time: '', 
+      date: new Date(), 
+      time: format(new Date(), "HH:mm"), 
       sessionType: '',
       cost: undefined,
     }
   });
   
   useEffect(() => {
-    if (isAddSessionDialogOpen) {
+    if (isAddSessionSheetOpen) {
       addSessionForm.reset({
         clientId: '',
-        date: new Date(), 
-        time: format(new Date(), "HH:mm"), 
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
         sessionType: '',
         cost: undefined,
       });
     }
-  }, [isAddSessionDialogOpen, addSessionForm]);
+  }, [isAddSessionSheetOpen, addSessionForm]);
 
 
   useEffect(() => {
@@ -291,7 +291,7 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      setIsAddSessionDialogOpen(false);
+      setIsAddSessionSheetOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -360,7 +360,7 @@ export default function SessionsPage() {
   };
 
 
-  if (selectedSession && !isAddSessionDialogOpen && !isSessionDeleteDialogOpen) {
+  if (selectedSession && !isAddSessionSheetOpen && !isSessionDeleteDialogOpen) {
     return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} onEdit={handleEditSession} />;
   }
 
@@ -382,8 +382,8 @@ export default function SessionsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
-        <Dialog open={isAddSessionDialogOpen} onOpenChange={(isOpen) => {
-          setIsAddSessionDialogOpen(isOpen);
+        <Sheet open={isAddSessionSheetOpen} onOpenChange={(isOpen) => {
+          setIsAddSessionSheetOpen(isOpen);
           if (isOpen) {
             addSessionForm.reset({
               clientId: '',
@@ -394,19 +394,19 @@ export default function SessionsPage() {
             });
           }
         }}>
-          <DialogTrigger asChild>
+          <SheetTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New Session
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Session</DialogTitle>
-              <DialogDescription>
+          </SheetTrigger>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>Add New Session</SheetTitle>
+              <SheetDescription>
                 Schedule a new training session.
-              </DialogDescription>
-            </DialogHeader>
+              </SheetDescription>
+            </SheetHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
@@ -450,7 +450,7 @@ export default function SessionsPage() {
                         initialFocus
                         disabled={isSubmittingForm}
                         id="date-sessionpage"
-                        className={cn("rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
+                        className={cn("!p-1 rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
                       />
                     )}
                   />
@@ -529,18 +529,18 @@ export default function SessionsPage() {
               </div>
 
 
-              <DialogFooter className="mt-4">
-                <DialogClose asChild>
+              <SheetFooter className="mt-4">
+                <SheetClose asChild>
                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                </DialogClose>
+                </SheetClose>
                 <Button type="submit" disabled={isSubmittingForm}>
                   {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Session
                 </Button>
-              </DialogFooter>
+              </SheetFooter>
             </form>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {isLoading && (
