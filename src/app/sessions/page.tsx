@@ -12,17 +12,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Users as UsersIcon, DollarSign } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, DollarSign } from 'lucide-react';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetClose,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +72,7 @@ const sessionFormSchema = z.object({
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
   sessionType: z.string().min(1, { message: "Session type is required." }),
-  amount: z.preprocess( // Changed from cost to amount
+  amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
     z.number().nonnegative({ message: "Amount must be a positive number." }).optional()
   ),
@@ -105,14 +105,14 @@ interface SessionDetailViewProps {
 function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
   const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
-     <Sheet open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
-      <SheetContent className="sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="text-xl">Session Details</SheetTitle>
-          <SheetDescription>
+     <Dialog open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Session Details</DialogTitle>
+          <DialogDescription>
             {displayName}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-3">
           <div className="py-4 space-y-3">
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
@@ -137,10 +137,10 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
               <Label className="text-right font-semibold col-span-1">Type:</Label>
               <div className="col-span-2 text-sm">{session.sessionType}</div>
             </div>
-            {session.amount !== undefined && ( // Changed from cost to amount
+            {session.amount !== undefined && (
               <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1">Amount:</Label> {/* Changed from Cost to Amount */}
-                <div className="col-span-2 text-sm">£{session.amount.toFixed(2)}</div> {/* Changed from cost to amount */}
+                <Label className="text-right font-semibold col-span-1">Amount:</Label>
+                <div className="col-span-2 text-sm">£{session.amount.toFixed(2)}</div>
               </div>
             )}
             <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
@@ -159,19 +159,19 @@ function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailV
             )}
           </div>
         </ScrollArea>
-        <SheetFooter className="pt-4 flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onEdit(session)} className="flex-1 sm:flex-none">
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
           <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
           </Button>
-          <SheetClose asChild>
+          <DialogClose asChild>
              <Button variant="outline" className="flex-1 sm:flex-none">Close</Button>
-          </SheetClose>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -182,11 +182,11 @@ export default function SessionsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false); // Changed from Dialog to Sheet
+  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
-  const [isSubmittingSheet, setIsSubmittingSheet] = useState<boolean>(false); // Changed from isSubmittingForm
+  const [isSubmittingDialog, setIsSubmittingDialog] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -194,31 +194,31 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined, // For client-side initialization
-      time: '',       // For client-side initialization
+      date: undefined,
+      time: '',
       sessionType: '',
-      amount: undefined, // Changed from cost to amount
+      amount: undefined,
     }
   });
   
   useEffect(() => {
-    if (isAddSessionSheetOpen) {
+    if (isAddSessionDialogOpen) {
       addSessionForm.reset({
         clientId: '',
         date: new Date(),
         time: format(new Date(), "HH:mm"),
         sessionType: '',
-        amount: undefined, // Changed from cost to amount
+        amount: undefined,
       });
     }
-  }, [isAddSessionSheetOpen, addSessionForm]);
+  }, [isAddSessionDialogOpen, addSessionForm]);
 
   const { watch: watchSessionForm, setValue: setSessionValue } = addSessionForm;
   const watchedClientId = watchSessionForm("clientId");
   const watchedSessionType = watchSessionForm("sessionType");
 
   useEffect(() => {
-    if (watchedClientId && watchedSessionType) {
+    if (watchedClientId && watchedSessionType && clients.length > 0) {
       const client = clients.find(c => c.id === watchedClientId);
       if (client) {
         let newAmount: number | undefined = undefined;
@@ -262,8 +262,8 @@ export default function SessionsPage() {
             return dateB.getTime() - dateA.getTime();
         }));
         setClients(firestoreClients.sort((a, b) => {
-          const nameA = `${a.ownerFirstName} ${a.ownerLastName}`.toLowerCase();
-          const nameB = `${b.ownerFirstName} ${b.ownerLastName}`.toLowerCase();
+          const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
+          const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
           if (nameA < nameB) return -1;
           if (nameA > nameB) return 1;
           return 0;
@@ -281,11 +281,11 @@ export default function SessionsPage() {
   }, [toast]);
 
   const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
-    setIsSubmittingSheet(true);
+    setIsSubmittingDialog(true);
     const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
       toast({ title: "Error", description: "Selected client not found.", variant: "destructive" });
-      setIsSubmittingSheet(false);
+      setIsSubmittingDialog(false);
       return;
     }
 
@@ -296,7 +296,7 @@ export default function SessionsPage() {
       date: format(data.date, 'yyyy-MM-dd'),
       time: data.time,
       sessionType: data.sessionType,
-      amount: data.amount, // Changed from cost to amount
+      amount: data.amount,
       status: 'Scheduled', 
     };
 
@@ -315,13 +315,13 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      setIsAddSessionSheetOpen(false);
+      setIsAddSessionDialogOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
       toast({ title: "Error Adding Session", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmittingSheet(false);
+      setIsSubmittingDialog(false);
     }
   };
 
@@ -354,7 +354,7 @@ export default function SessionsPage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true);
+    setIsSubmittingDialog(true);
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
@@ -372,7 +372,7 @@ export default function SessionsPage() {
     } finally {
       setIsSessionDeleteDialogOpen(false);
       setSessionToDelete(null);
-      setIsSubmittingSheet(false);
+      setIsSubmittingDialog(false);
     }
   };
 
@@ -384,7 +384,7 @@ export default function SessionsPage() {
   };
 
 
-  if (selectedSession && !isAddSessionSheetOpen && !isSessionDeleteDialogOpen) {
+  if (selectedSession && !isAddSessionDialogOpen && !isSessionDeleteDialogOpen) {
     return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} onEdit={handleEditSession} />;
   }
 
@@ -406,31 +406,31 @@ export default function SessionsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
-        <Sheet open={isAddSessionSheetOpen} onOpenChange={(isOpen) => {
-          setIsAddSessionSheetOpen(isOpen);
+        <Dialog open={isAddSessionDialogOpen} onOpenChange={(isOpen) => {
+          setIsAddSessionDialogOpen(isOpen);
           if (isOpen) {
             addSessionForm.reset({
               clientId: '',
               date: new Date(),
               time: format(new Date(), "HH:mm"),
               sessionType: '',
-              amount: undefined, // Changed from cost to amount
+              amount: undefined,
             });
           }
         }}>
-          <SheetTrigger asChild>
+          <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New Session
             </Button>
-          </SheetTrigger>
-          <SheetContent className="sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>Add New Session</SheetTitle>
-              <SheetDescription>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add New Session</DialogTitle>
+              <DialogDescription>
                 Schedule a new training session.
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
@@ -439,7 +439,7 @@ export default function SessionsPage() {
                       name="clientId"
                       control={addSessionForm.control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoading}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingDialog || isLoading}>
                           <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
@@ -448,7 +448,7 @@ export default function SessionsPage() {
                               <SelectLabel>Clients</SelectLabel>
                               {clients.map(client => (
                                 <SelectItem key={client.id} value={client.id}>
-                                  {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                                  {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
                                 </SelectItem>
                               ))}
                             </SelectGroup>
@@ -472,7 +472,7 @@ export default function SessionsPage() {
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
-                        disabled={isSubmittingSheet}
+                        disabled={isSubmittingDialog}
                         id="date-sessionpage"
                         className={cn("!p-1 rounded-md border w-full", addSessionForm.formState.errors.date ? "border-destructive" : "")}
                       />
@@ -494,7 +494,7 @@ export default function SessionsPage() {
                         type="time"
                         {...field}
                         className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
-                        disabled={isSubmittingSheet}
+                        disabled={isSubmittingDialog}
                       />
                     )}
                   />
@@ -509,7 +509,7 @@ export default function SessionsPage() {
                     name="sessionType"
                     control={addSessionForm.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingDialog}>
                         <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
                           <SelectValue placeholder="Select session type" />
                         </SelectTrigger>
@@ -531,40 +531,40 @@ export default function SessionsPage() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount-sessionpage" className="text-right">Amount (£)</Label> {/* Changed from cost to amount */}
+                <Label htmlFor="amount-sessionpage" className="text-right">Amount (£)</Label>
                 <div className="col-span-3">
-                <Controller name="amount" control={addSessionForm.control} // Changed from cost to amount
+                <Controller name="amount" control={addSessionForm.control}
                     render={({ field }) => (
                     <Input 
-                        id="amount-sessionpage"  // Changed from cost to amount
+                        id="amount-sessionpage" 
                         type="number" 
                         placeholder="e.g. 75.50"
                         step="0.01"
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                        className={cn("w-full", addSessionForm.formState.errors.amount && "border-destructive")} // Changed from cost to amount
-                        disabled={isSubmittingSheet} 
+                        className={cn("w-full", addSessionForm.formState.errors.amount && "border-destructive")}
+                        disabled={isSubmittingDialog} 
                     />
                     )}
                 />
-                {addSessionForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.amount.message}</p>} {/* Changed from cost to amount */}
+                {addSessionForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.amount.message}</p>}
                 </div>
               </div>
 
 
-              <SheetFooter className="mt-4">
-                <SheetClose asChild>
-                  <Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button>
-                </SheetClose>
-                <Button type="submit" disabled={isSubmittingSheet}>
-                  {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <DialogFooter className="mt-4">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmittingDialog}>Cancel</Button>
+                </DialogClose>
+                <Button type="submit" disabled={isSubmittingDialog}>
+                  {isSubmittingDialog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Session
                 </Button>
-              </SheetFooter>
+              </DialogFooter>
             </form>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {isLoading && (
@@ -586,7 +586,7 @@ export default function SessionsPage() {
         <Accordion type="multiple" className="w-full space-y-0" defaultValue={sortedMonthKeys.length > 0 ? [sortedMonthKeys[0]] : []}>
           {sortedMonthKeys.map((monthYear) => (
             <AccordionItem value={monthYear} key={monthYear} className="bg-card shadow-sm rounded-md mb-2">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-4 py-3 font-semibold">
+              <AccordionTrigger className="text-lg hover:no-underline px-4 py-3 font-semibold">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
               <AccordionContent className="px-4">
@@ -622,10 +622,10 @@ export default function SessionsPage() {
                                     <Clock className="inline-block mr-1.5 h-4 w-4" />
                                     {session.time}
                                 </span>
-                                {session.amount !== undefined && ( // Changed from cost to amount
+                                {session.amount !== undefined && (
                                     <span className="flex items-center">
                                         <DollarSign className="inline-block mr-1.5 h-4 w-4" />
-                                        £{session.amount.toFixed(2)} {/* Changed from cost to amount */}
+                                        £{session.amount.toFixed(2)}
                                     </span>
                                 )}
                             </div>
@@ -686,9 +686,9 @@ export default function SessionsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
-              {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingDialog}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingDialog}>
+              {isSubmittingDialog && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
