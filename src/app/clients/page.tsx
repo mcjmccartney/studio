@@ -107,15 +107,15 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
-  const [clientForViewSheet, setClientForViewSheet] = useState<Client | null>(null);
-  const [sheetViewMode, setSheetViewMode] = useState<'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire'>('clientInfo');
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [clientForViewDialog, setClientForViewDialog] = useState<Client | null>(null);
+  const [dialogViewMode, setDialogViewMode] = useState<'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire'>('clientInfo');
   
-  const [briefForSheet, setBriefForSheet] = useState<BehaviouralBrief | null>(null);
-  const [isLoadingBriefForSheet, setIsLoadingBriefForSheet] = useState<boolean>(false);
+  const [briefForDialog, setBriefForDialog] = useState<BehaviouralBrief | null>(null);
+  const [isLoadingBriefForDialog, setIsLoadingBriefForDialog] = useState<boolean>(false);
   
-  const [questionnaireForSheet, setQuestionnaireForSheet] = useState<BehaviourQuestionnaire | null>(null);
-  const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
+  const [questionnaireForDialog, setQuestionnaireForDialog] = useState<BehaviourQuestionnaire | null>(null);
+  const [isLoadingQuestionnaireForDialog, setIsLoadingQuestionnaireForDialog] = useState<boolean>(false);
   
   const [clientSessionsForView, setClientSessionsForView] = useState<Session[]>([]);
   const [memberFilter, setMemberFilter] = useState<MemberFilterType>('all');
@@ -233,8 +233,8 @@ export default function ClientsPage() {
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => {
-          const nameA = `${a.ownerFirstName} ${a.ownerLastName}`.toLowerCase();
-          const nameB = `${b.ownerFirstName} ${b.ownerLastName}`.toLowerCase();
+          const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
+          const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
           if (nameA < nameB) return -1;
           if (nameA > nameB) return 1;
           return 0;
@@ -287,8 +287,8 @@ export default function ClientsPage() {
       toast({ title: "Client Updated", description: `${formatFullNameAndDogName(ownerFullName, data.dogName)} has been successfully updated.` });
       setIsEditSheetOpen(false);
 
-      if (clientForViewSheet && clientForViewSheet.id === clientToEdit.id) {
-        setClientForViewSheet(updatedClients.find(c => c.id === clientToEdit.id) || null);
+      if (clientForViewDialog && clientForViewDialog.id === clientToEdit.id) {
+        setClientForViewDialog(updatedClients.find(c => c.id === clientToEdit.id) || null);
       }
       setClientToEdit(null);
 
@@ -320,9 +320,9 @@ export default function ClientsPage() {
       setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
       const ownerFullName = `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName}`.trim();
       toast({ title: "Client Deleted", description: `${formatFullNameAndDogName(ownerFullName, clientToDelete.dogName)} has been successfully deleted.` });
-      if (clientForViewSheet && clientForViewSheet.id === clientToDelete.id) {
-         setClientForViewSheet(null);
-         setIsViewSheetOpen(false);
+      if (clientForViewDialog && clientForViewDialog.id === clientToDelete.id) {
+         setClientForViewDialog(null);
+         setIsViewDialogOpen(false);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
@@ -334,10 +334,10 @@ export default function ClientsPage() {
     }
   };
 
-  const openViewSheet = (client: Client) => {
-    setClientForViewSheet(client);
-    setSheetViewMode('clientInfo');
-    setIsViewSheetOpen(true);
+  const openViewDialog = (client: Client) => {
+    setClientForViewDialog(client);
+    setDialogViewMode('clientInfo');
+    setIsViewDialogOpen(true);
     
     const sessionsForThisClient = allSessions.filter(session => session.clientId === client.id)
                                 .sort((a,b) => {
@@ -350,56 +350,46 @@ export default function ClientsPage() {
                                 });
     setClientSessionsForView(sessionsForThisClient);
     
-    setBriefForSheet(null); 
-    setQuestionnaireForSheet(null); 
+    setBriefForDialog(null); 
+    setQuestionnaireForDialog(null); 
   };
 
-  useEffect(() => {
-    const fetchBriefForSheet = async () => {
-      if (isViewSheetOpen && clientForViewSheet?.behaviouralBriefId && !briefForSheet) { 
-        setIsLoadingBriefForSheet(true);
-        try {
-          const brief = await getBehaviouralBriefByBriefId(clientForViewSheet.behaviouralBriefId);
-          setBriefForSheet(brief);
-        } catch (error) {
-          console.error("Error fetching behavioural brief for sheet:", error);
-          setBriefForSheet(null);
-        } finally {
-          setIsLoadingBriefForSheet(false);
-        }
-      }
-    };
-    fetchBriefForSheet();
-  }, [isViewSheetOpen, clientForViewSheet, briefForSheet]);
-
-  useEffect(() => {
-    const fetchQuestionnaireForSheet = async () => {
-      if (isViewSheetOpen && clientForViewSheet?.behaviourQuestionnaireId && !questionnaireForSheet) { 
-        setIsLoadingQuestionnaireForSheet(true);
-        try {
-          const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
-          setQuestionnaireForSheet(q);
-        } catch (error) {
-          console.error("Error fetching behaviour questionnaire for sheet:", error);
-          setQuestionnaireForSheet(null);
-        } finally {
-          setIsLoadingQuestionnaireForSheet(false);
-        }
-      }
-    };
-    fetchQuestionnaireForSheet();
-  }, [isViewSheetOpen, clientForViewSheet, questionnaireForSheet]);
+  const [isBriefDetailDialogOpen, setIsBriefDetailDialogOpen] = useState(false);
+  const [isQuestionnaireDetailDialogOpen, setIsQuestionnaireDetailDialogOpen] = useState(false);
 
 
   const openBriefDialog = async () => {
-    if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
-    setSheetViewMode('behaviouralBrief');
+    if (!clientForViewDialog || !clientForViewDialog.behaviouralBriefId) return;
+    setIsLoadingBriefForDialog(true);
+    try {
+      const brief = await getBehaviouralBriefByBriefId(clientForViewDialog.behaviouralBriefId);
+      setBriefForDialog(brief);
+      setIsBriefDetailDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching behavioural brief for dialog:", error);
+      setBriefForDialog(null);
+      toast({ title: "Error", description: "Could not load behavioural brief.", variant: "destructive" });
+    } finally {
+      setIsLoadingBriefForDialog(false);
+    }
   };
 
   const openQuestionnaireDialog = async () => {
-    if (!clientForViewSheet || !clientForViewSheet.behaviourQuestionnaireId) return;
-    setSheetViewMode('behaviourQuestionnaire');
+    if (!clientForViewDialog || !clientForViewDialog.behaviourQuestionnaireId) return;
+    setIsLoadingQuestionnaireForDialog(true);
+    try {
+      const q = await getBehaviourQuestionnaireById(clientForViewDialog.behaviourQuestionnaireId);
+      setQuestionnaireForDialog(q);
+      setIsQuestionnaireDetailDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching behaviour questionnaire for dialog:", error);
+      setQuestionnaireForDialog(null);
+      toast({ title: "Error", description: "Could not load behaviour questionnaire.", variant: "destructive" });
+    } finally {
+      setIsLoadingQuestionnaireForDialog(false);
+    }
   };
+
 
   const filteredClients = useMemo(() => {
     if (memberFilter === 'all') {
@@ -437,7 +427,7 @@ export default function ClientsPage() {
                 New Client
               </Button>
             </SheetTrigger>
-            <SheetContent className="sm:max-w-md">
+            <SheetContent className="sm:max-w-md bg-card">
               <SheetHeader>
                 <SheetTitle>New Client</SheetTitle>
                 <SheetDescription>
@@ -547,7 +537,7 @@ export default function ClientsPage() {
                 return (
                   <div
                     key={client.id}
-                    onClick={() => openViewSheet(client)}
+                    onClick={() => openViewDialog(client)}
                     className="bg-card shadow-sm rounded-md mb-2 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
                   >
                     <div className="flex items-center gap-3">
@@ -602,7 +592,7 @@ export default function ClientsPage() {
 
       {/* Edit Client Sheet */}
       <Sheet open={isEditSheetOpen} onOpenChange={(isOpen) => { setIsEditSheetOpen(isOpen); if(!isOpen) setClientToEdit(null);}}>
-        <SheetContent className="sm:max-w-md">
+        <SheetContent className="sm:max-w-md bg-card">
           <SheetHeader>
             <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(`${clientToEdit.ownerFirstName} ${clientToEdit.ownerLastName}`, clientToEdit.dogName) : ''}</SheetTitle>
             <SheetDescription>
@@ -706,16 +696,14 @@ export default function ClientsPage() {
         </SheetContent>
       </Sheet>
 
-       {/* View Client Sheet */}
-      <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) { setClientForViewSheet(null); setSheetViewMode('clientInfo');} }}>
-        <SheetContent className="sm:max-w-lg">
-          {clientForViewSheet && (
+      {/* View Client Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={(isOpen) => { setIsViewDialogOpen(isOpen); if (!isOpen) { setClientForViewDialog(null); setDialogViewMode('clientInfo');} }}>
+        <DialogContent className="sm:max-w-lg">
+          {clientForViewDialog && (
             <>
-            {sheetViewMode === 'clientInfo' && (
-              <>
-              <SheetHeader className="pr-8"> {/* Added pr-8 to prevent overlap with close button */}
-                <SheetTitle className="flex items-center mt-2">
-                   {clientForViewSheet.isMember && (
+              <DialogHeader>
+                <DialogTitle className="flex items-center">
+                   {clientForViewDialog.isMember && (
                       <Image
                         src="https://iili.io/34300ox.md.jpg"
                         alt="Member Icon"
@@ -725,61 +713,61 @@ export default function ClientsPage() {
                         data-ai-hint="company logo"
                       />
                     )}
-                  {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
-                </SheetTitle>
-                 <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                    {clientForViewSheet.isActive ? <SquareCheck className="mr-1.5 h-3.5 w-3.5" /> : <X className="mr-1.5 h-3.5 w-3.5" />}
-                    {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
+                  {formatFullNameAndDogName(`${clientForViewDialog.ownerFirstName} ${clientForViewDialog.ownerLastName}`, clientForViewDialog.dogName)}
+                </DialogTitle>
+                 <Badge variant={clientForViewDialog.isActive ? "default" : "secondary"} className="w-fit !mt-2">
+                    {clientForViewDialog.isActive ? <SquareCheck className="mr-1.5 h-3.5 w-3.5" /> : <X className="mr-1.5 h-3.5 w-3.5" />}
+                    {clientForViewDialog.isActive ? "Active Client" : "Inactive Client"}
                 </Badge>
-              </SheetHeader>
-              <ScrollArea className="max-h-[calc(100vh-180px)] pr-3 mt-4"> {/* Adjusted max-h for footer */}
+              </DialogHeader>
+              <ScrollArea className="max-h-[calc(100vh-250px)] pr-3 mt-2">
                 <div className="py-4 space-y-3">
                      <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right font-semibold col-span-1">Email:</Label>
-                        <div className="col-span-2 text-sm"><a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a></div>
+                        <div className="col-span-2 text-sm"><a href={`mailto:${clientForViewDialog.contactEmail}`} className="hover:underline">{clientForViewDialog.contactEmail}</a></div>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right font-semibold col-span-1">Number:</Label>
-                        <div className="col-span-2 text-sm"><a href={`tel:${clientForViewSheet.contactNumber}`} className="hover:underline">{clientForViewSheet.contactNumber}</a></div>
+                        <div className="col-span-2 text-sm"><a href={`tel:${clientForViewDialog.contactNumber}`} className="hover:underline">{clientForViewDialog.contactNumber}</a></div>
                     </div>
                     
-                    {clientForViewSheet.address ? (
+                    {clientForViewDialog.address ? (
                         <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
                             <Label className="text-right font-semibold col-span-1 pt-0.5">Address:</Label>
                             <div className="col-span-2 text-sm">
-                                {clientForViewSheet.address.addressLine1} <br />
-                                {clientForViewSheet.address.addressLine2 && <>{clientForViewSheet.address.addressLine2} <br /></>}
-                                {clientForViewSheet.address.city}, {clientForViewSheet.postcode} <br /> 
-                                {clientForViewSheet.address.country}
+                                {clientForViewDialog.address.addressLine1} <br />
+                                {clientForViewDialog.address.addressLine2 && <>{clientForViewDialog.address.addressLine2} <br /></>}
+                                {clientForViewDialog.address.city}, {clientForViewDialog.postcode} <br /> 
+                                {clientForViewDialog.address.country}
                             </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                             <Label className="text-right font-semibold col-span-1">Postcode:</Label>
-                            <div className="col-span-2 text-sm">{clientForViewSheet.postcode}</div>
+                            <div className="col-span-2 text-sm">{clientForViewDialog.postcode}</div>
                         </div>
                     )}
 
-                    {clientForViewSheet.howHeardAboutServices && (
+                    {clientForViewDialog.howHeardAboutServices && (
                         <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
                             <Label className="text-right font-semibold col-span-1 pt-0.5">How heard:</Label>
-                            <div className="col-span-2 text-sm text-muted-foreground">{clientForViewSheet.howHeardAboutServices}</div>
+                            <div className="col-span-2 text-sm text-muted-foreground">{clientForViewDialog.howHeardAboutServices}</div>
                         </div>
                     )}
                     <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
                         <Label className="text-right font-semibold col-span-1">Submitted:</Label>
-                        <div className="col-span-2 text-sm text-muted-foreground">{clientForViewSheet.submissionDate && isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'}</div>
+                        <div className="col-span-2 text-sm text-muted-foreground">{clientForViewDialog.submissionDate && isValid(parseISO(clientForViewDialog.submissionDate)) ? format(parseISO(clientForViewDialog.submissionDate), 'PPP p') : 'N/A'}</div>
                     </div>
                     
-                    {clientForViewSheet.behaviouralBriefId && (
-                        <Button variant="outline" className="w-full mt-4" onClick={openBriefDialog} disabled={isLoadingBriefForSheet}>
-                            {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {clientForViewDialog.behaviouralBriefId && (
+                        <Button variant="outline" className="w-full mt-4" onClick={openBriefDialog} disabled={isLoadingBriefForDialog}>
+                            {isLoadingBriefForDialog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             View Behavioural Brief
                         </Button>
                     )}
-                    {clientForViewSheet.behaviourQuestionnaireId && (
-                        <Button variant="outline" className="w-full mt-2" onClick={openQuestionnaireDialog} disabled={isLoadingQuestionnaireForSheet}>
-                            {isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {clientForViewDialog.behaviourQuestionnaireId && (
+                        <Button variant="outline" className="w-full mt-2" onClick={openQuestionnaireDialog} disabled={isLoadingQuestionnaireForDialog}>
+                            {isLoadingQuestionnaireForDialog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             View Behaviour Questionnaire
                         </Button>
                     )}
@@ -792,7 +780,7 @@ export default function ClientsPage() {
                             {clientSessionsForView.length > 0 ? (
                             <ul className="space-y-3">
                                 {clientSessionsForView.map(session => (
-                                <li key={session.id} className="p-3 rounded-md border bg-card hover:bg-muted/50 transition-colors text-sm">
+                                <li key={session.id} className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors text-sm">
                                     <div className="flex justify-between items-center">
                                     <div>
                                         <span className="font-semibold">
@@ -817,81 +805,84 @@ export default function ClientsPage() {
                     </Card>
                 </div>
               </ScrollArea>
-              <SheetFooter className="pt-4">
-                <Button variant="outline" onClick={() => setIsViewSheetOpen(false)}>Close</Button>
-              </SheetFooter>
-              </>
-            )}
-
-            {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
-              <>
-                <SheetHeader className="flex-row justify-between items-center pr-8"> {/* Added pr-8 */}
-                    <SheetTitle className="text-lg flex items-center">
-                    <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief
-                    </SheetTitle>
-                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Back to Client Info</span>
-                    </Button>
-                </SheetHeader>
-                <SheetDescription>{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, briefForSheet.dogName)}</SheetDescription>
-                <ScrollArea className="max-h-[calc(100vh-150px)] pr-3 mt-4">
-                    <div className="py-4 space-y-3 text-sm">
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{briefForSheet.dogName}</div></div>
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{briefForSheet.dogBreed}</div></div>
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Sex:</Label><div className="col-span-2">{briefForSheet.dogSex}</div></div>
-                        {briefForSheet.lifeWithDogAndHelpNeeded && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Life & Help Needed:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForSheet.lifeWithDogAndHelpNeeded}</div></div>}
-                        {briefForSheet.bestOutcome && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Best Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForSheet.bestOutcome}</div></div>}
-                        {briefForSheet.idealSessionTypes && briefForSheet.idealSessionTypes.length > 0 && (
-                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
-                            <Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Sessions:</Label>
-                            <div className="col-span-2"><ul className="list-disc list-inside text-muted-foreground">{briefForSheet.idealSessionTypes.map(type => <li key={type}>{type}</li>)}</ul></div>
-                        </div>
-                        )}
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'}</div></div>
-                    </div>
-                </ScrollArea>
-                 <SheetFooter className="pt-4">
-                    <Button variant="outline" onClick={() => setSheetViewMode('clientInfo')}>Back to Client Info</Button>
-                </SheetFooter>
-              </>
-            )}
-            {isLoadingBriefForSheet && sheetViewMode === 'behaviouralBrief' && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Brief...</p></div>}
-
-
-            {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
-                <>
-                <SheetHeader className="flex-row justify-between items-center pr-8"> {/* Added pr-8 */}
-                    <SheetTitle className="text-lg flex items-center">
-                        <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire
-                    </SheetTitle>
-                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')} className="h-7 w-7">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Back to Client Info</span>
-                    </Button>
-                </SheetHeader>
-                <SheetDescription>{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
-                 <ScrollArea className="max-h-[calc(100vh-150px)] pr-3 mt-4">
-                    <div className="py-4 space-y-3 text-sm">
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{questionnaireForSheet.dogName} ({questionnaireForSheet.dogAge}, {questionnaireForSheet.dogSex})</div></div>
-                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{questionnaireForSheet.dogBreed}</div></div>
-                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Neutered/Spayed:</Label><div className="col-span-2 whitespace-pre-wrap">{questionnaireForSheet.neuteredSpayedDetails}</div></div>
-                        {questionnaireForSheet.mainProblem && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Main Problem:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForSheet.mainProblem}</div></div>}
-                        {questionnaireForSheet.idealTrainingOutcome && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForSheet.idealTrainingOutcome}</div></div>}
-                         <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'}</div></div>
-                    </div>
-                </ScrollArea>
-                 <SheetFooter className="pt-4">
-                    <Button variant="outline" onClick={() => setSheetViewMode('clientInfo')}>Back to Client Info</Button>
-                </SheetFooter>
-              </>
-            )}
-            {isLoadingQuestionnaireForSheet && sheetViewMode === 'behaviourQuestionnaire' && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Questionnaire...</p></div>}
-
+              <DialogFooter className="pt-4">
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+              </DialogFooter>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
+
+      {/* Behavioural Brief Detail Dialog */}
+       <Dialog open={isBriefDetailDialogOpen} onOpenChange={setIsBriefDetailDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          {briefForDialog && clientForViewDialog && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-lg flex items-center">
+                  <BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief
+                </DialogTitle>
+                <DialogDescription>
+                  {formatFullNameAndDogName(`${clientForViewDialog.ownerFirstName} ${clientForViewDialog.ownerLastName}`, briefForDialog.dogName)}
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] pr-3 mt-2">
+                <div className="py-4 space-y-3 text-sm">
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{briefForDialog.dogName}</div></div>
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{briefForDialog.dogBreed}</div></div>
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Sex:</Label><div className="col-span-2">{briefForDialog.dogSex}</div></div>
+                  {briefForDialog.lifeWithDogAndHelpNeeded && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Life & Help Needed:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForDialog.lifeWithDogAndHelpNeeded}</div></div>}
+                  {briefForDialog.bestOutcome && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Best Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{briefForDialog.bestOutcome}</div></div>}
+                  {briefForDialog.idealSessionTypes && briefForDialog.idealSessionTypes.length > 0 && (
+                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+                      <Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Sessions:</Label>
+                      <div className="col-span-2"><ul className="list-disc list-inside text-muted-foreground">{briefForDialog.idealSessionTypes.map(type => <li key={type}>{type}</li>)}</ul></div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{briefForDialog.submissionDate && isValid(parseISO(briefForDialog.submissionDate)) ? format(parseISO(briefForDialog.submissionDate), 'PPP p') : 'N/A'}</div></div>
+                </div>
+              </ScrollArea>
+              <DialogFooter className="pt-4">
+                <Button variant="outline" onClick={() => setIsBriefDetailDialogOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+          {isLoadingBriefForDialog && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Brief...</p></div>}
+        </DialogContent>
+      </Dialog>
+
+      {/* Behaviour Questionnaire Detail Dialog */}
+      <Dialog open={isQuestionnaireDetailDialogOpen} onOpenChange={setIsQuestionnaireDetailDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          {questionnaireForDialog && clientForViewDialog && (
+             <>
+                <DialogHeader>
+                  <DialogTitle className="text-lg flex items-center">
+                      <IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire
+                  </DialogTitle>
+                  <DialogDescription>
+                    {formatFullNameAndDogName(`${clientForViewDialog.ownerFirstName} ${clientForViewDialog.ownerLastName}`, questionnaireForDialog.dogName)}
+                  </DialogDescription>
+                </DialogHeader>
+                 <ScrollArea className="max-h-[70vh] pr-3 mt-2">
+                    <div className="py-4 space-y-3 text-sm">
+                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog's Name:</Label><div className="col-span-2">{questionnaireForDialog.dogName} ({questionnaireForDialog.dogAge}, {questionnaireForDialog.dogSex})</div></div>
+                        <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Breed:</Label><div className="col-span-2">{questionnaireForDialog.dogBreed}</div></div>
+                        <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Neutered/Spayed:</Label><div className="col-span-2 whitespace-pre-wrap">{questionnaireForDialog.neuteredSpayedDetails}</div></div>
+                        {questionnaireForDialog.mainProblem && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Main Problem:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForDialog.mainProblem}</div></div>}
+                        {questionnaireForDialog.idealTrainingOutcome && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Ideal Outcome:</Label><div className="col-span-2 whitespace-pre-wrap text-muted-foreground">{questionnaireForDialog.idealTrainingOutcome}</div></div>}
+                         <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1 pt-2"><Label className="text-right font-semibold col-span-1">Submitted:</Label><div className="col-span-2 text-muted-foreground">{questionnaireForDialog.submissionDate && isValid(parseISO(questionnaireForDialog.submissionDate)) ? format(parseISO(questionnaireForDialog.submissionDate), 'PPP p') : 'N/A'}</div></div>
+                         {/* Add more fields here if needed for a quick overview, or keep it concise */}
+                    </div>
+                </ScrollArea>
+                 <DialogFooter className="pt-4">
+                    <Button variant="outline" onClick={() => setIsQuestionnaireDetailDialogOpen(false)}>Close</Button>
+                </DialogFooter>
+              </>
+          )}
+          {isLoadingQuestionnaireForDialog && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Questionnaire...</p></div>}
+        </DialogContent>
+      </Dialog>
 
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, DollarSign } from 'lucide-react';
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -428,7 +429,7 @@ export default function SessionsPage() {
               New Session
             </Button>
           </SheetTrigger>
-          <SheetContent className="sm:max-w-md">
+          <SheetContent className="sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
               <SheetDescription>
@@ -436,15 +437,14 @@ export default function SessionsPage() {
               </SheetDescription>
             </SheetHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
-                  <div className="col-span-3">
+                <div>
+                  <Label htmlFor="clientId-sessionpage">Client</Label>
                   <Controller
                       name="clientId"
                       control={addSessionForm.control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet || isLoading}>
-                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
+                          <SelectTrigger id="clientId-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.clientId ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
                           <SelectContent>
@@ -461,12 +461,11 @@ export default function SessionsPage() {
                       )}
                     />
                     {addSessionForm.formState.errors.clientId && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.clientId.message}</p>}
-                    </div>
                 </div>
 
-               <div className="grid grid-cols-4 items-start gap-4"> {/* Changed to items-start for calendar alignment */}
-                <Label htmlFor="date-sessionpage" className="text-right pt-2">Date</Label> {/* Added pt-2 for alignment */}
-                <div className="col-span-3 flex justify-center"> {/* Added flex justify-center */}
+               <div>
+                <Label htmlFor="date-sessionpage">Date</Label>
+                <div className="mt-1 flex justify-center">
                 <Controller
                   name="date"
                   control={addSessionForm.control}
@@ -488,13 +487,12 @@ export default function SessionsPage() {
                     />
                   )}
                 />
-                {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
                 </div>
+                {addSessionForm.formState.errors.date && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.date.message}</p>}
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time-sessionpage" className="text-right">Time (24h)</Label>
-                <div className="col-span-3">
+              <div>
+                <Label htmlFor="time-sessionpage">Time (24h)</Label>
                 <Controller
                   name="time"
                   control={addSessionForm.control}
@@ -503,24 +501,22 @@ export default function SessionsPage() {
                       id="time-sessionpage"
                       type="time"
                       {...field}
-                      className={cn("w-full", addSessionForm.formState.errors.time ? "border-destructive" : "")}
+                      className={cn("w-full mt-1", addSessionForm.formState.errors.time ? "border-destructive" : "")}
                       disabled={isSubmittingSheet}
                     />
                   )}
                 />
                 {addSessionForm.formState.errors.time && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.time.message}</p>}
-                </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="sessionType-sessionpage" className="text-right">Type</Label>
-                <div className="col-span-3">
+              <div>
+                <Label htmlFor="sessionType-sessionpage">Type</Label>
                 <Controller
                   name="sessionType"
                   control={addSessionForm.control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
-                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionForm.formState.errors.sessionType ? "border-destructive" : "")}>
                         <SelectValue placeholder="Select session type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -537,12 +533,10 @@ export default function SessionsPage() {
                   )}
                 />
                 {addSessionForm.formState.errors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.sessionType.message}</p>}
-                </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount-sessionpage" className="text-right">Amount (£)</Label>
-                <div className="col-span-3">
+              <div>
+                <Label htmlFor="amount-sessionpage">Amount (£)</Label>
                 <Controller name="amount" control={addSessionForm.control}
                     render={({ field }) => (
                     <Input 
@@ -553,13 +547,12 @@ export default function SessionsPage() {
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                        className={cn("w-full", addSessionForm.formState.errors.amount && "border-destructive")}
+                        className={cn("w-full mt-1", addSessionForm.formState.errors.amount && "border-destructive")}
                         disabled={isSubmittingSheet} 
                     />
                     )}
                 />
                 {addSessionForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{addSessionForm.formState.errors.amount.message}</p>}
-                </div>
               </div>
 
               <SheetFooter className="mt-4">
@@ -598,8 +591,8 @@ export default function SessionsPage() {
               <AccordionTrigger className="text-lg hover:no-underline px-4 py-3 font-semibold">
                 {monthYear} ({groupedSessions[monthYear].length} sessions)
               </AccordionTrigger>
-              <AccordionContent className="px-4">
-                <ul className="space-y-3 pt-2 pb-3">
+              <AccordionContent className="px-0"> {/* Changed px-4 to px-0 */}
+                <ul className="space-y-0 pt-0 pb-0"> {/* Changed pt-2 pb-3 to pt-0 pb-0 and space-y-3 to space-y-0 */}
                   {groupedSessions[monthYear]
                     .sort((a, b) => {
                         const dateA = parseISO(a.date);
@@ -617,35 +610,27 @@ export default function SessionsPage() {
                     .map(session => (
                       <li
                         key={session.id}
-                        className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors shadow-sm"
+                        className="bg-card hover:bg-muted/50 transition-colors border-b last:border-b-0" // Added bg-card, border-b, last:border-b-0
                       >
-                        <div className="flex justify-between items-start">
-                          <div className="cursor-pointer flex-grow" onClick={() => handleSessionClick(session)}>
-                            <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
-                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                                <span className="flex items-center">
-                                    <CalendarIconLucide className="inline-block mr-1.5 h-4 w-4" />
-                                    {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}
-                                </span>
-                                <span className="flex items-center">
-                                    <Clock className="inline-block mr-1.5 h-4 w-4" />
-                                    {session.time}
-                                </span>
-                                {session.amount !== undefined && (
-                                    <span className="flex items-center">
-                                        <DollarSign className="inline-block mr-1.5 h-4 w-4" />
-                                        £{session.amount.toFixed(2)}
-                                    </span>
-                                )}
+                        <div className="flex justify-between items-center p-4"> {/* Added p-4 here */}
+                          <div className="flex items-center gap-4 flex-grow cursor-pointer" onClick={() => handleSessionClick(session)}> {/* Added flex items-center gap-4 */}
+                             <Image
+                                src="https://iili.io/34300ox.md.jpg"
+                                alt="RMR Logo"
+                                width={40}
+                                height={40}
+                                className="rounded-md"
+                                data-ai-hint="company logo"
+                              />
+                            <div>
+                               <h3 className="font-semibold text-base">{formatFullNameAndDogName(session.clientName, session.dogName)}</h3>
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                  {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
+                                  , {session.time} • {session.sessionType}
+                                </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                             <Badge 
-                                variant="default"
-                                className="mt-1 whitespace-nowrap"
-                              >
-                                {session.sessionType}
-                              </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -675,7 +660,6 @@ export default function SessionsPage() {
                             </DropdownMenu>
                           </div>
                         </div>
-                      
                       </li>
                     ))}
                 </ul>
