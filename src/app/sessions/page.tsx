@@ -106,64 +106,73 @@ interface SessionDetailViewProps {
 function SessionDetailView({ session, onBack, onDelete, onEdit }: SessionDetailViewProps) {
   const displayName = formatFullNameAndDogName(session.clientName, session.dogName);
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Details</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => onEdit(session)}>
-            <Edit className="mr-2 h-4 w-4" /> Edit Session
-          </Button>
-          <Button variant="destructive" onClick={() => onDelete(session)}>
-            <Trash2 className="mr-2 h-4 w-4" /> Delete Session
-          </Button>
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sessions
-          </Button>
-        </div>
-      </div>
-
-      <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-        <div className="p-1 space-y-3">
+     <Dialog open={true} onOpenChange={(isOpen) => !isOpen && onBack()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Session Details</DialogTitle>
+          <DialogDescription>
+            {displayName}
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[60vh] pr-3">
+          <div className="py-4 space-y-3">
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1">Client:</Label>
-                <div className="col-span-2 text-sm">{displayName}</div>
+              <Label className="text-right font-semibold col-span-1">Date:</Label>
+              <div className="col-span-2 text-sm">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
             </div>
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1">Date:</Label>
-                <div className="col-span-2 text-sm">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div>
+              <Label className="text-right font-semibold col-span-1">Time:</Label>
+              <div className="col-span-2 text-sm">{session.time}</div>
             </div>
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1">Time:</Label>
-                <div className="col-span-2 text-sm">{session.time}</div>
+              <Label className="text-right font-semibold col-span-1">Client:</Label>
+              <div className="col-span-2 text-sm">{session.clientName}</div>
             </div>
+            {session.dogName && (
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Dog:</Label>
+                <div className="col-span-2 text-sm">{session.dogName}</div>
+              </div>
+            )}
             <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1">Type:</Label>
-                <div className="col-span-2 text-sm">{session.sessionType}</div>
+              <Label className="text-right font-semibold col-span-1">Type:</Label>
+              <div className="col-span-2 text-sm">{session.sessionType}</div>
             </div>
             {session.cost !== undefined && (
-                <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
-                    <Label className="text-right font-semibold col-span-1">Cost:</Label>
-                    <div className="col-span-2 text-sm">£{session.cost.toFixed(2)}</div>
-                </div>
+              <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1">
+                <Label className="text-right font-semibold col-span-1">Cost:</Label>
+                <div className="col-span-2 text-sm">£{session.cost.toFixed(2)}</div>
+              </div>
             )}
             <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
-                <Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label>
-                <div className="col-span-2">
-                    <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'}>
-                    {session.status}
-                    </Badge>
-                </div>
+              <Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label>
+              <div className="col-span-2">
+                <Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'}>
+                  {session.status}
+                </Badge>
+              </div>
             </div>
             {session.notes && (
-            <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
+              <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1">
                 <Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label>
                 <div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{session.notes}</div>
-            </div>
+              </div>
             )}
-        </div>
-      </ScrollArea>
-    </div>
+          </div>
+        </ScrollArea>
+        <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => onEdit(session)} className="flex-1 sm:flex-none">
+            <Edit className="mr-2 h-4 w-4" /> Edit
+          </Button>
+          <Button variant="destructive" onClick={() => onDelete(session)} className="flex-1 sm:flex-none">
+            <Trash2 className="mr-2 h-4 w-4" /> Delete
+          </Button>
+          <DialogClose asChild>
+             <Button variant="outline" className="flex-1 sm:flex-none">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -173,6 +182,7 @@ export default function SessionsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
   const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
@@ -343,11 +353,14 @@ export default function SessionsPage() {
   };
 
   const handleEditSession = (session: Session) => {
-    alert(`Edit session functionality for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : ''}" to be implemented.`);
+    toast({
+      title: "Edit Session",
+      description: `Edit session for "${formatFullNameAndDogName(session.clientName, session.dogName)} - ${isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : ''}" (Feature not fully implemented).`,
+    });
   };
 
 
-  if (selectedSession) {
+  if (selectedSession && !isAddSessionDialogOpen && !isSessionDeleteDialogOpen) {
     return <SessionDetailView session={selectedSession} onBack={handleBackToSessionList} onDelete={handleDeleteSessionRequest} onEdit={handleEditSession} />;
   }
 
@@ -369,7 +382,18 @@ export default function SessionsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
-        <Dialog open={isAddSessionDialogOpen} onOpenChange={setIsAddSessionDialogOpen}>
+        <Dialog open={isAddSessionDialogOpen} onOpenChange={(isOpen) => {
+          setIsAddSessionDialogOpen(isOpen);
+          if (isOpen) {
+            addSessionForm.reset({
+              clientId: '',
+              date: new Date(),
+              time: format(new Date(), "HH:mm"),
+              sessionType: '',
+              cost: undefined,
+            });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -491,6 +515,7 @@ export default function SessionsPage() {
                         id="cost-sessionpage" 
                         type="number" 
                         placeholder="e.g. 75.50"
+                        step="0.01"
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
@@ -575,7 +600,7 @@ export default function SessionsPage() {
                                 </span>
                                 {session.cost !== undefined && (
                                     <span className="flex items-center">
-                                        <IconDollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                        <DollarSign className="inline-block mr-1.5 h-4 w-4" />
                                         £{session.cost.toFixed(2)}
                                     </span>
                                 )}
@@ -648,3 +673,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+
