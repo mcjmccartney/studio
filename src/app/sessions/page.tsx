@@ -14,15 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, ArrowLeft, Users, Tag as TagIcon, Info, ClipboardList, MoreHorizontal, Edit, Trash2, Loader2, X, Users as UsersIcon, DollarSign } from 'lucide-react';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-  SheetTrigger,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,7 +173,7 @@ export default function SessionsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddSessionSheetOpen, setIsAddSessionSheetOpen] = useState(false);
+  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isSessionDeleteDialogOpen, setIsSessionDeleteDialogOpen] = useState(false);
@@ -185,32 +185,24 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined, // Updated for useEffect init
-      time: '', // Updated for useEffect init
+      date: undefined, 
+      time: '', 
       sessionType: '',
       cost: undefined,
     }
   });
   
   useEffect(() => {
-    if (isAddSessionSheetOpen) {
+    if (isAddSessionDialogOpen) {
       addSessionForm.reset({
         clientId: '',
-        date: new Date(), // Set by form now
-        time: format(new Date(), "HH:mm"), // Set by form now
-        sessionType: '',
-        cost: undefined,
-      });
-    } else {
-      addSessionForm.reset({ // Reset when sheet closes
-        clientId: '',
-        date: undefined,
-        time: '',
+        date: new Date(), 
+        time: format(new Date(), "HH:mm"), 
         sessionType: '',
         cost: undefined,
       });
     }
-  }, [isAddSessionSheetOpen, addSessionForm]);
+  }, [isAddSessionDialogOpen, addSessionForm]);
 
 
   useEffect(() => {
@@ -235,7 +227,13 @@ export default function SessionsPage() {
             if (!isValid(dateB)) return -1;
             return dateB.getTime() - dateA.getTime();
         }));
-        setClients(firestoreClients);
+        setClients(firestoreClients.sort((a, b) => {
+          const nameA = `${a.ownerFirstName} ${a.ownerLastName}`.toLowerCase();
+          const nameB = `${b.ownerFirstName} ${b.ownerLastName}`.toLowerCase();
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+          return 0;
+        }));
       } catch (err) {
         console.error("Error fetching data:", err);
         const errorMessage = err instanceof Error ? err.message : "Failed to load data.";
@@ -283,7 +281,7 @@ export default function SessionsPage() {
         title: "Session Added",
         description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
-      setIsAddSessionSheetOpen(false);
+      setIsAddSessionDialogOpen(false);
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -371,20 +369,20 @@ export default function SessionsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session Management</h1>
-        <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
-          <SheetTrigger asChild>
+        <Dialog open={isAddSessionDialogOpen} onOpenChange={setIsAddSessionDialogOpen}>
+          <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New Session
             </Button>
-          </SheetTrigger>
-          <SheetContent className="sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>Add New Session</SheetTitle>
-              <SheetDescription>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add New Session</DialogTitle>
+              <DialogDescription>
                 Schedule a new training session.
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
             <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="clientId-sessionpage" className="text-right">Client</Label>
@@ -506,18 +504,18 @@ export default function SessionsPage() {
               </div>
 
 
-              <SheetFooter className="mt-4">
-                <SheetClose asChild>
+              <DialogFooter className="mt-4">
+                <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                </SheetClose>
+                </DialogClose>
                 <Button type="submit" disabled={isSubmittingForm}>
                   {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Session
                 </Button>
-              </SheetFooter>
+              </DialogFooter>
             </form>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {isLoading && (
@@ -577,7 +575,7 @@ export default function SessionsPage() {
                                 </span>
                                 {session.cost !== undefined && (
                                     <span className="flex items-center">
-                                        <DollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                        <IconDollarSign className="inline-block mr-1.5 h-4 w-4" />
                                         £{session.cost.toFixed(2)}
                                     </span>
                                 )}
@@ -650,5 +648,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-
