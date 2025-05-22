@@ -14,9 +14,10 @@ export default {
       fontFamily: {
         sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
         mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
-        title: ['var(--font-title)', ...defaultTheme.fontFamily.sans], // Added title font family
+        title: ['var(--font-title)', ...defaultTheme.fontFamily.sans],
       },
   		colors: {
+        'custom-ring-color': '#92351f', // Added custom color for the ring
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
