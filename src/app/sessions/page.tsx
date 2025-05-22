@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign, X, PawPrint } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign as IconDollarSign, X, PawPrint } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -23,15 +23,6 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,7 +75,7 @@ const sessionFormSchema = z.object({
   sessionType: z.string().min(1, { message: "Session type is required." }),
   amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
-    z.number().nonnegative({ message: "Amount must be a positive number." }).optional()
+    z.number().nonnegative({ message: 'Amount must be a positive number.' }).optional()
   ),
 });
 
@@ -104,6 +95,18 @@ const sessionTypeOptions = [
 interface GroupedSessions {
   [monthYear: string]: Session[];
 }
+
+const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; isFirst?: boolean }> = ({ label, value, className, isFirst }) => {
+  if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
+    return null; 
+  }
+  return (
+    <div className={cn("flex justify-between items-start py-3 border-b border-primary-foreground/30", !isFirst && "", className)}>
+      <span className="text-sm text-primary-foreground/80 pr-2">{label}</span>
+      <span className="text-sm text-primary-foreground text-right break-words whitespace-pre-wrap">{value}</span>
+    </div>
+  );
+};
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -135,23 +138,23 @@ export default function SessionsPage() {
   });
   
   const { watch: watchSessionForm, setValue: setSessionValue, control: addSessionFormControl, reset: resetAddSessionForm, formState: { errors: addSessionFormErrors } } = addSessionForm;
-  const watchedClientId = watchSessionForm("clientId");
-  const watchedSessionType = watchSessionForm("sessionType");
-
- useEffect(() => {
+  
+  useEffect(() => {
     if (isAddSessionSheetOpen) {
       resetAddSessionForm({
         clientId: '',
-        date: new Date(), // Initialize with current date
-        time: format(new Date(), "HH:mm"), // Initialize with current time in 24-hour format
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
         sessionType: '',
         amount: undefined,
       });
     }
   }, [isAddSessionSheetOpen, resetAddSessionForm]);
 
+  const watchedClientId = watchSessionForm("clientId");
+  const watchedSessionType = watchSessionForm("sessionType");
 
-  useEffect(() => {
+ useEffect(() => {
     if (watchedClientId && watchedSessionType && clients.length > 0) {
       const client = clients.find(c => c.id === watchedClientId);
       if (client) {
@@ -407,7 +410,7 @@ export default function SessionsPage() {
                       className={cn("!p-1 rounded-md border", addSessionFormErrors.date && "border-destructive")}
                        classNames={{ 
                         day_selected: "bg-primary text-white focus:bg-primary focus:text-white", 
-                        day: cn( "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white" )
+                        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white")
                       }}
                     />
                   )}
@@ -566,7 +569,7 @@ export default function SessionsPage() {
                                     <>
                                       <span className="hidden sm:inline">•</span>
                                       <span className="flex items-center">
-                                          <DollarSign className="inline-block mr-1 h-3.5 w-3.5" />
+                                          <IconDollarSign className="inline-block mr-1 h-3.5 w-3.5" />
                                           £{session.amount.toFixed(2)}
                                       </span>
                                     </>
@@ -617,35 +620,35 @@ export default function SessionsPage() {
         </Accordion>
       )}
 
-      {selectedSessionForSheet && (
-         <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => {setIsSessionDetailSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
+      <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => {setIsSessionDetailSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
           <SheetContent className="sm:max-w-lg bg-card">
-            <SheetHeader>
-                <SheetTitle className="text-xl">Session Details</SheetTitle>
-                <SheetDescription>
-                    {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
-                </SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="max-h-[calc(100vh-220px)] pr-3">
-                <div className="py-4 space-y-3">
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Date:</Label><div className="col-span-2 text-sm">{isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'EEEE, MMMM do, yyyy') : 'Invalid Date'}</div></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Time:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.time}</div></div>
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Client:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.clientName}</div></div>
-                    {selectedSessionForSheet.dogName && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Dog:</Label><div className="col-span-2 text-sm">{selectedSessionForSheet.dogName}</div></div>}
-                    <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Type:</Label><div className="col-span-2 text-sm flex items-center"><TagIcon className="mr-2 h-4 w-4 text-muted-foreground" />{selectedSessionForSheet.sessionType}</div></div>
-                    {selectedSessionForSheet.amount !== undefined && <div className="grid grid-cols-3 items-center gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1">Amount:</Label><div className="col-span-2 text-sm flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />£{selectedSessionForSheet.amount.toFixed(2)}</div></div>}
-                    <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Status:</Label><div className="col-span-2"><Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'}>{selectedSessionForSheet.status}</Badge></div></div>
-                    {selectedSessionForSheet.notes && <div className="grid grid-cols-3 items-start gap-x-4 gap-y-1"><Label className="text-right font-semibold col-span-1 pt-0.5">Notes:</Label><div className="col-span-2 text-sm whitespace-pre-wrap text-muted-foreground">{selectedSessionForSheet.notes}</div></div>}
-                </div>
-            </ScrollArea>
-            <SheetFooter className="pt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1 sm:flex-none"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
-                <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>{isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Delete</Button>
-                <SheetClose asChild><Button variant="outline" className="flex-1 sm:flex-none">Close</Button></SheetClose>
-            </SheetFooter>
+            {selectedSessionForSheet && (
+              <>
+                <SheetHeader>
+                    <SheetTitle className="text-xl">Session Details</SheetTitle>
+                    <SheetDescription>
+                        {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
+                    </SheetDescription>
+                </SheetHeader>
+                <ScrollArea className="max-h-[calc(100vh-220px)] pr-3">
+                  <div className="bg-[#92351f] text-primary-foreground p-4 rounded-md space-y-0 mt-4">
+                      <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} isFirst/>
+                      <DetailRow label="Booking:" value={`${isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'dd/MM/yyyy') : 'Invalid Date'}, ${selectedSessionForSheet.time}`} />
+                      <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
+                      {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
+                      <DetailRow label="Status:" value={<Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'} className="bg-card text-card-foreground">{selectedSessionForSheet.status}</Badge>} />
+                      {selectedSessionForSheet.notes && <DetailRow label="Notes:" value={selectedSessionForSheet.notes} />}
+                  </div>
+                </ScrollArea>
+                <SheetFooter className="pt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+                    <Button variant="outline" onClick={() => handleEditSession(selectedSessionForSheet)} className="flex-1 sm:flex-none"><Edit className="mr-2 h-4 w-4" /> Edit</Button>
+                    <Button variant="destructive" onClick={() => handleDeleteSessionRequest(selectedSessionForSheet)} className="flex-1 sm:flex-none" disabled={isSubmittingSheet}>{isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}Delete</Button>
+                    <SheetClose asChild><Button variant="outline" className="flex-1 sm:flex-none">Close</Button></SheetClose>
+                </SheetFooter>
+              </>
+            )}
           </SheetContent>
         </Sheet>
-      )}
 
       <AlertDialog open={isSessionDeleteDialogOpen} onOpenChange={setIsSessionDeleteDialogOpen}>
         <AlertDialogContent>
