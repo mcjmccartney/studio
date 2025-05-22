@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, CheckSquare, Users as IconUsers, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, SquareCheck as IconSquareCheck } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, SquareCheck, Users as UsersIcon } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -16,15 +16,6 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -428,7 +419,7 @@ export default function ClientsPage() {
                   Add essential contact and dog information.
                 </SheetDescription>
               </SheetHeader>
-              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="space-y-4 py-4">
+              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="space-y-6 py-4">
                 <div>
                   <Label htmlFor="add-ownerFirstName">First Name</Label>
                   <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
@@ -593,7 +584,7 @@ export default function ClientsPage() {
           </SheetHeader>
           {clientToEdit && (
             <ScrollArea className="h-[calc(100vh-150px)] pr-3 mt-4"> 
-            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-4 py-4">
+            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-6 py-4">
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
                   <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
