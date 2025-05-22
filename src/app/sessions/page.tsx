@@ -12,7 +12,7 @@ import {
 } from '@/lib/firebase';
 import { Button, buttonVariants } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info } from 'lucide-react';
+import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, Tag as TagIcon } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -321,9 +321,10 @@ export default function SessionsPage() {
 
       toast({
         title: "Session Added",
-        description: `Session with ${formatFullNameAndDogName(sessionData.clientName, sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
+        description: `Session with ${formatFullNameAndDogName(sessionData.clientName || '', sessionData.dogName)} on ${format(data.date, 'PPP')} at ${data.time} has been scheduled.`,
       });
       setIsAddSessionSheetOpen(false);
+      resetAddSessionForm();
     } catch (err) {
       console.error("Error adding session to Firestore:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to add session.";
@@ -374,7 +375,6 @@ export default function SessionsPage() {
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
     } catch (err) {
-      console.error("Error updating session:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -415,7 +415,7 @@ export default function SessionsPage() {
       setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionToDelete.id));
       toast({
         title: "Session Deleted",
-        description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName)} on ${isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''} has been deleted.`,
+        description: `Session with ${formatFullNameAndDogName(sessionToDelete.clientName || '', sessionToDelete.dogName)} on ${isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''} has been deleted.`,
       });
       if (selectedSessionForSheet && selectedSessionForSheet.id === sessionToDelete.id) {
         setSelectedSessionForSheet(null);
@@ -489,7 +489,7 @@ export default function SessionsPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="date-sessionpage">Date</Label>
-                    <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller
                         name="date"
                         control={addSessionFormControl}
@@ -504,7 +504,7 @@ export default function SessionsPage() {
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
                                 day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
-                                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
+                                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
                                 day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
                             }}
                           />
@@ -649,14 +649,14 @@ export default function SessionsPage() {
                                         <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                     </span>
-                                    <span className="hidden sm:inline">•</span>
+                                    <span className="sm:inline">•</span>
                                     <span className="flex items-center">
                                         <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {session.time}
                                     </span>
                                     {session.amount !== undefined && (
                                       <>
-                                        <span className="hidden sm:inline">•</span>
+                                        <span className="sm:inline">•</span>
                                         <span className="flex items-center">
                                             <DollarSign className="inline-block mr-1.5 h-4 w-4" />
                                             £{session.amount.toFixed(2)}
@@ -717,19 +717,23 @@ export default function SessionsPage() {
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
-              <SheetTitle className="text-center flex-1">Session Details</SheetTitle>
+              <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => { if (selectedSessionForSheet) { setSessionToEdit(selectedSessionForSheet); setIsEditSessionSheetOpen(true); setIsSessionSheetOpen(false); } }}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit Session</span></Button>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Session</span></Button>
+              </div>
+              <SheetTitle>{selectedSessionForSheet ? formatFullNameAndDogName(selectedSessionForSheet.clientName || '', selectedSessionForSheet.dogName) : "Session Details"}</SheetTitle>
             <Separator/>
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
                 {selectedSessionForSheet && (
-                    <div className="space-y-0">
+                    <>
                         <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                         <DetailRow label="Time:" value={selectedSessionForSheet.time} />
                         <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
                         <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
                         {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
-                    </div>
+                    </>
                 )}
               </div>
             </ScrollArea>
@@ -776,14 +780,14 @@ export default function SessionsPage() {
                 </div>
                 <div className="space-y-1.5">
                     <Label htmlFor="edit-date-sessions">Date</Label>
-                    <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
                           className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                           classNames={{
                             day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
-                            day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
+                            day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
                             day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
                           }} />
                         )} />
@@ -838,7 +842,7 @@ export default function SessionsPage() {
           </AlertDialogHeader>
           <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the session
-              with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+              with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName || '', sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
@@ -852,4 +856,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
