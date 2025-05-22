@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
+import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, SquareCheck, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -62,7 +62,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SquareCheck } from 'lucide-react';
 
 
 const internalClientFormSchema = z.object({
@@ -598,12 +597,12 @@ export default function ClientsPage() {
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-                <SheetHeader className="relative">
-                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
+                <SheetHeader>
+                    <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
                 </SheetHeader>
 
                 <ScrollArea className="flex-1">
-                  <div className="py-4">
+                  <div className="py-4"> {/* Removed px-6 */}
                     {clientForViewSheet && (
                       <>
                         {sheetViewMode === 'clientInfo' && (
@@ -616,7 +615,7 @@ export default function ClientsPage() {
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.address.postcode || clientForViewSheet.postcode} />
                                   </>
                                 ) : (
                                   <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
@@ -638,7 +637,7 @@ export default function ClientsPage() {
                                 </div>
 
                                 <Tabs defaultValue="sessions" className="w-full mt-6">
-                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
                                         <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
@@ -759,7 +758,7 @@ export default function ClientsPage() {
                             setIsViewSheetOpen(false);
                             }
                         }}
-                        disabled={isProcessingDelete}
+                        disabled={isProcessingDelete || sheetViewMode !== 'clientInfo'}
                     >
                         Edit Contact
                     </Button>
@@ -767,7 +766,7 @@ export default function ClientsPage() {
                         variant="destructive" 
                         className="w-1/2"
                         onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
-                        disabled={isProcessingDelete}
+                        disabled={isProcessingDelete || sheetViewMode !== 'clientInfo'}
                     >
                           {isProcessingDelete && clientToDelete && clientToDelete.id === clientForViewSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         Delete Client
