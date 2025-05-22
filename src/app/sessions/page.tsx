@@ -33,14 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -133,8 +126,8 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined, 
-      time: '', 
+      date: undefined,
+      time: '',
       sessionType: '',
       amount: undefined,
     }
@@ -149,20 +142,17 @@ export default function SessionsPage() {
     handleSubmit: handleAddSessionSubmitHook 
   } = addSessionForm;
   
-  useEffect(() => {
+ useEffect(() => {
     if (isAddSessionSheetOpen) {
-      setAddSessionValue("date", new Date());
-      setAddSessionValue("time", format(new Date(), "HH:mm"));
-    } else {
       resetAddSessionForm({
         clientId: '',
-        date: undefined,
-        time: '',
+        date: new Date(),
+        time: format(new Date(), "HH:mm"),
         sessionType: '',
         amount: undefined,
       });
     }
-  }, [isAddSessionSheetOpen, setAddSessionValue, resetAddSessionForm]);
+  }, [isAddSessionSheetOpen, resetAddSessionForm]);
 
   const watchedClientIdForAddSession = watchAddSessionForm("clientId");
   const watchedSessionTypeForAddSession = watchAddSessionForm("sessionType");
@@ -278,7 +268,7 @@ export default function SessionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
+  const handleAddSessionSubmit: SubmitHandler<SessionFormValues> = async (data) => {
     setIsSubmittingSheet(true);
     const selectedClient = clients.find(c => c.id === data.clientId);
     if (!selectedClient) {
@@ -368,7 +358,7 @@ export default function SessionsPage() {
       toast({ title: "Session Updated", description: `Session on ${format(data.date, 'PPP')} at ${data.time} updated.` });
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
-    } catch (err)
+    } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -448,38 +438,39 @@ export default function SessionsPage() {
           <SheetTrigger asChild>
             <Button>New Session</Button>
           </SheetTrigger>
-          <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+          <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
               <Separator />
             </SheetHeader>
             <ScrollArea className="flex-1" showScrollbar={false}>
              <div className="py-4 space-y-4">
-              <form onSubmit={handleAddSessionSubmitHook(handleAddSession)} id="addSessionFormInSheetSessions" className="space-y-4">
+              <form onSubmit={handleAddSessionSubmitHook(handleAddSessionSubmit)} id="addSessionFormInSheetSessions" className="space-y-4">
+                  
                   <div className="space-y-1.5">
-                      <Label htmlFor="clientId-sessionpage">Client</Label>
-                      <Controller
-                          name="clientId"
-                          control={addSessionFormControl}
-                          render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                              <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
-                                  <SelectValue placeholder="Select a client" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectGroup>
-                                  <SelectLabel>Clients</SelectLabel>
-                                  {clients.map(client => (
-                                      <SelectItem key={client.id} value={client.id}>
-                                      {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
-                                      </SelectItem>
-                                  ))}
-                                  </SelectGroup>
-                              </SelectContent>
-                              </Select>
-                          )}
-                          />
-                      {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
+                    <Label htmlFor="clientId-sessionpage">Client</Label>
+                    <Controller
+                        name="clientId"
+                        control={addSessionFormControl}
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
+                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
+                                <SelectValue placeholder="Select a client" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                <SelectLabel>Clients</SelectLabel>
+                                {clients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>
+                                    {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
+                                    </SelectItem>
+                                ))}
+                                </SelectGroup>
+                            </SelectContent>
+                            </Select>
+                        )}
+                        />
+                    {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
@@ -498,8 +489,8 @@ export default function SessionsPage() {
                             id="date-sessionpage"
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                              day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground focus-visible:ring-0 focus-visible:ring-offset-0")
                             }}
                           />
                         )}
@@ -646,19 +637,22 @@ export default function SessionsPage() {
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span className="flex items-center">
+                                        <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                     </span>
                                     <span className="hidden sm:inline">•</span>
                                     <span className="flex items-center">
+                                        <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {session.time}
                                     </span>
-                                     {session.amount !== undefined && (
-                                      <>
-                                        <span className="hidden sm:inline">•</span>
-                                        <span className="flex items-center">
-                                          £{session.amount.toFixed(2)}
-                                        </span>
-                                      </>
+                                    {session.amount !== undefined && (
+                                        <>
+                                            <span className="hidden sm:inline">•</span>
+                                            <span className="flex items-center">
+                                                <DollarSign className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                                £{session.amount.toFixed(2)}
+                                            </span>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -713,8 +707,24 @@ export default function SessionsPage() {
 
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-            <SheetHeader>
-                 <SheetTitle className="text-center">Session Details</SheetTitle>
+           <SheetHeader className="flex flex-row justify-between items-center pr-10">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    if (selectedSessionForSheet) {
+                      setSessionToEdit(selectedSessionForSheet);
+                      setIsEditSessionSheetOpen(true);
+                      setIsSessionSheetOpen(false);
+                    }
+                  }} className="text-muted-foreground hover:text-foreground">
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit Session</span>
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)} className="text-destructive hover:text-destructive/90">
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete Session</span>
+                  </Button>
+                </div>
+                <SheetTitle className="text-center flex-1">Session Details</SheetTitle>
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -741,7 +751,7 @@ export default function SessionsPage() {
         </Sheet>
 
       <Sheet open={isEditSessionSheetOpen} onOpenChange={setIsEditSessionSheetOpen}>
-        <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+        <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
           <SheetHeader>
             <SheetTitle>Edit Session</SheetTitle>
             <Separator />
@@ -760,7 +770,7 @@ export default function SessionsPage() {
                         <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
                             {clients.map(client => (
                             <SelectItem key={client.id} value={client.id}>
-                                {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
+                                {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
                             </SelectItem>
                             ))}
                         </SelectGroup></SelectContent>
@@ -776,8 +786,8 @@ export default function SessionsPage() {
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                            day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground focus-visible:ring-0 focus-visible:ring-offset-0")
                             }} />
                         )} />
                     </div>
@@ -845,3 +855,6 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+
+    
