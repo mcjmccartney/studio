@@ -25,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -265,9 +273,9 @@ export default function ClientsPage() {
           return 0;
         })
         );
-        toast({ title: "Client Updated", description: `${formatFullNameAndDogName(data.ownerFirstName + " " + data.ownerLastName, data.dogName)} has been successfully updated.` });
-        setIsEditSheetOpen(false);
-        setClientToEdit(null);
+      toast({ title: "Client Updated", description: `${formatFullNameAndDogName(data.ownerFirstName + " " + data.ownerLastName, data.dogName)} has been successfully updated.` });
+      setIsEditSheetOpen(false);
+      setClientToEdit(null);
     } catch (err) {
         console.error("Error updating client:", err);
         const errorMessage = err instanceof Error ? err.message : "Failed to update client.";
@@ -373,7 +381,7 @@ export default function ClientsPage() {
                       <SheetTitle>New Client</SheetTitle>
                       <Separator />
                     </SheetHeader>
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="flex-1" showScrollbar={false}>
                       <div className="py-4 space-y-4">
                         <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheet" className="space-y-4">
                           <div className="space-y-1.5">
@@ -529,10 +537,10 @@ export default function ClientsPage() {
         <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
           <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
             <SheetHeader>
-              <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
+              <SheetTitle>Edit Client</SheetTitle>
               <Separator />
             </SheetHeader>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1" showScrollbar={false}>
               {clientToEdit && (
                 <div className="py-4 space-y-4">
                 <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} id="editClientFormInSheet" className="space-y-4"> 
@@ -602,8 +610,7 @@ export default function ClientsPage() {
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
-                    <Separator />
-                </SheetHeader>
+                 </SheetHeader>
 
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
@@ -642,10 +649,10 @@ export default function ClientsPage() {
 
                                 <Tabs defaultValue="sessions" className="w-full mt-6">
                                      <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>
@@ -800,3 +807,6 @@ export default function ClientsPage() {
     </div>
   );
 }
+
+
+    
