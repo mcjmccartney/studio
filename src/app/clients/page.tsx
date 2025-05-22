@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, SquareCheck, Users as UsersIcon } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck as MemberIcon, SquareCheck, X, Users as UsersIcon, CalendarDays as IconCalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -16,6 +16,15 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,15 +58,15 @@ import { useForm, type SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getClients, 
-  addClientToFirestore as fbAddClient, 
-  deleteClientFromFirestore, 
-  getBehaviouralBriefByBriefId, 
-  getBehaviourQuestionnaireById, 
-  updateClientInFirestore, 
+import {
+  getClients,
+  addClientToFirestore as fbAddClient,
+  deleteClientFromFirestore,
+  getBehaviouralBriefByBriefId,
+  getBehaviourQuestionnaireById,
+  updateClientInFirestore,
   getSessionsFromFirestore,
-  type EditableClientData 
+  type EditableClientData
 } from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -81,7 +90,7 @@ type MemberFilterType = 'all' | 'members' | 'nonMembers';
 
 const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; }> = ({ label, value, className }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
-    return null; 
+    return null;
   }
   return (
     <div className={cn("flex justify-between items-start py-3 border-b border-border", className)}>
@@ -94,9 +103,9 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | Reac
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [allSessions, setAllSessions] = useState<Session[]>([]); 
+  const [allSessions, setAllSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSubmittingForm, setIsSubmittingForm] = useState<boolean>(false);
+  const [isSubmittingSheet, setIsSubmittingSheet] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const [isAddClientSheetOpen, setIsAddClientSheetOpen] = useState(false);
@@ -110,13 +119,13 @@ export default function ClientsPage() {
   const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
   const [clientForViewSheet, setClientForViewSheet] = useState<Client | null>(null);
   const [sheetViewMode, setSheetViewMode] = useState<'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire'>('clientInfo');
-  
+
   const [briefForSheet, setBriefForSheet] = useState<BehaviouralBrief | null>(null);
   const [isLoadingBriefForSheet, setIsLoadingBriefForSheet] = useState<boolean>(false);
-  
+
   const [questionnaireForSheet, setQuestionnaireForSheet] = useState<BehaviourQuestionnaire | null>(null);
   const [isLoadingQuestionnaireForSheet, setIsLoadingQuestionnaireForSheet] = useState<boolean>(false);
-  
+
   const [clientSessionsForView, setClientSessionsForView] = useState<Session[]>([]);
   const [memberFilter, setMemberFilter] = useState<MemberFilterType>('all');
 
@@ -132,7 +141,7 @@ export default function ClientsPage() {
       contactNumber: '',
       postcode: '',
       isMember: false,
-      isActive: true, 
+      isActive: true,
       submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     }
   });
@@ -194,7 +203,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [toast]); 
+  }, []);
 
   useEffect(() => {
     if (clientToEdit) {
@@ -212,8 +221,8 @@ export default function ClientsPage() {
     }
   }, [clientToEdit, editClientForm]);
 
-  const handleAddClient: SubmitHandler<InternalClientFormValues> = async (data) => {
-    setIsSubmittingForm(true);
+  const handleAddClientSubmit: SubmitHandler<InternalClientFormValues> = async (data) => {
+    setIsSubmittingSheet(true);
     try {
       const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
         ownerFirstName: data.ownerFirstName,
@@ -243,109 +252,83 @@ export default function ClientsPage() {
       const errorMessage = err instanceof Error ? err.message : "Failed to add client.";
       toast({ title: "Error Adding Client", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmittingForm(false);
+      setIsSubmittingSheet(false);
     }
   };
 
   const handleUpdateClient: SubmitHandler<InternalClientFormValues> = async (data) => {
     if (!clientToEdit) return;
-    setIsSubmittingForm(true);
+    setIsSubmittingSheet(true);
     try {
-      const updatedData: EditableClientData = {
-        ownerFirstName: data.ownerFirstName,
-        ownerLastName: data.ownerLastName,
-        contactEmail: data.contactEmail,
-        contactNumber: data.contactNumber,
-        postcode: data.postcode,
-        dogName: data.dogName || undefined,
-        isMember: data.isMember || false,
-        isActive: data.isActive === undefined ? true : data.isActive,
-      };
-      await updateClientInFirestore(clientToEdit.id, updatedData);
-
-      const updatedClients = clients.map(c =>
-        c.id === clientToEdit.id ? { ...c, ...updatedData, dogName: updatedData.dogName || c.dogName, isActive: updatedData.isActive === undefined ? c.isActive : updatedData.isActive } : c
-      ).sort((a, b) => {
+        const updateData: EditableClientData = {
+            ownerFirstName: data.ownerFirstName,
+            ownerLastName: data.ownerLastName,
+            dogName: data.dogName || undefined,
+            contactEmail: data.contactEmail,
+            contactNumber: data.contactNumber,
+            postcode: data.postcode,
+            isMember: data.isMember || false,
+            isActive: data.isActive === undefined ? true : data.isActive,
+        };
+        await updateClientInFirestore(clientToEdit.id, updateData);
+        setClients(prevClients => prevClients.map(c => c.id === clientToEdit.id ? { ...c, ...updateData } : c)
+        .sort((a, b) => {
           const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
           const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
           if (nameA < nameB) return -1;
           if (nameA > nameB) return 1;
           return 0;
-        });
-      setClients(updatedClients);
-      
-      const ownerFullName = `${data.ownerFirstName} ${data.ownerLastName}`.trim();
-      toast({ title: "Client Updated", description: `${formatFullNameAndDogName(ownerFullName, data.dogName)} has been successfully updated.` });
-      setIsEditSheetOpen(false);
-
-      if (clientForViewSheet && clientForViewSheet.id === clientToEdit.id) {
-        setClientForViewSheet(updatedClients.find(c => c.id === clientToEdit.id) || null);
-      }
-      setClientToEdit(null);
-
+        })
+        );
+        toast({ title: "Client Updated", description: `${formatFullNameAndDogName(data.ownerFirstName + " " + data.ownerLastName, data.dogName)} has been successfully updated.` });
+        setIsEditSheetOpen(false);
+        setClientToEdit(null);
     } catch (err) {
-      console.error("Error updating client in Firestore:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to update client.";
-      toast({ title: "Error Updating Client", description: errorMessage, variant: "destructive" });
+        console.error("Error updating client:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to update client.";
+        toast({ title: "Error Updating Client", description: errorMessage, variant: "destructive" });
     } finally {
-      setIsSubmittingForm(false);
+        setIsSubmittingSheet(false);
     }
   };
 
-  const openEditSheet = (client: Client) => {
-    setClientToEdit(client);
-    setIsEditSheetOpen(true);
-  };
-
-  const handleDeleteRequest = (client: Client | null) => {
-    if (!client) return;
+  const handleDeleteClientRequest = (client: Client) => {
     setClientToDelete(client);
     setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDeleteClient = async () => {
     if (!clientToDelete) return;
-    setIsSubmittingForm(true);
+    setIsSubmittingSheet(true);
     try {
       await deleteClientFromFirestore(clientToDelete.id);
-      setClients(prevClients => prevClients.filter(c => c.id !== clientToDelete.id));
-      const ownerFullName = `${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName}`.trim();
-      toast({ title: "Client Deleted", description: `${formatFullNameAndDogName(ownerFullName, clientToDelete.dogName)} has been successfully deleted.` });
+      setClients(prev => prev.filter(c => c.id !== clientToDelete.id));
+      toast({ title: "Client Deleted", description: `${formatFullNameAndDogName(clientToDelete.ownerFirstName + " " + clientToDelete.ownerLastName, clientToDelete.dogName)} has been deleted.` });
       if (clientForViewSheet && clientForViewSheet.id === clientToDelete.id) {
-         setClientForViewSheet(null);
-         setIsViewSheetOpen(false);
+        setIsViewSheetOpen(false);
+        setClientForViewSheet(null);
       }
     } catch (err) {
+      console.error("Error deleting client:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to delete client.";
       toast({ title: "Error Deleting Client", description: errorMessage, variant: "destructive" });
     } finally {
       setIsDeleteDialogOpen(false);
       setClientToDelete(null);
-      setIsSubmittingForm(false);
+      setIsSubmittingSheet(false);
     }
   };
 
-  const openViewSheet = (client: Client) => {
-    setClientForViewSheet(client);
-    setSheetViewMode('clientInfo'); 
-    setIsViewSheetOpen(true);
-    
-    const sessionsForThisClient = allSessions.filter(session => session.clientId === client.id)
-                                .sort((a,b) => {
-                                    const dateA = parseISO(a.date);
-                                    const dateB = parseISO(b.date);
-                                    if (!isValid(dateA) && !isValid(dateB)) return 0;
-                                    if (!isValid(dateA)) return 1;
-                                    if (!isValid(dateB)) return -1;
-                                    return dateB.getTime() - dateA.getTime();
-                                });
-    setClientSessionsForView(sessionsForThisClient);
-    
-    setBriefForSheet(null); 
-    setQuestionnaireForSheet(null); 
-  };
+  useEffect(() => {
+    if (isViewSheetOpen && clientForViewSheet) {
+      setSheetViewMode('clientInfo'); // Reset to client info when sheet opens/client changes
+      setBriefForSheet(null);
+      setQuestionnaireForSheet(null);
+      setClientSessionsForView(allSessions.filter(s => s.clientId === clientForViewSheet.id));
+    }
+  }, [isViewSheetOpen, clientForViewSheet, allSessions]);
 
-  const openBriefInSheet = async () => {
+  const handleViewBrief = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
     setIsLoadingBriefForSheet(true);
     try {
@@ -353,24 +336,22 @@ export default function ClientsPage() {
       setBriefForSheet(brief);
       setSheetViewMode('behaviouralBrief');
     } catch (error) {
-      console.error("Error fetching behavioural brief for sheet:", error);
-      setBriefForSheet(null);
+      console.error("Error fetching brief:", error);
       toast({ title: "Error", description: "Could not load behavioural brief.", variant: "destructive" });
     } finally {
       setIsLoadingBriefForSheet(false);
     }
   };
 
-  const openQuestionnaireInSheet = async () => {
+  const handleViewQuestionnaire = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviourQuestionnaireId) return;
     setIsLoadingQuestionnaireForSheet(true);
     try {
-      const q = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
-      setQuestionnaireForSheet(q);
+      const questionnaire = await getBehaviourQuestionnaireById(clientForViewSheet.behaviourQuestionnaireId);
+      setQuestionnaireForSheet(questionnaire);
       setSheetViewMode('behaviourQuestionnaire');
     } catch (error) {
-      console.error("Error fetching behaviour questionnaire for sheet:", error);
-      setQuestionnaireForSheet(null);
+      console.error("Error fetching questionnaire:", error);
       toast({ title: "Error", description: "Could not load behaviour questionnaire.", variant: "destructive" });
     } finally {
       setIsLoadingQuestionnaireForSheet(false);
@@ -378,464 +359,430 @@ export default function ClientsPage() {
   };
 
   const filteredClients = useMemo(() => {
-    if (memberFilter === 'all') {
-      return clients;
-    } else if (memberFilter === 'members') {
-      return clients.filter(client => client.isMember === true);
-    } else { 
-      return clients.filter(client => client.isMember === false || client.isMember === undefined);
-    }
+    if (memberFilter === 'all') return clients;
+    return clients.filter(client => memberFilter === 'members' ? client.isMember : !client.isMember);
   }, [clients, memberFilter]);
+
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="memberFilter" className="text-sm font-medium">Show:</Label>
-            <Select value={memberFilter} onValueChange={(value: MemberFilterType) => setMemberFilter(value)}>
-              <SelectTrigger id="memberFilter" className="w-[180px] h-9">
-                <SelectValue placeholder="Filter by membership" />
+        <div className="flex items-center gap-2">
+            <Select value={memberFilter} onValueChange={(value) => setMemberFilter(value as MemberFilterType)}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Show: All Clients" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Clients</SelectItem>
-                <SelectItem value="members">Members Only</SelectItem>
-                <SelectItem value="nonMembers">Non-Members</SelectItem>
+                <SelectItem value="all">Show: All Clients</SelectItem>
+                <SelectItem value="members">Show: Members Only</SelectItem>
+                <SelectItem value="nonMembers">Show: Non-Members Only</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                New Client
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="sm:max-w-md bg-card">
-              <SheetHeader>
-                <SheetTitle>New Client</SheetTitle>
-                <SheetDescription>
-                  Add essential contact and dog information.
-                </SheetDescription>
-              </SheetHeader>
-              <form onSubmit={addClientForm.handleSubmit(handleAddClient)} className="space-y-6 py-4">
-                <div>
-                  <Label htmlFor="add-ownerFirstName">First Name</Label>
-                  <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
-                  {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+            <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
+                <SheetTrigger asChild>
+                <Button size="sm">New Client</Button>
+                </SheetTrigger>
+                <SheetContent className="sm:max-w-md bg-card">
+                    <SheetHeader>
+                    <SheetTitle>New Client</SheetTitle>
+                    <SheetDescription>Add essential contact and dog information.</SheetDescription>
+                    </SheetHeader>
+                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-6 py-4">
+                      <div>
+                          <Label htmlFor="add-ownerFirstName">First Name</Label>
+                          <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+                      </div>
+                      <div>
+                          <Label htmlFor="add-ownerLastName">Last Name</Label>
+                          <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={cn("mt-1", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                      </div>
+                      <div>
+                          <Label htmlFor="add-dogName">Dog's Name</Label>
+                          <Input id="add-dogName" {...addClientForm.register("dogName")} className={cn("mt-1", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                      </div>
+                      <div>
+                          <Label htmlFor="add-contactEmail">Email</Label>
+                          <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={cn("mt-1", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                      </div>
+                      <div>
+                          <Label htmlFor="add-contactNumber">Number</Label>
+                          <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("mt-1", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                      </div>
+                      <div>
+                          <Label htmlFor="add-postcode">Postcode</Label>
+                          <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("mt-1", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                          {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <Controller
+                          name="isMember"
+                          control={addClientForm.control}
+                          render={({ field }) => (
+                              <Checkbox
+                              id="add-isMember"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isSubmittingSheet}
+                              />
+                          )}
+                          />
+                          <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
+                      </div>
+                       <div className="flex items-center space-x-2">
+                          <Controller
+                          name="isActive"
+                          control={addClientForm.control}
+                          render={({ field }) => (
+                              <Checkbox
+                              id="add-isActive"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isSubmittingSheet}
+                              />
+                          )}
+                          />
+                          <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
+                      </div>
+                      <input type="hidden" {...addClientForm.register("submissionDate")} />
+                      <SheetFooter className="mt-4">
+                          <SheetClose asChild>
+                          <Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button>
+                          </SheetClose>
+                          <Button type="submit" disabled={isSubmittingSheet}>
+                          {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Save Client
+                          </Button>
+                      </SheetFooter>
+                    </form>
+                </SheetContent>
+            </Sheet>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading clients...</p>
+        </div>
+      )}
+      {!isLoading && error && (
+        <div className="text-destructive text-center py-10">
+          <p>Error loading clients: {error}</p>
+          <p>Please ensure Firebase is configured correctly and you are online.</p>
+        </div>
+      )}
+      {!isLoading && !error && filteredClients.length === 0 && (
+        <p className="text-muted-foreground text-center py-10">No clients found. Add a new client or adjust your filter.</p>
+      )}
+      {!isLoading && !error && filteredClients.length > 0 && (
+        <div className="space-y-0">
+          {filteredClients.map(client => {
+            const displayName = formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName);
+            return (
+              <div
+                key={client.id}
+                className="bg-card shadow-sm rounded-md mb-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => { setClientForViewSheet(client); setIsViewSheetOpen(true); }}
+              >
+                <div className="flex items-center justify-between px-4 py-2">
+                  <div className="flex items-center gap-3">
+                    {client.isMember && (
+                        <Image
+                        src="https://iili.io/34300ox.md.jpg"
+                        alt="Member Icon"
+                        width={28}
+                        height={28}
+                        className="rounded-md"
+                        data-ai-hint="company logo"
+                        />
+                    )}
+                    <h3 className="font-semibold text-sm">{displayName}</h3>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setClientToEdit(client); setIsEditSheetOpen(true); }}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Contact
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast({ title: "Schedule Session", description: `Scheduling session for ${displayName} (Feature not fully implemented).`}) }}>
+                        <IconCalendarDays className="mr-2 h-4 w-4" />
+                        Schedule Session
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClientRequest(client); }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Client
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div>
-                  <Label htmlFor="add-ownerLastName">Last Name</Label>
-                  <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={cn("mt-1", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingForm} />
-                  {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+        <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+          <SheetContent className="sm:max-w-md bg-card">
+            <SheetHeader>
+              <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
+              <SheetDescription>
+                Update the client's contact and dog information.
+              </SheetDescription>
+            </SheetHeader>
+            {clientToEdit && (
+              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-ownerFirstName" className="text-right">First Name</Label>
+                  <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("col-span-3", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                 </div>
-                 <div>
-                  <Label htmlFor="add-dogName">Dog's Name</Label>
-                  <Input id="add-dogName" {...addClientForm.register("dogName")} className={cn("mt-1", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                {editClientForm.formState.errors.ownerFirstName && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-ownerLastName" className="text-right">Last Name</Label>
+                  <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("col-span-3", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                 </div>
-                <div>
-                  <Label htmlFor="add-contactEmail">Email</Label>
-                  <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={cn("mt-1", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                 {editClientForm.formState.errors.ownerLastName && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-dogName" className="text-right">Dog's Name</Label>
+                  <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("col-span-3", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                 </div>
-                <div>
-                  <Label htmlFor="add-contactNumber">Number</Label>
-                  <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("mt-1", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                {editClientForm.formState.errors.dogName && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.dogName.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-contactEmail" className="text-right">Email</Label>
+                  <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("col-span-3", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                 </div>
-                <div>
-                  <Label htmlFor="add-postcode">Postcode</Label>
-                  <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("mt-1", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                {editClientForm.formState.errors.contactEmail && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.contactEmail.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-contactNumber" className="text-right">Number</Label>
+                  <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("col-span-3", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                 </div>
-                <div className="flex items-center space-x-2">
-                   <Controller
+                {editClientForm.formState.errors.contactNumber && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.contactNumber.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-postcode" className="text-right">Postcode</Label>
+                  <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("col-span-3", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                </div>
+                 {editClientForm.formState.errors.postcode && <p className="col-span-4 text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.postcode.message}</p>}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-isMember" className="text-right">Member?</Label>
+                  <Controller
                     name="isMember"
-                    control={addClientForm.control}
+                    control={editClientForm.control}
                     render={({ field }) => (
-                      <Checkbox
-                        id="add-isMember"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                      />
+                      <Checkbox id="edit-isMember" checked={field.value} onCheckedChange={field.onChange} className="col-span-3 justify-self-start" disabled={isSubmittingSheet}/>
                     )}
                   />
-                  <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
                 </div>
-                 <div className="flex items-center space-x-2">
-                   <Controller
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-isActive" className="text-right">Active?</Label>
+                  <Controller
                     name="isActive"
-                    control={addClientForm.control}
+                    control={editClientForm.control}
                     render={({ field }) => (
-                      <Checkbox
-                        id="add-isActive"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                      />
+                      <Checkbox id="edit-isActive" checked={field.value} onCheckedChange={field.onChange} className="col-span-3 justify-self-start" disabled={isSubmittingSheet}/>
                     )}
                   />
-                  <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
                 </div>
-                <input type="hidden" {...addClientForm.register("submissionDate")} />
                 <SheetFooter className="mt-4">
-                  <SheetClose asChild>
-                     <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                  </SheetClose>
-                  <Button type="submit" disabled={isSubmittingForm}>
-                    {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Client
+                  <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
+                  <Button type="submit" disabled={isSubmittingSheet}>
+                    {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
                   </Button>
                 </SheetFooter>
               </form>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-      
-      <div className="mt-0"> 
-          {isLoading && (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2">Loading clients...</p>
-            </div>
-          )}
-          {!isLoading && error && (
-            <div className="text-destructive text-center py-10">
-              <p>Error loading clients: {error}</p>
-              <p>Please ensure Firebase is configured correctly and you are online.</p>
-            </div>
-          )}
-          {!isLoading && !error && filteredClients.length === 0 && (
-            <p className="text-muted-foreground text-center py-10">
-              No clients found for the current filter.
-              {!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && " (Firebase may not be configured)"}
-            </p>
-          )}
-          {!isLoading && !error && filteredClients.length > 0 && (
-             <div className="space-y-0">
-              {filteredClients.map((client) => {
-                const displayName = formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName);
-                return (
-                  <div
-                    key={client.id}
-                    onClick={() => openViewSheet(client)}
-                    className="bg-card shadow-sm rounded-md mb-2 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer flex justify-between items-center"
-                  >
-                    <div className="flex items-center gap-3">
-                      {client.isMember && (
-                        <Image
-                          src="https://iili.io/34300ox.md.jpg" 
-                          alt="Member Icon"
-                          width={28}
-                          height={28}
-                          className="rounded-sm"
-                          data-ai-hint="company logo"
-                        />
-                      )}
-                      <div>
-                        <h3 className="text-sm font-semibold">{displayName}</h3>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); openEditSheet(client);}}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Contact
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {e.stopPropagation(); alert('Schedule session functionality to be implemented.');}}>
-                            <IconCalendarDays className="mr-2 h-4 w-4" />
-                            Schedule Session
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                            onClick={(e) => {e.stopPropagation(); handleDeleteRequest(client);}}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Client
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-      </div>
+            )}
+          </SheetContent>
+        </Sheet>
 
-      <Sheet open={isEditSheetOpen} onOpenChange={(isOpen) => { setIsEditSheetOpen(isOpen); if(!isOpen) setClientToEdit(null);}} >
-        <SheetContent className="sm:max-w-md bg-card">
-          <SheetHeader>
-            <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(`${clientToEdit.ownerFirstName} ${clientToEdit.ownerLastName}`, clientToEdit.dogName) : ''}</SheetTitle>
-            <SheetDescription>
-              Update the client's contact information and details.
-            </SheetDescription>
-          </SheetHeader>
-          {clientToEdit && (
-            <ScrollArea className="h-[calc(100vh-150px)] pr-3 mt-4"> 
-            <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-6 py-4">
-                <div>
-                  <Label htmlFor="edit-ownerFirstName">First Name</Label>
-                  <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingForm} />
-                  {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
+        <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
+            <SheetContent className="sm:max-w-lg bg-card">
+                <div className="absolute top-3.5 right-[calc(1rem+24px+0.25rem+24px+0.25rem)] flex items-center gap-1 z-10">
+                    <Button variant="ghost" size="icon" onClick={() => { if (clientForViewSheet) { setClientToEdit(clientForViewSheet); setIsEditSheetOpen(true); setIsViewSheetOpen(false); } }}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit Client</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete Client</span>
+                    </Button>
                 </div>
-                <div>
-                  <Label htmlFor="edit-ownerLastName">Last Name</Label>
-                  <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("mt-1", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingForm} />
-                  {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
-                </div>
-                 <div>
-                  <Label htmlFor="edit-dogName">Dog's Name</Label>
-                  <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("mt-1", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="edit-contactEmail">Email</Label>
-                  <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("mt-1", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="edit-contactNumber">Number</Label>
-                  <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("mt-1", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="edit-postcode">Postcode</Label>
-                  <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("mt-1", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingForm}/>
-                  {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
-                </div>
-                <div className="flex items-center space-x-2">
-                   <Controller
-                    name="isMember"
-                    control={editClientForm.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="edit-isMember"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                      />
-                    )}
-                  />
-                  <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
-                </div>
-                 <div className="flex items-center space-x-2">
-                   <Controller
-                    name="isActive"
-                    control={editClientForm.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="edit-isActive"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={isSubmittingForm}
-                      />
-                    )}
-                  />
-                  <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
-                </div>
-              <SheetFooter className="mt-4"> 
-                <Button type="button" variant="outline" onClick={() => setIsEditSheetOpen(false)} disabled={isSubmittingForm}>Cancel</Button>
-                <Button type="submit" disabled={isSubmittingForm}>
-                  {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </SheetFooter>
-            </form>
-            </ScrollArea>
-          )}
-        </SheetContent>
-      </Sheet>
+                {clientForViewSheet && (
+                    <>
+                        <SheetHeader className="mb-4">
+                            <SheetTitle className="text-xl">
+                                {formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)}
+                            </SheetTitle>
+                             <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
+                                <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
+                                {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
+                            </Badge>
+                        </SheetHeader>
 
-      <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) { setClientForViewSheet(null); setSheetViewMode('clientInfo');} }}>
-        <SheetContent className="sm:max-w-lg bg-card">
-          {clientForViewSheet && (
-            <>
-            {sheetViewMode === 'clientInfo' && (
-                <>
-                <SheetHeader>
-                    <div className="flex justify-between items-center">
-                        <SheetTitle className="text-xl">
-                            {clientForViewSheet.isMember && (
-                                <Image
-                                src="https://iili.io/34300ox.md.jpg"
-                                alt="Member Icon"
-                                width={28} 
-                                height={28}
-                                className="rounded-sm mr-3 inline-block align-middle"
-                                data-ai-hint="company logo"
-                                />
+                        <ScrollArea className="h-[calc(100vh-160px)] pr-3">
+                            {sheetViewMode === 'clientInfo' && (
+                                <div className="space-y-0">
+                                    <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
+                                    <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
+                                    {clientForViewSheet.address ? (
+                                      <>
+                                        <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
+                                        {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
+                                        <DetailRow label="City:" value={clientForViewSheet.address.city} />
+                                        <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                        <DetailRow label="Country:" value={clientForViewSheet.address.country} />
+                                      </>
+                                    ) : (
+                                      <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                    )}
+                                    {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
+                                    <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
+                                    <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
+
+
+                                    {clientForViewSheet.behaviouralBriefId && (
+                                        <Button onClick={handleViewBrief} className="w-full mt-4" variant="outline" disabled={isLoadingBriefForSheet}>
+                                        {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
+                                        </Button>
+                                    )}
+                                    {clientForViewSheet.behaviourQuestionnaireId && (
+                                        <Button onClick={handleViewQuestionnaire} className="w-full mt-2" variant="outline" disabled={isLoadingQuestionnaireForSheet}>
+                                        {isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behaviour Questionnaire
+                                        </Button>
+                                    )}
+
+                                    <h4 className="text-md font-semibold mt-6 mb-2 pt-3 border-t">Session History ({clientSessionsForView.length})</h4>
+                                    {clientSessionsForView.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {clientSessionsForView.map(session => (
+                                        <li key={session.id} className="text-sm p-2 border rounded-md">
+                                            <div>{format(parseISO(session.date), 'PPP')} at {session.time}</div>
+                                            <div className="text-xs text-muted-foreground">{session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}</div>
+                                        </li>
+                                        ))}
+                                    </ul>
+                                    ) : (
+                                    <p className="text-sm text-muted-foreground">No sessions recorded for this client.</p>
+                                    )}
+                                </div>
                             )}
-                            {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
-                        </SheetTitle>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditSheet(clientForViewSheet)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteRequest(clientForViewSheet)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </div>
-                    </div>
-                     <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                        <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
-                        {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
-                    </Badge>
-                </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
-                  <div className="space-y-0">
-                    <DetailRow label="Email:" value={<a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a>} />
-                    <DetailRow label="Number:" value={<a href={`tel:${clientForViewSheet.contactNumber}`} className="hover:underline">{clientForViewSheet.contactNumber}</a>} />
-                    {clientForViewSheet.address ? (
-                      <>
-                        <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
-                        {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
-                        <DetailRow label="City:" value={clientForViewSheet.address.city} />
-                        <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                        <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                      </>
-                    ) : (
-                      <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                    )}
-                    {clientForViewSheet.howHeardAboutServices && <DetailRow label="How Heard:" value={clientForViewSheet.howHeardAboutServices} />}
-                    <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate && isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
-                    <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
-                  </div>
-                        
-                  {clientForViewSheet.behaviouralBriefId && <Button variant="outline" className="w-full mt-4" onClick={openBriefInSheet} disabled={isLoadingBriefForSheet}>{isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}View Behavioural Brief</Button>}
-                  {clientForViewSheet.behaviourQuestionnaireId && <Button variant="outline" className="w-full mt-2" onClick={openQuestionnaireInSheet} disabled={isLoadingQuestionnaireForSheet}>{isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}View Behaviour Questionnaire</Button>}
 
-                  <Card className="mt-4 bg-card">
-                      <CardHeader><CardTitle className="text-lg flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" /> Session History</CardTitle></CardHeader>
-                      <CardContent>
-                          {clientSessionsForView.length > 0 ? (
-                          <ul className="space-y-3">
-                              {clientSessionsForView.map(session => (
-                              <li key={session.id} className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors text-sm">
-                                  <div className="flex justify-between items-center"><div><span className="font-semibold">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}</span><span className="text-muted-foreground"> at {session.time}</span></div></div>
-                                  {session.sessionType && <div className="text-xs text-muted-foreground mt-1">Type: {session.sessionType}</div>}
-                                  {session.amount !== undefined && <div className="text-xs text-muted-foreground mt-0.5">Amount: £{session.amount.toFixed(2)}</div>}
-                                  {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
-                              </li>))}
-                          </ul>
-                          ) : <p className="text-sm text-muted-foreground">No session history found for this client.</p>}
-                      </CardContent>
-                  </Card>
-                </ScrollArea>
-                </>
-            )}
-            {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
-                <>
-                <SheetHeader className="flex flex-row justify-between items-center text-left">
-                    <SheetTitle className="text-xl flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Behavioural Brief</SheetTitle>
-                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
-                </SheetHeader>
-                <SheetDescription className="text-left mb-4">
-                    {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, briefForSheet.dogName)}
-                </SheetDescription>
-                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
-                  <div className="space-y-0">
-                    <DetailRow label="Dog's Name:" value={briefForSheet.dogName} />
-                    <DetailRow label="Breed:" value={briefForSheet.dogBreed} />
-                    <DetailRow label="Sex:" value={briefForSheet.dogSex} />
-                    <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
-                    <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
-                    {briefForSheet.idealSessionTypes && briefForSheet.idealSessionTypes.length > 0 && <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes.join(', ')} />}
-                    <DetailRow label="Submitted:" value={briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'} />
-                  </div>
-                </ScrollArea>
-                </>
-            )}
-            {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
-                <>
-                <SheetHeader className="flex flex-row justify-between items-center text-left">
-                    <SheetTitle className="text-xl flex items-center"><IconFileQuestion className="mr-2 h-5 w-5 text-primary" /> Behaviour Questionnaire</SheetTitle>
-                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
-                </SheetHeader>
-                <SheetDescription className="text-left mb-4">{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
-                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
-                  <div className="space-y-0">
-                    <DetailRow label="Dog's Name:" value={questionnaireForSheet.dogName} />
-                    <DetailRow label="Age:" value={questionnaireForSheet.dogAge} />
-                    <DetailRow label="Sex:" value={questionnaireForSheet.dogSex} />
-                    <DetailRow label="Breed:" value={questionnaireForSheet.dogBreed} />
-                    <DetailRow label="Neutered/Spayed:" value={questionnaireForSheet.neuteredSpayedDetails} />
-                    <DetailRow label="Main Problem:" value={questionnaireForSheet.mainProblem} />
-                    <DetailRow label="Problem First Noticed:" value={questionnaireForSheet.problemTendencyFirstNoticed} />
-                    <DetailRow label="Problem Frequency:" value={questionnaireForSheet.problemFrequencyDetails} />
-                    <DetailRow label="Recent Changes to Problem:" value={questionnaireForSheet.problemRecentChanges} />
-                    <DetailRow label="Problem Anticipation:" value={questionnaireForSheet.problemAnticipationDetails} />
-                    <DetailRow label="Dog's Motivation (Problem):" value={questionnaireForSheet.dogMotivationForProblem} />
-                    <DetailRow label="Problem Addressing Attempts:" value={questionnaireForSheet.problemAddressingAttempts} />
-                    <DetailRow label="Ideal Training Outcome:" value={questionnaireForSheet.idealTrainingOutcome} />
-                    <DetailRow label="Other Help Needed:" value={questionnaireForSheet.otherHelpNeeded} />
-                    <DetailRow label="Medical History:" value={questionnaireForSheet.medicalHistory} />
-                    <DetailRow label="Vet Consultation:" value={questionnaireForSheet.vetConsultationDetails} />
-                    <DetailRow label="Dog Origin:" value={questionnaireForSheet.dogOrigin} />
-                    <DetailRow label="Rescue Background:" value={questionnaireForSheet.rescueBackground} />
-                    <DetailRow label="Age When Acquired:" value={questionnaireForSheet.dogAgeWhenAcquired} />
-                    <DetailRow label="Diet:" value={questionnaireForSheet.dietDetails} />
-                    <DetailRow label="Food Motivation (1-10):" value={questionnaireForSheet.foodMotivationLevel} />
-                    <DetailRow label="Mealtime Routine:" value={questionnaireForSheet.mealtimeRoutine} />
-                    <DetailRow label="Treat Routine:" value={questionnaireForSheet.treatRoutine} />
-                    <DetailRow label="External Treats Consent:" value={questionnaireForSheet.externalTreatsConsent} />
-                    <DetailRow label="Play Engagement:" value={questionnaireForSheet.playEngagement} />
-                    <DetailRow label="Affection Response:" value={questionnaireForSheet.affectionResponse} />
-                    <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />
-                    <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />
-                    <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />
-                    <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />
-                    <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />
-                    <DetailRow label="Activities Aside From Walks:" value={questionnaireForSheet.activitiesAsideFromWalks} />
-                    <DetailRow label="Dog Likes:" value={questionnaireForSheet.dogLikes} />
-                    <DetailRow label="Dog Challenges:" value={questionnaireForSheet.dogChallenges} />
-                    <DetailRow label="Positive Reinforcement Methods:" value={questionnaireForSheet.positiveReinforcementMethods} />
-                    <DetailRow label="Favorite Rewards:" value={questionnaireForSheet.favoriteRewards} />
-                    <DetailRow label="Correction Methods:" value={questionnaireForSheet.correctionMethods} />
-                    <DetailRow label="Correction Effects:" value={questionnaireForSheet.correctionEffects} />
-                    <DetailRow label="Previous Professional Training:" value={questionnaireForSheet.previousProfessionalTraining} />
-                    <DetailRow label="Previous Training Methods:" value={questionnaireForSheet.previousTrainingMethodsUsed} />
-                    <DetailRow label="Previous Training Results:" value={questionnaireForSheet.previousTrainingExperienceResults} />
-                    <DetailRow label="Sociability with Dogs:" value={questionnaireForSheet.sociabilityWithDogs} />
-                    <DetailRow label="Sociability with People:" value={questionnaireForSheet.sociabilityWithPeople} />
-                    <DetailRow label="Additional Information:" value={questionnaireForSheet.additionalInformation} />
-                    <DetailRow label="Time Dedicated to Training:" value={questionnaireForSheet.timeDedicatedToTraining} />
-                    <DetailRow label="Submitted:" value={questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'} />
-                  </div>
-                </ScrollArea>
-                </>
-            )}
-            {isLoadingBriefForSheet && sheetViewMode === 'behaviouralBrief' && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Brief...</p></div>}
-            {isLoadingQuestionnaireForSheet && sheetViewMode === 'behaviourQuestionnaire' && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Questionnaire...</p></div>}
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+                            {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="text-lg font-semibold">Behavioural Brief</h4>
+                                        <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                    </div>
+                                    <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
+                                    <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
+                                    <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
+                                    <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
+                                    <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
+                                    <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
+                                    <DetailRow label="Submitted:" value={briefForSheet.submissionDate ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'} />
+                                </div>
+                            )}
+                             {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the client
-              "{clientToDelete ? formatFullNameAndDogName(`${clientToDelete.ownerFirstName} ${clientToDelete.ownerLastName}`, clientToDelete.dogName) : ""}" and all associated data from Firestore.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {setClientToDelete(null); setIsDeleteDialogOpen(false);}} disabled={isSubmittingForm}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingForm}>
-              {isSubmittingForm && clientToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Confirm Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+                            {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
+                                        <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                    </div>
+                                    <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
+                                    <DetailRow label="Dog Age:" value={questionnaireForSheet.dogAge} />
+                                    <DetailRow label="Dog Sex:" value={questionnaireForSheet.dogSex} />
+                                    <DetailRow label="Dog Breed:" value={questionnaireForSheet.dogBreed} />
+                                    <DetailRow label="Neutered/Spayed:" value={questionnaireForSheet.neuteredSpayedDetails} />
+                                    <DetailRow label="Main Problem:" value={questionnaireForSheet.mainProblem} />
+                                    <DetailRow label="Problem First Noticed:" value={questionnaireForSheet.problemTendencyFirstNoticed} />
+                                    <DetailRow label="Problem Frequency:" value={questionnaireForSheet.problemFrequencyDetails} />
+                                    <DetailRow label="Problem Recent Changes:" value={questionnaireForSheet.problemRecentChanges} />
+                                    <DetailRow label="Problem Anticipation:" value={questionnaireForSheet.problemAnticipationDetails} />
+                                    <DetailRow label="Dog Motivation (Problem):" value={questionnaireForSheet.dogMotivationForProblem} />
+                                    <DetailRow label="Problem Attempts:" value={questionnaireForSheet.problemAddressingAttempts} />
+                                    <DetailRow label="Ideal Outcome:" value={questionnaireForSheet.idealTrainingOutcome} />
+                                    {questionnaireForSheet.otherHelpNeeded && <DetailRow label="Other Help Needed:" value={questionnaireForSheet.otherHelpNeeded} />}
+                                    {questionnaireForSheet.medicalHistory && <DetailRow label="Medical History:" value={questionnaireForSheet.medicalHistory} />}
+                                    {questionnaireForSheet.vetConsultationDetails && <DetailRow label="Vet Consultation:" value={questionnaireForSheet.vetConsultationDetails} />}
+                                    {questionnaireForSheet.dogOrigin && <DetailRow label="Dog Origin:" value={questionnaireForSheet.dogOrigin} />}
+                                    {questionnaireForSheet.rescueBackground && <DetailRow label="Rescue Background:" value={questionnaireForSheet.rescueBackground} />}
+                                    {questionnaireForSheet.dogAgeWhenAcquired && <DetailRow label="Age Acquired:" value={questionnaireForSheet.dogAgeWhenAcquired} />}
+                                    {questionnaireForSheet.dietDetails && <DetailRow label="Diet:" value={questionnaireForSheet.dietDetails} />}
+                                    {questionnaireForSheet.foodMotivationLevel && <DetailRow label="Food Motivation:" value={questionnaireForSheet.foodMotivationLevel} />}
+                                    {questionnaireForSheet.mealtimeRoutine && <DetailRow label="Mealtime Routine:" value={questionnaireForSheet.mealtimeRoutine} />}
+                                    {questionnaireForSheet.treatRoutine && <DetailRow label="Treat Routine:" value={questionnaireForSheet.treatRoutine} />}
+                                    {questionnaireForSheet.externalTreatsConsent && <DetailRow label="External Treats Consent:" value={questionnaireForSheet.externalTreatsConsent} />}
+                                    {questionnaireForSheet.playEngagement && <DetailRow label="Play Engagement:" value={questionnaireForSheet.playEngagement} />}
+                                    {questionnaireForSheet.affectionResponse && <DetailRow label="Affection Response:" value={questionnaireForSheet.affectionResponse} />}
+                                    {questionnaireForSheet.exerciseRoutine && <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />}
+                                    {questionnaireForSheet.muzzleUsage && <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />}
+                                    {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />}
+                                    {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />}
+                                    {questionnaireForSheet.housetrainedStatus && <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />}
+                                    {questionnaireForSheet.activitiesAsideFromWalks && <DetailRow label="Other Activities:" value={questionnaireForSheet.activitiesAsideFromWalks} />}
+                                    {questionnaireForSheet.dogLikes && <DetailRow label="Dog Likes:" value={questionnaireForSheet.dogLikes} />}
+                                    <DetailRow label="Dog Challenges:" value={questionnaireForSheet.dogChallenges} />
+                                    <DetailRow label="Positive Reinforcement:" value={questionnaireForSheet.positiveReinforcementMethods} />
+                                    <DetailRow label="Favorite Rewards:" value={questionnaireForSheet.favoriteRewards} />
+                                    <DetailRow label="Correction Methods:" value={questionnaireForSheet.correctionMethods} />
+                                    <DetailRow label="Correction Effects:" value={questionnaireForSheet.correctionEffects} />
+                                    <DetailRow label="Previous Training:" value={questionnaireForSheet.previousProfessionalTraining} />
+                                    <DetailRow label="Previous Methods Used:" value={questionnaireForSheet.previousTrainingMethodsUsed} />
+                                    <DetailRow label="Previous Training Results:" value={questionnaireForSheet.previousTrainingExperienceResults} />
+                                    {questionnaireForSheet.sociabilityWithDogs && <DetailRow label="Sociability (Dogs):" value={questionnaireForSheet.sociabilityWithDogs} />}
+                                    {questionnaireForSheet.sociabilityWithPeople && <DetailRow label="Sociability (People):" value={questionnaireForSheet.sociabilityWithPeople} />}
+                                    {questionnaireForSheet.additionalInformation && <DetailRow label="Additional Info:" value={questionnaireForSheet.additionalInformation} />}
+                                    {questionnaireForSheet.timeDedicatedToTraining && <DetailRow label="Time for Training:" value={questionnaireForSheet.timeDedicatedToTraining} />}
+                                    <DetailRow label="Submitted:" value={questionnaireForSheet.submissionDate ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'} />
+                                </div>
+                            )}
+                             {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+
+                        </ScrollArea>
+                    </>
+                )}
+            </SheetContent>
+        </Sheet>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                This will permanently delete the client: {clientToDelete ? formatFullNameAndDogName(clientToDelete.ownerFirstName + " " + clientToDelete.ownerLastName, clientToDelete.dogName) : ''}.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDeleteClient} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
+                {isSubmittingSheet && clientToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
