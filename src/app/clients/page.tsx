@@ -17,6 +17,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -79,14 +88,14 @@ type InternalClientFormValues = z.infer<typeof internalClientFormSchema>;
 
 type MemberFilterType = 'all' | 'members' | 'nonMembers';
 
-const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; isFirst?: boolean }> = ({ label, value, className, isFirst }) => {
+const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; }> = ({ label, value, className }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
     return null; 
   }
   return (
-    <div className={cn("flex justify-between items-start py-3 border-b border-primary-foreground/30", !isFirst && "", className)}>
-      <span className="text-sm text-primary-foreground/80 pr-2">{label}</span>
-      <span className="text-sm text-primary-foreground text-right break-words whitespace-pre-wrap">{value}</span>
+    <div className={cn("flex justify-between items-start py-3 border-b border-border", className)}>
+      <span className="text-sm text-muted-foreground pr-2">{label}</span>
+      <span className="text-sm text-foreground text-right break-words whitespace-pre-wrap">{value}</span>
     </div>
   );
 };
@@ -583,7 +592,7 @@ export default function ClientsPage() {
             </SheetDescription>
           </SheetHeader>
           {clientToEdit && (
-            <ScrollArea className="max-h-[calc(100vh-150px)] pr-3 mt-4"> 
+            <ScrollArea className="h-[calc(100vh-150px)] pr-3 mt-4"> 
             <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-4 py-4">
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
@@ -681,13 +690,13 @@ export default function ClientsPage() {
                         {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
                     </SheetTitle>
                      <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                        <IconSquareCheck className="mr-1.5 h-3.5 w-3.5" />
+                        <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
                         {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
                     </Badge>
                 </SheetHeader>
-                <ScrollArea className="max-h-[calc(100vh-250px)] pr-3 mt-2">
-                  <div className="bg-[#92351f] text-primary-foreground p-4 rounded-md space-y-0">
-                    <DetailRow label="Email:" value={<a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a>} isFirst />
+                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                  <div className="space-y-0">
+                    <DetailRow label="Email:" value={<a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a>} />
                     <DetailRow label="Number:" value={<a href={`tel:${clientForViewSheet.contactNumber}`} className="hover:underline">{clientForViewSheet.contactNumber}</a>} />
                     {clientForViewSheet.address ? (
                       <>
@@ -741,9 +750,9 @@ export default function ClientsPage() {
                 <SheetDescription className="text-left mb-4">
                     {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, briefForSheet.dogName)}
                 </SheetDescription>
-                <ScrollArea className="max-h-[calc(100vh-230px)] pr-3">
-                  <div className="bg-[#92351f] text-primary-foreground p-4 rounded-md space-y-0">
-                    <DetailRow label="Dog's Name:" value={briefForSheet.dogName} isFirst />
+                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                  <div className="space-y-0">
+                    <DetailRow label="Dog's Name:" value={briefForSheet.dogName} />
                     <DetailRow label="Breed:" value={briefForSheet.dogBreed} />
                     <DetailRow label="Sex:" value={briefForSheet.dogSex} />
                     <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
@@ -762,9 +771,9 @@ export default function ClientsPage() {
                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                 </SheetHeader>
                 <SheetDescription className="text-left mb-4">{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
-                <ScrollArea className="max-h-[calc(100vh-230px)] pr-3">
-                  <div className="bg-[#92351f] text-primary-foreground p-4 rounded-md space-y-0">
-                    <DetailRow label="Dog's Name:" value={questionnaireForSheet.dogName} isFirst />
+                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                  <div className="space-y-0">
+                    <DetailRow label="Dog's Name:" value={questionnaireForSheet.dogName} />
                     <DetailRow label="Age:" value={questionnaireForSheet.dogAge} />
                     <DetailRow label="Sex:" value={questionnaireForSheet.dogSex} />
                     <DetailRow label="Breed:" value={questionnaireForSheet.dogBreed} />
@@ -843,3 +852,6 @@ export default function ClientsPage() {
     </div>
   );
 }
+
+
+    

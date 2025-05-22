@@ -9,9 +9,9 @@ import {
   deleteSessionFromFirestore,
   getClients
 } from '@/lib/firebase';
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign as IconDollarSign, X, PawPrint } from 'lucide-react';
+import { PlusCircle, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Edit, Trash2, Loader2, DollarSign, X, PawPrint, FileQuestion as IconFileQuestion } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -72,7 +72,6 @@ const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
-  sessionType: z.string().min(1, { message: "Session type is required." }),
   amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
     z.number().nonnegative({ message: 'Amount must be a positive number.' }).optional()
@@ -96,14 +95,14 @@ interface GroupedSessions {
   [monthYear: string]: Session[];
 }
 
-const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; isFirst?: boolean }> = ({ label, value, className, isFirst }) => {
+const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; }> = ({ label, value, className }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
     return null; 
   }
   return (
-    <div className={cn("flex justify-between items-start py-3 border-b border-primary-foreground/30", !isFirst && "", className)}>
-      <span className="text-sm text-primary-foreground/80 pr-2">{label}</span>
-      <span className="text-sm text-primary-foreground text-right break-words whitespace-pre-wrap">{value}</span>
+    <div className={cn("flex justify-between items-start py-3 border-b border-border", className)}>
+      <span className="text-sm text-muted-foreground pr-2">{label}</span>
+      <span className="text-sm text-foreground text-right break-words whitespace-pre-wrap">{value}</span>
     </div>
   );
 };
@@ -130,8 +129,8 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: { 
       clientId: '', 
-      date: undefined, 
-      time: '', 
+      date: new Date(), 
+      time: format(new Date(), "HH:mm"), 
       sessionType: '', 
       amount: undefined, 
     }
@@ -393,8 +392,8 @@ export default function SessionsPage() {
                     {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
                 </div>
 
-               <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="date-sessionpage" className="text-right pt-2 col-span-1">Date</Label>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date-sessionpage" className="text-right col-span-1">Date</Label>
                  <div className={cn("col-span-3 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                 <Controller
                   name="date"
@@ -420,8 +419,8 @@ export default function SessionsPage() {
                  {addSessionFormErrors.date && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionFormErrors.date.message}</p>}
               
 
-              <div>
-                <Label htmlFor="time-sessionpage">Time (24h)</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time-sessionpage" className="text-right col-span-1">Time (24h)</Label>
                 <Controller
                   name="time"
                   control={addSessionFormControl}
@@ -430,22 +429,22 @@ export default function SessionsPage() {
                       id="time-sessionpage"
                       type="time"
                       {...field}
-                      className={cn("w-full mt-1", addSessionFormErrors.time ? "border-destructive" : "")}
+                      className={cn("w-full col-span-3", addSessionFormErrors.time ? "border-destructive" : "")}
                       disabled={isSubmittingSheet}
                     />
                   )}
                 />
-                {addSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.time.message}</p>}
+                {addSessionFormErrors.time && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionFormErrors.time.message}</p>}
               </div>
 
-              <div>
-                <Label htmlFor="sessionType-sessionpage">Session Type</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sessionType-sessionpage" className="text-right col-span-1">Session Type</Label>
                 <Controller
                   name="sessionType"
                   control={addSessionFormControl}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value} disabled={isSubmittingSheet}>
-                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full col-span-3", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
                         <SelectValue placeholder="Select session type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -461,11 +460,11 @@ export default function SessionsPage() {
                     </Select>
                   )}
                 />
-                {addSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.sessionType.message}</p>}
+                {addSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionFormErrors.sessionType.message}</p>}
               </div>
 
-              <div>
-                <Label htmlFor="amount-sessionpage">Amount (£)</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount-sessionpage" className="text-right col-span-1">Amount (£)</Label>
                 <Controller name="amount" control={addSessionFormControl}
                     render={({ field }) => (
                     <Input 
@@ -476,12 +475,12 @@ export default function SessionsPage() {
                         {...field} 
                         value={field.value === undefined ? '' : String(field.value)}
                         onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                        className={cn("w-full mt-1", addSessionFormErrors.amount && "border-destructive")}
+                        className={cn("w-full col-span-3", addSessionFormErrors.amount && "border-destructive")}
                         disabled={isSubmittingSheet} 
                     />
                     )}
                 />
-                {addSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.amount.message}</p>}
+                {addSessionFormErrors.amount && <p className="text-xs text-destructive mt-1 col-start-2 col-span-3">{addSessionFormErrors.amount.message}</p>}
               </div>
 
               <SheetFooter className="mt-4">
@@ -569,7 +568,7 @@ export default function SessionsPage() {
                                     <>
                                       <span className="hidden sm:inline">•</span>
                                       <span className="flex items-center">
-                                          <IconDollarSign className="inline-block mr-1 h-3.5 w-3.5" />
+                                          <DollarSign className="inline-block mr-1 h-3.5 w-3.5" />
                                           £{session.amount.toFixed(2)}
                                       </span>
                                     </>
@@ -630,13 +629,13 @@ export default function SessionsPage() {
                         {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
                     </SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="max-h-[calc(100vh-220px)] pr-3">
-                  <div className="bg-[#92351f] text-primary-foreground p-4 rounded-md space-y-0 mt-4">
-                      <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} isFirst/>
+                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                  <div className="space-y-0">
+                      <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
                       <DetailRow label="Booking:" value={`${isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'dd/MM/yyyy') : 'Invalid Date'}, ${selectedSessionForSheet.time}`} />
                       <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
                       {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
-                      <DetailRow label="Status:" value={<Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'} className="bg-card text-card-foreground">{selectedSessionForSheet.status}</Badge>} />
+                      <DetailRow label="Status:" value={<Badge variant={selectedSessionForSheet.status === 'Scheduled' ? 'default' : selectedSessionForSheet.status === 'Completed' ? 'secondary' : 'outline'} >{selectedSessionForSheet.status}</Badge>} />
                       {selectedSessionForSheet.notes && <DetailRow label="Notes:" value={selectedSessionForSheet.notes} />}
                   </div>
                 </ScrollArea>
@@ -671,3 +670,6 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+
+    
