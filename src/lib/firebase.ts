@@ -296,7 +296,7 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       sessionType: session.sessionType || 'Unknown',
       createdAt: session.createdAt instanceof Date || session.createdAt instanceof Timestamp ? session.createdAt : serverTimestamp(),
       notes: session.notes === undefined ? null : session.notes,
-      amount: session.amount === undefined ? null : session.amount, // Changed from cost to amount
+      amount: session.amount === undefined ? null : session.amount,
     };
     if (session.dogName === undefined) dataToSave.dogName = null;
     return dataToSave;
@@ -310,9 +310,8 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       dogName: data.dogName === null ? undefined : data.dogName,
       date: data.date, 
       time: data.time, 
-      status: data.status,
       sessionType: data.sessionType || 'Unknown',
-      amount: data.amount === null ? undefined : data.amount, // Changed from cost to amount
+      amount: data.amount === null ? undefined : data.amount,
       notes: data.notes === null ? undefined : data.notes,
       createdAt: data.createdAt, 
     } as Session;
@@ -497,7 +496,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     clientDataForReturn = existingClientDoc.data();
     console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
     
-    const updates: Partial<Client> = { isActive: true };
+    const updates: Partial<Client> = { isActive: true }; // Default to active if questionnaire is filled
     if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
         updates.address = {
             addressLine1: formData.addressLine1,
@@ -687,7 +686,7 @@ export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'c
     ...sessionData,
     createdAt: serverTimestamp() as Timestamp,
   };
-  if (sessionData.amount === undefined) { // Changed from cost to amount
+  if (sessionData.amount === undefined) { 
     dataToSave.amount = null; 
   }
   if (sessionData.dogName === undefined) {

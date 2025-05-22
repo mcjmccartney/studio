@@ -131,9 +131,8 @@ export interface Session {
   dogName?: string;    // Denormalized for easier display
   date: string; // Should be in 'yyyy-MM-dd' format
   time: string; // Should be in 'HH:MM' (24-hour) format
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
   sessionType: string;
-  amount?: number; // Changed from cost to amount
+  amount?: number;
   notes?: string;
   createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }

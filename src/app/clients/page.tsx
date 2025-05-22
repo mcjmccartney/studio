@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, SquareCheck, Users as UsersIcon } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck, CalendarDays as IconCalendarDays, X, SquareCheck, Users as UsersIcon } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -408,7 +408,6 @@ export default function ClientsPage() {
           <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
             <SheetTrigger asChild>
               <Button>
-                <PlusCircle className="mr-2 h-5 w-5" />
                 New Client
               </Button>
             </SheetTrigger>
@@ -645,10 +644,8 @@ export default function ClientsPage() {
                   />
                   <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
                 </div>
-              <SheetFooter className="mt-4 col-span-4"> 
-                <SheetClose asChild>
-                   <Button type="button" variant="outline" disabled={isSubmittingForm}>Cancel</Button>
-                </SheetClose>
+              <SheetFooter className="mt-4"> 
+                <Button type="button" variant="outline" onClick={() => setIsEditSheetOpen(false)} disabled={isSubmittingForm}>Cancel</Button>
                 <Button type="submit" disabled={isSubmittingForm}>
                   {isSubmittingForm && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
@@ -666,26 +663,32 @@ export default function ClientsPage() {
             <>
             {sheetViewMode === 'clientInfo' && (
                 <>
-                <SheetHeader className="text-left">
-                    <SheetTitle className="text-xl">
-                        {clientForViewSheet.isMember && (
-                            <Image
-                            src="https://iili.io/34300ox.md.jpg"
-                            alt="Member Icon"
-                            width={28} 
-                            height={28}
-                            className="rounded-sm mr-3 inline-block align-middle"
-                            data-ai-hint="company logo"
-                            />
-                        )}
-                        {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
-                    </SheetTitle>
+                <SheetHeader>
+                    <div className="flex justify-between items-center">
+                        <SheetTitle className="text-xl">
+                            {clientForViewSheet.isMember && (
+                                <Image
+                                src="https://iili.io/34300ox.md.jpg"
+                                alt="Member Icon"
+                                width={28} 
+                                height={28}
+                                className="rounded-sm mr-3 inline-block align-middle"
+                                data-ai-hint="company logo"
+                                />
+                            )}
+                            {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, clientForViewSheet.dogName)}
+                        </SheetTitle>
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditSheet(clientForViewSheet)}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteRequest(clientForViewSheet)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                    </div>
                      <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
                         <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
                         {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
                     </Badge>
                 </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
                   <div className="space-y-0">
                     <DetailRow label="Email:" value={<a href={`mailto:${clientForViewSheet.contactEmail}`} className="hover:underline">{clientForViewSheet.contactEmail}</a>} />
                     <DetailRow label="Number:" value={<a href={`tel:${clientForViewSheet.contactNumber}`} className="hover:underline">{clientForViewSheet.contactNumber}</a>} />
@@ -715,7 +718,7 @@ export default function ClientsPage() {
                           <ul className="space-y-3">
                               {clientSessionsForView.map(session => (
                               <li key={session.id} className="p-3 rounded-md border bg-background hover:bg-muted/50 transition-colors text-sm">
-                                  <div className="flex justify-between items-center"><div><span className="font-semibold">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}</span><span className="text-muted-foreground"> at {session.time}</span></div><Badge variant={session.status === 'Scheduled' ? 'default' : session.status === 'Completed' ? 'secondary' : 'outline'}>{session.status}</Badge></div>
+                                  <div className="flex justify-between items-center"><div><span className="font-semibold">{isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : 'Invalid Date'}</span><span className="text-muted-foreground"> at {session.time}</span></div></div>
                                   {session.sessionType && <div className="text-xs text-muted-foreground mt-1">Type: {session.sessionType}</div>}
                                   {session.amount !== undefined && <div className="text-xs text-muted-foreground mt-0.5">Amount: £{session.amount.toFixed(2)}</div>}
                                   {session.notes && <p className="mt-1 text-xs text-muted-foreground">Notes: {session.notes}</p>}
@@ -725,11 +728,6 @@ export default function ClientsPage() {
                       </CardContent>
                   </Card>
                 </ScrollArea>
-                <SheetFooter className="pt-4">
-                  <Button variant="outline" onClick={() => {openEditSheet(clientForViewSheet)}}>Edit Contact</Button>
-                  <Button variant="destructive" onClick={() => handleDeleteRequest(clientForViewSheet)}>Delete Client</Button>
-                  <SheetClose asChild><Button variant="outline">Close</Button></SheetClose>
-                </SheetFooter>
                 </>
             )}
             {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
@@ -741,7 +739,7 @@ export default function ClientsPage() {
                 <SheetDescription className="text-left mb-4">
                     {formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, briefForSheet.dogName)}
                 </SheetDescription>
-                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
                   <div className="space-y-0">
                     <DetailRow label="Dog's Name:" value={briefForSheet.dogName} />
                     <DetailRow label="Breed:" value={briefForSheet.dogBreed} />
@@ -752,7 +750,6 @@ export default function ClientsPage() {
                     <DetailRow label="Submitted:" value={briefForSheet.submissionDate && isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'} />
                   </div>
                 </ScrollArea>
-                <SheetFooter className="pt-4"><Button variant="outline" onClick={() => setSheetViewMode('clientInfo')}>Back to Client Info</Button></SheetFooter>
                 </>
             )}
             {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
@@ -762,7 +759,7 @@ export default function ClientsPage() {
                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                 </SheetHeader>
                 <SheetDescription className="text-left mb-4">{formatFullNameAndDogName(`${clientForViewSheet.ownerFirstName} ${clientForViewSheet.ownerLastName}`, questionnaireForSheet.dogName)}</SheetDescription>
-                <ScrollArea className="h-[calc(100vh-200px)] pr-3 mt-4">
+                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
                   <div className="space-y-0">
                     <DetailRow label="Dog's Name:" value={questionnaireForSheet.dogName} />
                     <DetailRow label="Age:" value={questionnaireForSheet.dogAge} />
@@ -812,7 +809,6 @@ export default function ClientsPage() {
                     <DetailRow label="Submitted:" value={questionnaireForSheet.submissionDate && isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'} />
                   </div>
                 </ScrollArea>
-                <SheetFooter className="pt-4"><Button variant="outline" onClick={() => setSheetViewMode('clientInfo')}>Back to Client Info</Button></SheetFooter>
                 </>
             )}
             {isLoadingBriefForSheet && sheetViewMode === 'behaviouralBrief' && <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Loading Brief...</p></div>}
@@ -843,6 +839,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-
-
-    
