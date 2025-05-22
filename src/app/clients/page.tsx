@@ -4,17 +4,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MoreHorizontal, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, ShieldCheck as MemberIcon, SquareCheck, X, Users as UsersIcon, CalendarDays as IconCalendarDays } from 'lucide-react';
+import { Edit, Trash2, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, Users as UsersIcon, CalendarDays as IconCalendarDays, MoreHorizontal } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
-  SheetFooter,
   SheetClose,
-  SheetTrigger,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -26,14 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,8 +52,16 @@ import {
 } from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn, formatFullNameAndDogName } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 const internalClientFormSchema = z.object({
   ownerFirstName: z.string().min(1, { message: "First name is required." }),
@@ -235,8 +233,7 @@ export default function ClientsPage() {
           if (nameA > nameB) return 1;
           return 0;
         }));
-      const ownerFullName = `${newClient.ownerFirstName} ${newClient.ownerLastName}`.trim();
-      toast({ title: "Client Added", description: `${formatFullNameAndDogName(ownerFullName, newClient.dogName)} has been successfully added.` });
+      toast({ title: "Client Added", description: `${formatFullNameAndDogName(data.ownerFirstName + " " + data.ownerLastName, data.dogName)} has been successfully added.` });
       addClientForm.reset({ ownerFirstName: '', ownerLastName: '', dogName: '', contactEmail: '', contactNumber: '', postcode: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
       setIsAddClientSheetOpen(false);
     } catch (err) {
@@ -379,7 +376,7 @@ export default function ClientsPage() {
                     <SheetHeader>
                     <SheetTitle>New Client</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-6 py-4">
+                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-4 py-4">
                       <div>
                           <Label htmlFor="add-ownerFirstName">First Name</Label>
                           <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
@@ -441,7 +438,7 @@ export default function ClientsPage() {
                           <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
                       </div>
                       <input type="hidden" {...addClientForm.register("submissionDate")} />
-                      <SheetFooter className="mt-4">
+                      <SheetFooter>
                           <SheetClose asChild>
                           <Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button>
                           </SheetClose>
@@ -478,10 +475,10 @@ export default function ClientsPage() {
             return (
               <div
                 key={client.id}
-                className="bg-card shadow-sm rounded-md mb-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="bg-card shadow-sm rounded-md mb-2 cursor-pointer hover:bg-muted/50 transition-colors px-4 py-2"
                 onClick={() => { setClientForViewSheet(client); setIsViewSheetOpen(true); }}
               >
-                <div className="flex items-center justify-between px-4 py-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {client.isMember && (
                         <Image
@@ -535,43 +532,37 @@ export default function ClientsPage() {
               <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
             </SheetHeader>
             {clientToEdit && (
-              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-6 py-4">
+              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-4 py-4">
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
                   <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                  {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
                 </div>
-                {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
-
                 <div>
                   <Label htmlFor="edit-ownerLastName">Last Name</Label>
                   <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("mt-1", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                  {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
                 </div>
-                 {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
-
                 <div>
                   <Label htmlFor="edit-dogName">Dog's Name</Label>
                   <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("mt-1", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                  {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
                 </div>
-                {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.dogName.message}</p>}
-
                 <div>
                   <Label htmlFor="edit-contactEmail">Email</Label>
                   <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("mt-1", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                  {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
                 </div>
-                {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.contactEmail.message}</p>}
-
                 <div>
                   <Label htmlFor="edit-contactNumber">Number</Label>
                   <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("mt-1", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                  {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
                 </div>
-                {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.contactNumber.message}</p>}
-
                 <div>
                   <Label htmlFor="edit-postcode">Postcode</Label>
                   <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("mt-1", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                 {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
                 </div>
-                 {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive -mt-2 text-right pr-1">{editClientForm.formState.errors.postcode.message}</p>}
-
                 <div className="flex items-center space-x-2">
                   <Controller
                     name="isMember"
@@ -592,7 +583,7 @@ export default function ClientsPage() {
                   />
                    <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
                 </div>
-                <SheetFooter className="mt-4">
+                <SheetFooter>
                   <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
                   <Button type="submit" disabled={isSubmittingSheet}>
                     {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
@@ -605,8 +596,7 @@ export default function ClientsPage() {
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
-                <SheetHeader>
-                  <div className="flex items-center gap-2">
+                 <div className="absolute top-3.5 right-14 flex items-center gap-1 z-10">
                     <Button variant="ghost" size="icon" onClick={() => {
                         if (clientForViewSheet) {
                             setClientToEdit(clientForViewSheet);
@@ -628,13 +618,14 @@ export default function ClientsPage() {
                     >
                         <Trash2 className="h-5 w-5" />
                     </Button>
-                    <SheetTitle className="text-xl">
-                        {clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}
+                </div>
+                <SheetHeader>
+                    <SheetTitle>
+                        Client Details
                     </SheetTitle>
-                  </div>
                      {clientForViewSheet && (
                         <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                            <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
+                             {/* SquareCheck removed, assuming it was MemberIcon or similar. Re-add if needed */}
                             {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
                         </Badge>
                      )}
@@ -644,6 +635,7 @@ export default function ClientsPage() {
                     <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
                           {sheetViewMode === 'clientInfo' && (
                               <div className="space-y-0">
+                                  <DetailRow label="Owner:" value={formatFullNameAndDogName(clientForViewSheet.ownerFirstName + ' ' + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)} />
                                   <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                   <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
                                   {clientForViewSheet.address ? (
@@ -659,7 +651,9 @@ export default function ClientsPage() {
                                   )}
                                   {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                   <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
-                                  
+                                  <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
+
+
                                   {clientForViewSheet.behaviouralBriefId && (
                                       <Button onClick={handleViewBrief} className="w-full mt-4" variant="outline" disabled={isLoadingBriefForSheet}>
                                       {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
@@ -672,22 +666,30 @@ export default function ClientsPage() {
                                   )}
 
                                   <Tabs defaultValue="sessions" className="w-full mt-6">
-                                    <TabsList className="grid w-full grid-cols-2">
-                                      <TabsTrigger value="sessions">Sessions ({clientSessionsForView.length})</TabsTrigger>
-                                      <TabsTrigger value="membership">Membership</TabsTrigger>
+                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
+                                      <TabsTrigger value="sessions" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                        Sessions ({clientSessionsForView.length})
+                                      </TabsTrigger>
+                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                        Membership
+                                      </TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="sessions" className="pt-2">
                                       {clientSessionsForView.length > 0 ? (
-                                      <ul className="space-y-2">
-                                          {clientSessionsForView.map(session => (
-                                          <li key={session.id} className="text-sm p-2 border rounded-md bg-muted/30">
-                                              <div>{format(parseISO(session.date), 'PPP')} at {session.time}</div>
-                                              <div className="text-xs text-muted-foreground">{session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}</div>
-                                          </li>
-                                          ))}
-                                      </ul>
+                                         <ul className="space-y-0">
+                                            {clientSessionsForView.map(session => (
+                                            <li key={session.id} className="bg-card border border-border rounded-md p-3 mb-2">
+                                                <div className="text-sm font-medium text-foreground">
+                                                  {format(parseISO(session.date), 'PPP')} at {session.time}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}
+                                                </div>
+                                            </li>
+                                            ))}
+                                        </ul>
                                       ) : (
-                                      <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded for this client.</p>
+                                        <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded for this client.</p>
                                       )}
                                     </TabsContent>
                                     <TabsContent value="membership" className="pt-2">
