@@ -19,9 +19,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
   SheetFooter,
-  SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
@@ -440,9 +438,6 @@ export default function SessionsPage() {
           <SheetContent className="sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
-              <SheetDescription>
-                Schedule a new training session.
-              </SheetDescription>
             </SheetHeader>
             <form onSubmit={handleAddSessionSubmitHook(handleAddSession)} className="space-y-4 py-4">
                 <div>
@@ -471,9 +466,9 @@ export default function SessionsPage() {
                     {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
                 </div>
 
-               <div>
-                <Label htmlFor="date-sessionpage">Date</Label>
-                 <div className={cn("mt-1 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+               <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="date-sessionpage" className="text-right pt-2 col-span-1">Date</Label>
+                 <div className={cn("mt-1 flex justify-center col-span-3", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                 <Controller
                   name="date"
                   control={addSessionFormControl}
@@ -487,14 +482,14 @@ export default function SessionsPage() {
                       id="date-sessionpage"
                       className={cn("!p-1", addSessionFormErrors.date && "border-destructive")}
                        classNames={{
-                        day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground")
+                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white")
                       }}
                     />
                   )}
                 />
                 </div>
-                 {addSessionFormErrors.date && <p className="text-xs text-destructive -mt-2">{addSessionFormErrors.date.message}</p>}
+                 {addSessionFormErrors.date && <p className="col-start-2 col-span-3 text-xs text-destructive -mt-2">{addSessionFormErrors.date.message}</p>}
                 </div>
 
 
@@ -566,9 +561,7 @@ export default function SessionsPage() {
 
 
               <SheetFooter className="mt-4">
-                <SheetClose asChild>
-                  <Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button>
-                </SheetClose>
+                 <Button type="button" variant="outline" onClick={() => setIsAddSessionSheetOpen(false)} disabled={isSubmittingSheet}>Cancel</Button>
                 <Button type="submit" disabled={isSubmittingSheet}>
                   {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Session
@@ -641,15 +634,15 @@ export default function SessionsPage() {
                                     <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                     {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                   </span>
-                                  <span className="flex items-center sm:inline">
+                                  <span className="flex items-center">
                                     <span className="mx-1 hidden sm:inline">•</span>
                                     <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                     {session.time}
                                   </span>
                                   {session.amount !== undefined && (
-                                      <span className="flex items-center sm:inline">
+                                      <span className="flex items-center">
                                           <span className="mx-1 hidden sm:inline">•</span>
-                                          <DollarSign className="inline-block mr-1 h-3.5 w-3.5" />
+                                          <DollarSign className="inline-block mr-1.5 h-3.5 w-3.5" />
                                           £{session.amount.toFixed(2)}
                                       </span>
                                   )}
@@ -677,7 +670,7 @@ export default function SessionsPage() {
                                     e.stopPropagation(); 
                                     setSessionToEdit(session);
                                     setIsEditSessionSheetOpen(true);
-                                    setIsSessionSheetOpen(false); // Close view if open
+                                    setIsSessionSheetOpen(false); 
                                 }}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Session
@@ -707,43 +700,35 @@ export default function SessionsPage() {
       {/* Session Detail Sheet */}
       <Sheet open={isSessionSheetOpen} onOpenChange={setIsSessionSheetOpen}>
         <SheetContent className="sm:max-w-lg bg-card">
-            <div className="absolute top-3.5 right-14 flex items-center gap-1 z-10">
-                <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                    if (selectedSessionForSheet) {
-                    setSessionToEdit(selectedSessionForSheet);
-                    setIsEditSessionSheetOpen(true);
-                    setIsSessionSheetOpen(false); // Close view sheet
-                    }
-                }}
-                disabled={!selectedSessionForSheet}
-                >
-                <Edit className="h-5 w-5" />
-                <span className="sr-only">Edit Session</span>
-                </Button>
-                <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-                onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                disabled={!selectedSessionForSheet}
-                >
-                <Trash2 className="h-5 w-5" />
-                <span className="sr-only">Delete Session</span>
-                </Button>
-            </div>
             <SheetHeader>
-                <SheetTitle>Session Details</SheetTitle>
-                {selectedSessionForSheet && (
-                <SheetDescription>
-                    {formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}
-                </SheetDescription>
-                )}
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" 
+                        onClick={() => {
+                            if (selectedSessionForSheet) {
+                            setSessionToEdit(selectedSessionForSheet);
+                            setIsEditSessionSheetOpen(true);
+                            setIsSessionSheetOpen(false); 
+                            }
+                        }}
+                        disabled={!selectedSessionForSheet}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <Edit className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
+                        disabled={!selectedSessionForSheet || isSubmittingSheet}
+                        className="text-destructive hover:text-destructive/90"
+                    >
+                        {isSubmittingSheet && sessionToDelete && sessionToDelete.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="h-5 w-5" />}
+                    </Button>
+                    <SheetTitle>Session Details</SheetTitle>
+                </div>
             </SheetHeader>
             {selectedSessionForSheet && (
-                <ScrollArea className="h-[calc(100vh-220px)] pr-3 mt-4"> {/* Adjusted height */}
+                <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
                 <div className="space-y-0">
                     <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                     <DetailRow label="Time:" value={selectedSessionForSheet.time} />
@@ -753,7 +738,6 @@ export default function SessionsPage() {
                 </div>
                 </ScrollArea>
             )}
-            {/* Footer removed as actions are in header */}
           </SheetContent>
         </Sheet>
 
@@ -762,14 +746,6 @@ export default function SessionsPage() {
         <SheetContent className="sm:max-w-md bg-card">
           <SheetHeader>
             <SheetTitle>Edit Session</SheetTitle>
-            {sessionToEdit && (
-              <SheetDescription>
-                Editing session for {formatFullNameAndDogName(
-                  clients.find(c=>c.id === sessionToEdit.clientId)?.ownerFirstName + " " + clients.find(c=>c.id === sessionToEdit.clientId)?.ownerLastName,
-                  clients.find(c=>c.id === sessionToEdit.clientId)?.dogName
-                )}
-              </SheetDescription>
-            )}
           </SheetHeader>
           <form onSubmit={handleEditSessionSubmitHook(handleUpdateSession)} className="space-y-4 py-4">
              <div>
@@ -792,15 +768,15 @@ export default function SessionsPage() {
                 />
                 {editSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.clientId.message}</p>}
             </div>
-            <div>
-                <Label htmlFor="edit-date-sessions">Date</Label>
-                <div className={cn("mt-1 flex justify-center", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+            <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="edit-date-sessions" className="text-right pt-2 col-span-1">Date</Label>
+                <div className={cn("mt-1 flex justify-center col-span-3", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                 <Controller name="date" control={editSessionFormControl}
                     render={({ field }) => (
                     <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" className={cn("!p-1", editSessionFormErrors.date && "border-destructive")}
                         classNames={{
-                          day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                          day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground")
+                          day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                          day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white")
                         }} />
                     )} />
                 </div>
@@ -837,7 +813,7 @@ export default function SessionsPage() {
                 {editSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.amount.message}</p>}
             </div>
             <SheetFooter className="mt-4">
-              <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmittingSheet}>Cancel</Button></SheetClose>
+               <Button type="button" variant="outline" onClick={() => setIsEditSessionSheetOpen(false)} disabled={isSubmittingSheet}>Cancel</Button>
               <Button type="submit" disabled={isSubmittingSheet}>
                 {isSubmittingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
               </Button>
@@ -851,11 +827,11 @@ export default function SessionsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the session
               with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setSessionToDelete(null); setIsSessionDeleteDialogOpen(false); }} disabled={isSubmittingSheet}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet}>
@@ -868,7 +844,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-
-
-    
