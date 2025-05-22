@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, PawPrint, Users as UsersIcon, MoreHorizontal, X, SquareCheck, Info } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, PawPrint, Users as UsersIcon, MoreHorizontal, X, SquareCheck, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -108,7 +108,7 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const [isViewClientSheetOpen, setIsViewClientSheetOpen] = useState(false);
+  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false);
   const [clientForViewSheet, setClientForViewSheet] = useState<Client | null>(null);
   const [sheetViewMode, setSheetViewMode] = useState<'clientInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire'>('clientInfo');
   
@@ -297,7 +297,7 @@ export default function ClientsPage() {
       setClients(prev => prev.filter(c => c.id !== clientToDelete.id));
       toast({ title: "Client Deleted", description: `${formatFullNameAndDogName(clientToDelete.ownerFirstName + " " + clientToDelete.ownerLastName, clientToDelete.dogName)} has been deleted.` });
       if (clientForViewSheet && clientForViewSheet.id === clientToDelete.id) {
-        setIsViewClientSheetOpen(false);
+        setIsViewSheetOpen(false);
         setClientForViewSheet(null);
       }
     } catch (err) {
@@ -312,14 +312,14 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    if (isViewClientSheetOpen && clientForViewSheet) {
+    if (isViewSheetOpen && clientForViewSheet) {
       setSheetViewMode('clientInfo');
       setBriefForSheet(null);
       setQuestionnaireForSheet(null);
       const sessionsForThisClient = allSessions.filter(s => s.clientId === clientForViewSheet.id);
       setClientSessionsForView(sessionsForThisClient);
     }
-  }, [isViewClientSheetOpen, clientForViewSheet, allSessions]);
+  }, [isViewSheetOpen, clientForViewSheet, allSessions]);
 
   const handleViewBrief = async () => {
     if (!clientForViewSheet || !clientForViewSheet.behaviouralBriefId) return;
@@ -477,7 +477,7 @@ export default function ClientsPage() {
               <div
                 key={client.id}
                 className="bg-card shadow-sm rounded-md mb-2 cursor-pointer hover:bg-muted/50 transition-colors px-4 py-2"
-                onClick={() => { setClientForViewSheet(client); setIsViewClientSheetOpen(true); }}
+                onClick={() => { setClientForViewSheet(client); setIsViewSheetOpen(true); }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -533,7 +533,7 @@ export default function ClientsPage() {
               <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
             </SheetHeader>
             {clientToEdit && (
-              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-6 py-4"> {/* Changed from space-y-4 */}
+              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4"> 
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
                   <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
@@ -595,8 +595,30 @@ export default function ClientsPage() {
           </SheetContent>
         </Sheet>
 
-        <Sheet open={isViewClientSheetOpen} onOpenChange={(isOpen) => { setIsViewClientSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
+        <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
+                 <div className="absolute top-3.5 right-[calc(1rem+2.5rem+0.25rem+2.5rem+0.25rem)] flex items-center gap-1 z-10">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                            if (clientForViewSheet) {
+                                setClientToEdit(clientForViewSheet);
+                                setIsEditSheetOpen(true);
+                                setIsViewSheetOpen(false);
+                            }
+                        }}
+                    >
+                        <Edit className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
+                        disabled={isProcessingDelete && clientToDelete?.id === clientForViewSheet?.id}
+                        className="text-destructive hover:text-destructive/90"
+                    >
+                        {isProcessingDelete && clientToDelete?.id === clientForViewSheet?.id ? <Loader2 className="h-5 w-5 animate-spin"/> : <Trash2 className="h-5 w-5" />}
+                    </Button>
+                </div>
                 <SheetHeader>
                      <SheetTitle>
                        Client Details
@@ -630,7 +652,6 @@ export default function ClientsPage() {
                                   )}
                                   {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                   <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
-                                  <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
                                   
                                   {clientForViewSheet.behaviouralBriefId && (
                                       <Button onClick={handleViewBrief} className="w-full mt-4" variant="outline" disabled={isLoadingBriefForSheet}>
@@ -644,11 +665,11 @@ export default function ClientsPage() {
                                   )}
 
                                   <Tabs defaultValue="sessions" className="w-full mt-6">
-                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full">
-                                      <TabsTrigger value="sessions" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                    <TabsList className="grid w-full grid-cols-2 items-center justify-center rounded-md bg-card p-1 border text-muted-foreground">
+                                      <TabsTrigger value="sessions" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary">
                                         Sessions ({clientSessionsForView.length})
                                       </TabsTrigger>
-                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary">
                                         Membership
                                       </TabsTrigger>
                                     </TabsList>
@@ -756,10 +777,10 @@ export default function ClientsPage() {
                             variant="outline" 
                             className="w-1/2"
                             onClick={() => {
-                                setIsViewClientSheetOpen(false);
                                 if (clientForViewSheet) {
                                 setClientToEdit(clientForViewSheet);
                                 setIsEditSheetOpen(true);
+                                setIsViewSheetOpen(false);
                                 }
                             }}
                             disabled={isProcessingDelete}
@@ -800,4 +821,5 @@ export default function ClientsPage() {
     </div>
   );
 }
+
 
