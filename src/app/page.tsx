@@ -20,10 +20,11 @@ import {
   Clock,
   Tag as TagIcon,
   DollarSign,
+  Info,
 } from 'lucide-react';
 import { DayPicker, type DateFormatter, type DayProps } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import type { Session, Client } from '@/lib/types';
+import type { Session, Client, EditableClientData } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,7 +33,19 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
+  SheetFooter,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,10 +162,9 @@ export default function HomePage() {
   const [isEditSessionSheetOpen, setIsEditSessionSheetOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
 
-
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
 
-  const [isSessionSheetOpen, setIsSessionSheetOpen] = useState(false);
+  const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isDeleteSessionDialogOpen, setIsDeleteSessionDialogOpen] = useState(false);
@@ -177,6 +189,13 @@ export default function HomePage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      clientId: '',
+      date: new Date(),
+      time: format(new Date(), "HH:mm"),
+      sessionType: '',
+      amount: undefined,
+    }
   });
   
   const { 
@@ -263,58 +282,58 @@ export default function HomePage() {
   }, [isEditSessionSheetOpen, watchedClientIdForEditSession, watchedSessionTypeForEditSession, clients, setEditSessionValue]);
 
 
+  const fetchDashboardData = async () => {
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+      toast({
+        title: "Firebase Not Configured",
+        description: "Cannot fetch dashboard data.",
+        variant: "destructive",
+      });
+      setIsLoadingData(false);
+      return;
+    }
+    try {
+      setIsLoadingData(true);
+      const [firestoreClients, firestoreSessions] = await Promise.all([
+        getClients(),
+        getSessionsFromFirestore()
+      ]);
+      setClients(firestoreClients.sort((a, b) => {
+        const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
+        const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      }));
+      setSessions(firestoreSessions.sort((a, b) => {
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        if (!isValid(dateA) && !isValid(dateB)) return 0;
+        if (!isValid(dateA)) return 1;
+        if (!isValid(dateB)) return -1;
+
+        const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
+        const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
+
+        if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
+        if (!isValid(dateTimeA)) return 1;
+        if (!isValid(dateTimeB)) return -1;
+
+        return dateTimeB.getTime() - dateTimeA.getTime();
+      }));
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      toast({
+        title: "Error Loading Dashboard Data",
+        description: "Could not fetch client or session data from Firestore.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-        toast({
-          title: "Firebase Not Configured",
-          description: "Cannot fetch dashboard data.",
-          variant: "destructive",
-        });
-        setIsLoadingData(false);
-        return;
-      }
-      try {
-        setIsLoadingData(true);
-        const [firestoreClients, firestoreSessions] = await Promise.all([
-          getClients(),
-          getSessionsFromFirestore()
-        ]);
-        setClients(firestoreClients.sort((a, b) => {
-          const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
-          const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
-          if (nameA < nameB) return -1;
-          if (nameA > nameB) return 1;
-          return 0;
-        }));
-        setSessions(firestoreSessions.sort((a, b) => {
-          const dateA = parseISO(a.date);
-          const dateB = parseISO(b.date);
-          if (!isValid(dateA) && !isValid(dateB)) return 0;
-          if (!isValid(dateA)) return 1;
-          if (!isValid(dateB)) return -1;
-
-          const dateTimeA = isValid(dateA) ? new Date(`${format(dateA, 'yyyy-MM-dd')}T${a.time || '00:00'}:00`) : new Date(0);
-          const dateTimeB = isValid(dateB) ? new Date(`${format(dateB, 'yyyy-MM-dd')}T${b.time || '00:00'}:00`) : new Date(0);
-
-          if (!isValid(dateTimeA) && !isValid(dateTimeB)) return 0;
-          if (!isValid(dateTimeA)) return 1;
-          if (!isValid(dateTimeB)) return -1;
-
-          return dateTimeB.getTime() - dateTimeA.getTime();
-        }));
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        toast({
-          title: "Error Loading Dashboard Data",
-          description: "Could not fetch client or session data from Firestore.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
     fetchDashboardData();
   }, [toast]);
 
@@ -332,7 +351,7 @@ export default function HomePage() {
   const handleAddClientSubmit: SubmitHandler<InternalClientFormValuesDash> = async (data) => {
     setIsSubmittingSheet(true);
     try {
-      const clientDataForFirestore = {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
@@ -466,12 +485,12 @@ export default function HomePage() {
 
   const handleConfirmDeleteSession = async () => {
     if (!sessionToDelete) return;
-    setIsSubmittingSheet(true); // Reuse for dialog submission state
+    setIsSubmittingSheet(true); 
     try {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       toast({ title: "Session Deleted", description: "The session has been deleted." });
-      setIsSessionSheetOpen(false); // Close view sheet if open
+      setIsSessionDetailSheetOpen(false); 
       setSelectedSessionForSheet(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
@@ -524,7 +543,7 @@ export default function HomePage() {
                   className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80 rounded-md"
                   onClick={() => {
                     setSelectedSessionForSheet(session);
-                    setIsSessionSheetOpen(true);
+                    setIsSessionDetailSheetOpen(true);
                   }}
                 >
                   {session.time} -{" "}
@@ -574,37 +593,38 @@ export default function HomePage() {
                   <SheetTitle>New Client</SheetTitle>
                   </SheetHeader>
                   <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-4 py-4">
-                    <div>
-                        <Label htmlFor="add-ownerFirstName-dash">First Name</Label>
-                        <Input id="add-ownerFirstName-dash" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-ownerFirstName-dash" className="text-right">First Name</Label>
+                        <Input id="add-ownerFirstName-dash" {...addClientForm.register("ownerFirstName")} className={cn("col-span-3", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.ownerFirstName && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.ownerFirstName.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="add-ownerLastName-dash">Last Name</Label>
-                        <Input id="add-ownerLastName-dash" {...addClientForm.register("ownerLastName")} className={cn("mt-1", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-ownerLastName-dash" className="text-right">Last Name</Label>
+                        <Input id="add-ownerLastName-dash" {...addClientForm.register("ownerLastName")} className={cn("col-span-3", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.ownerLastName && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.ownerLastName.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="add-dogName-dash">Dog's Name</Label>
-                        <Input id="add-dogName-dash" {...addClientForm.register("dogName")} className={cn("mt-1", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-dogName-dash" className="text-right">Dog's Name</Label>
+                        <Input id="add-dogName-dash" {...addClientForm.register("dogName")} className={cn("col-span-3", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.dogName && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.dogName.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="add-contactEmail-dash">Email</Label>
-                        <Input id="add-contactEmail-dash" type="email" {...addClientForm.register("contactEmail")} className={cn("mt-1", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-contactEmail-dash" className="text-right">Email</Label>
+                        <Input id="add-contactEmail-dash" type="email" {...addClientForm.register("contactEmail")} className={cn("col-span-3", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.contactEmail && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.contactEmail.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="add-contactNumber-dash">Number</Label>
-                        <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={cn("mt-1", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-contactNumber-dash" className="text-right">Number</Label>
+                        <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={cn("col-span-3", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.contactNumber && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.contactNumber.message}</p>}
                     </div>
-                    <div>
-                        <Label htmlFor="add-postcode-dash">Postcode</Label>
-                        <Input id="add-postcode-dash" {...addClientForm.register("postcode")} className={cn("mt-1", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                        {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-postcode-dash" className="text-right">Postcode</Label>
+                        <Input id="add-postcode-dash" {...addClientForm.register("postcode")} className={cn("col-span-3", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                        {addClientForm.formState.errors.postcode && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addClientForm.formState.errors.postcode.message}</p>}
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                         <Label htmlFor="add-isMember-dash" className="text-right">Is Member?</Label>
                         <Controller
                         name="isMember"
                         control={addClientForm.control}
@@ -614,12 +634,13 @@ export default function HomePage() {
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             disabled={isSubmittingSheet}
+                            className="col-span-3"
                             />
                         )}
                         />
-                        <Label htmlFor="add-isMember-dash" className="text-sm font-normal">Is Member?</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="add-isActive-dash" className="text-right">Is Active?</Label>
                         <Controller
                         name="isActive"
                         control={addClientForm.control}
@@ -629,10 +650,10 @@ export default function HomePage() {
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             disabled={isSubmittingSheet}
+                            className="col-span-3"
                             />
                         )}
                         />
-                        <Label htmlFor="add-isActive-dash" className="text-sm font-normal">Is Active?</Label>
                     </div>
                     <input type="hidden" {...addClientForm.register("submissionDate")} />
                      <SheetFooter className="mt-4">
@@ -654,12 +675,12 @@ export default function HomePage() {
                   <SheetTitle>New Session</SheetTitle>
                 </SheetHeader>
                 <form onSubmit={handleAddSessionSubmitHook(handleAddSessionSubmit)} className="space-y-4 py-4">
-                    <div>
-                        <Label htmlFor="clientId-dashboard">Client</Label>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="clientId-dashboard" className="text-right">Client</Label>
                         <Controller name="clientId" control={addSessionFormControl}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoadingData}>
-                            <SelectTrigger id="clientId-dashboard" className={cn("w-full mt-1", addSessionFormErrors.clientId && "border-destructive")}>
+                            <SelectTrigger id="clientId-dashboard" className={cn("col-span-3", addSessionFormErrors.clientId && "border-destructive")}>
                                 <SelectValue placeholder="Select a client" />
                             </SelectTrigger>
                             <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -672,38 +693,38 @@ export default function HomePage() {
                             </Select>
                         )}
                         />
-                        {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
+                        {addSessionFormErrors.clientId && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addSessionFormErrors.clientId.message}</p>}
                     </div>
 
                     <div className="grid grid-cols-4 items-start gap-4">
                         <Label htmlFor="date-dashboard" className="text-right pt-2 col-span-1">Date</Label>
-                        <div className={cn("mt-1 flex justify-center col-span-3", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                        <div className={cn("col-span-3 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                         <Controller name="date" control={addSessionFormControl}
                             render={({ field }) => (
                             <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("!p-1", addSessionFormErrors.date && "border-destructive")}
                                 classNames={{
-                                  day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                                  day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground text-white",
                                   day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white")
                                 }} />
                             )} />
                         </div>
-                         {addSessionFormErrors.date && <p className="col-start-2 col-span-3 text-xs text-destructive -mt-2">{addSessionFormErrors.date.message}</p>}
+                         {addSessionFormErrors.date && <p className="col-span-4 text-xs text-destructive -mt-2 text-right">{addSessionFormErrors.date.message}</p>}
                     </div>
 
 
-                    <div>
-                        <Label htmlFor="time-dashboard">Time (24h)</Label>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="time-dashboard" className="text-right">Time (24h)</Label>
                         <Controller name="time" control={addSessionFormControl}
-                        render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("mt-1", addSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
-                         {addSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.time.message}</p>}
+                        render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("col-span-3", addSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                         {addSessionFormErrors.time && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addSessionFormErrors.time.message}</p>}
                     </div>
 
-                    <div>
-                        <Label htmlFor="sessionType-dashboard">Type</Label>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="sessionType-dashboard" className="text-right">Type</Label>
                         <Controller name="sessionType" control={addSessionFormControl}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                            <SelectTrigger id="sessionType-dashboard" className={cn("mt-1",addSessionFormErrors.sessionType && "border-destructive")}>
+                            <SelectTrigger id="sessionType-dashboard" className={cn("col-span-3",addSessionFormErrors.sessionType && "border-destructive")}>
                                 <SelectValue placeholder="Select session type" />
                             </SelectTrigger>
                             <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -712,17 +733,17 @@ export default function HomePage() {
                             </Select>
                         )}
                         />
-                        {addSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.sessionType.message}</p>}
+                        {addSessionFormErrors.sessionType && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addSessionFormErrors.sessionType.message}</p>}
                     </div>
 
 
-                    <div>
-                        <Label htmlFor="amount-dashboard">Amount (£)</Label>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="amount-dashboard" className="text-right">Amount (£)</Label>
                         <Controller name="amount" control={addSessionFormControl}
                         render={({ field }) => (
-                            <Input id="amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("mt-1", addSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
+                            <Input id="amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("col-span-3", addSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
                         )} />
-                        {addSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.amount.message}</p>}
+                        {addSessionFormErrors.amount && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{addSessionFormErrors.amount.message}</p>}
                     </div>
 
 
@@ -761,7 +782,7 @@ export default function HomePage() {
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
                 day: "h-full w-full p-0",
-                day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 day_today: "ring-2 ring-[#4e6748] rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
@@ -772,42 +793,36 @@ export default function HomePage() {
       </Card>
 
       {/* Session Detail Sheet */}
-      <Sheet open={isSessionSheetOpen} onOpenChange={setIsSessionSheetOpen}>
+      <Sheet open={isSessionDetailSheetOpen} onOpenChange={setIsSessionDetailSheetOpen}>
         <SheetContent className="sm:max-w-lg bg-card">
+           <div className="absolute top-3.5 right-14 flex items-center gap-1 z-10">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                        if (selectedSessionForSheet) {
+                            setSessionToEdit(selectedSessionForSheet);
+                            setIsEditSessionSheetOpen(true);
+                            setIsSessionDetailSheetOpen(false); 
+                        }
+                    }}
+                >
+                    <Edit className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90"
+                    onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
+                >
+                    <Trash2 className="h-5 w-5" />
+                </Button>
+            </div>
             <SheetHeader>
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" 
-                        onClick={() => {
-                            if (selectedSessionForSheet) {
-                                setSessionToEdit(selectedSessionForSheet);
-                                setIsEditSessionSheetOpen(true);
-                                setIsSessionSheetOpen(false); 
-                            }
-                        }}
-                        disabled={!selectedSessionForSheet}
-                        className="text-muted-foreground hover:text-foreground"
-                    >
-                        <Edit className="h-5 w-5" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                        disabled={!selectedSessionForSheet || isSubmittingSheet}
-                        className="text-destructive hover:text-destructive/90"
-                    >
-                        {isSubmittingSheet && sessionToDelete && sessionToDelete.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="h-5 w-5" />}
-                    </Button>
-                    <SheetTitle>Session Details</SheetTitle>
-                </div>
+                <SheetTitle>Session Details</SheetTitle>
             </SheetHeader>
             {selectedSessionForSheet && (
-            <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4">
+            <ScrollArea className="h-[calc(100vh-120px)] pr-3 mt-4"> {/* Adjusted height */}
               <div className="space-y-0">
+                <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
                 <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                 <DetailRow label="Time:" value={selectedSessionForSheet.time} />
-                <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
-                <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
+                <DetailRow label="Type:" value={selectedSessionForSheet.sessionType} />
                 {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
               </div>
             </ScrollArea>
@@ -822,12 +837,12 @@ export default function HomePage() {
             <SheetTitle>Edit Session</SheetTitle>
           </SheetHeader>
           <form onSubmit={handleEditSessionSubmitHook(handleUpdateSession)} className="space-y-4 py-4">
-             <div>
-                <Label htmlFor="edit-clientId-dashboard">Client</Label>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-clientId-dashboard" className="text-right">Client</Label>
                 <Controller name="clientId" control={editSessionFormControl}
                 render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoadingData}>
-                    <SelectTrigger id="edit-clientId-dashboard" className={cn("w-full mt-1", editSessionFormErrors.clientId && "border-destructive")}>
+                    <SelectTrigger id="edit-clientId-dashboard" className={cn("col-span-3", editSessionFormErrors.clientId && "border-destructive")}>
                         <SelectValue placeholder="Select a client" />
                     </SelectTrigger>
                     <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -840,34 +855,34 @@ export default function HomePage() {
                     </Select>
                 )}
                 />
-                {editSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.clientId.message}</p>}
+                {editSessionFormErrors.clientId && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{editSessionFormErrors.clientId.message}</p>}
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="edit-date-dashboard" className="text-right pt-2 col-span-1">Date</Label>
-                <div className={cn("mt-1 flex justify-center col-span-3", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                <div className={cn("col-span-3 flex justify-center", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                 <Controller name="date" control={editSessionFormControl}
                     render={({ field }) => (
                     <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-dashboard" className={cn("!p-1", editSessionFormErrors.date && "border-destructive")}
                         classNames={{
-                          day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                          day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground text-white",
                           day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white")
                         }} />
                     )} />
                 </div>
-                  {editSessionFormErrors.date && <p className="col-start-2 col-span-3 text-xs text-destructive -mt-2">{editSessionFormErrors.date.message}</p>}
+                  {editSessionFormErrors.date && <p className="col-span-4 text-xs text-destructive -mt-2 text-right">{editSessionFormErrors.date.message}</p>}
             </div>
-            <div>
-                <Label htmlFor="edit-time-dashboard">Time (24h)</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-time-dashboard" className="text-right">Time (24h)</Label>
                 <Controller name="time" control={editSessionFormControl}
-                render={({ field }) => (<Input id="edit-time-dashboard" type="time" {...field} className={cn("mt-1", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
-                  {editSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.time.message}</p>}
+                render={({ field }) => (<Input id="edit-time-dashboard" type="time" {...field} className={cn("col-span-3", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                  {editSessionFormErrors.time && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{editSessionFormErrors.time.message}</p>}
             </div>
-            <div>
-                <Label htmlFor="edit-sessionType-dashboard">Type</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-sessionType-dashboard" className="text-right">Type</Label>
                 <Controller name="sessionType" control={editSessionFormControl}
                 render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                    <SelectTrigger id="edit-sessionType-dashboard" className={cn("mt-1",editSessionFormErrors.sessionType && "border-destructive")}>
+                    <SelectTrigger id="edit-sessionType-dashboard" className={cn("col-span-3",editSessionFormErrors.sessionType && "border-destructive")}>
                         <SelectValue placeholder="Select session type" />
                     </SelectTrigger>
                     <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -876,15 +891,15 @@ export default function HomePage() {
                     </Select>
                 )}
                 />
-                {editSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.sessionType.message}</p>}
+                {editSessionFormErrors.sessionType && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{editSessionFormErrors.sessionType.message}</p>}
             </div>
-            <div>
-                <Label htmlFor="edit-amount-dashboard">Amount (£)</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-amount-dashboard" className="text-right">Amount (£)</Label>
                 <Controller name="amount" control={editSessionFormControl}
                 render={({ field }) => (
-                    <Input id="edit-amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("mt-1", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
+                    <Input id="edit-amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("col-span-3", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
                 )} />
-                {editSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.amount.message}</p>}
+                {editSessionFormErrors.amount && <p className="col-span-4 text-xs text-destructive mt-1 text-right">{editSessionFormErrors.amount.message}</p>}
             </div>
             <SheetFooter className="mt-4">
                <Button type="button" variant="outline" onClick={() => setIsEditSessionSheetOpen(false)} disabled={isSubmittingSheet}>Cancel</Button>
