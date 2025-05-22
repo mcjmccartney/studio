@@ -12,7 +12,7 @@ import {
 } from '@/lib/firebase';
 import { Button, buttonVariants } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, Tag as TagIcon, Info, MoreHorizontal, Loader2, DollarSign, X } from 'lucide-react';
+import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, X, FileQuestion } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -33,6 +33,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -124,6 +132,13 @@ export default function SessionsPage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      clientId: '',
+      date: undefined,
+      time: '',
+      sessionType: '',
+      amount: undefined,
+    },
   });
   
   const { 
@@ -161,7 +176,7 @@ export default function SessionsPage() {
         else if (watchedSessionTypeForAddSession === "Online") newAmount = isMember ? 50 : 60;
         else if (watchedSessionTypeForAddSession === "Online Catchup") newAmount = 30;
         else if (watchedSessionTypeForAddSession === "Training") newAmount = isMember ? 50 : 60;
-
+        
         setAddSessionValue("amount", newAmount);
       }
     }
@@ -169,6 +184,13 @@ export default function SessionsPage() {
 
   const editSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      clientId: '',
+      date: undefined,
+      time: '',
+      sessionType: '',
+      amount: undefined,
+    },
   });
 
   const {
@@ -242,8 +264,8 @@ export default function SessionsPage() {
             return dateTimeB.getTime() - dateTimeA.getTime();
         }));
         setClients(firestoreClients.sort((a, b) => {
-          const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
-          const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
+          const nameA = formatFullNameAndDogName(a.ownerFirstName + " " + a.ownerLastName, a.dogName).toLowerCase();
+          const nameB = formatFullNameAndDogName(b.ownerFirstName + " " + b.ownerLastName, b.dogName).toLowerCase();
           if (nameA < nameB) return -1;
           if (nameA > nameB) return 1;
           return 0;
@@ -431,7 +453,7 @@ export default function SessionsPage() {
           <SheetTrigger asChild>
             <Button>New Session</Button>
           </SheetTrigger>
-          <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+          <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
               <Separator />
@@ -632,11 +654,11 @@ export default function SessionsPage() {
                                   </span>
                                   {session.amount !== undefined && (
                                     <>
-                                        <span className="hidden sm:inline">•</span>
-                                        <span className="flex items-center">
-                                            <DollarSign className="inline-block mr-1.5 h-4 w-4" />
-                                            £{session.amount.toFixed(2)}
-                                        </span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="flex items-center">
+                                          <DollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                          £{session.amount.toFixed(2)}
+                                      </span>
                                     </>
                                   )}
                                 </div>
@@ -692,9 +714,10 @@ export default function SessionsPage() {
 
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-           <SheetHeader>
-                <SheetTitle>Session Details</SheetTitle>
+           <SheetHeader className="flex flex-row justify-between items-center">
+              <SheetTitle>Session Details</SheetTitle>
             </SheetHeader>
+            <Separator className="my-2"/>
             <ScrollArea className="flex-1">
               <div className="py-4">
                 {selectedSessionForSheet && (
@@ -708,7 +731,7 @@ export default function SessionsPage() {
                 )}
               </div>
             </ScrollArea>
-             <SheetFooter className="border-t pt-4">
+            <SheetFooter className="border-t pt-4">
                 <Button variant="outline" className="w-1/2" onClick={() => { if(selectedSessionForSheet) {setSessionToEdit(selectedSessionForSheet); setIsEditSessionSheetOpen(true); setIsSessionSheetOpen(false);}}}>
                     Edit Session
                 </Button>
@@ -720,7 +743,7 @@ export default function SessionsPage() {
         </Sheet>
 
       <Sheet open={isEditSessionSheetOpen} onOpenChange={setIsEditSessionSheetOpen}>
-        <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+        <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
           <SheetHeader>
             <SheetTitle>Edit Session</SheetTitle>
             <Separator />
