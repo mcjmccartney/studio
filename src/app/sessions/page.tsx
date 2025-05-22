@@ -124,13 +124,6 @@ export default function SessionsPage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
-    defaultValues: {
-      clientId: '',
-      date: new Date(), 
-      time: format(new Date(), "HH:mm"),
-      sessionType: '',
-      amount: undefined,
-    }
   });
   
   const { 
@@ -359,7 +352,6 @@ export default function SessionsPage() {
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
     } catch (err) {
-      console.error("Error updating session:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -439,7 +431,7 @@ export default function SessionsPage() {
           <SheetTrigger asChild>
             <Button>New Session</Button>
           </SheetTrigger>
-          <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
+          <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
               <Separator />
@@ -447,7 +439,6 @@ export default function SessionsPage() {
             <ScrollArea className="flex-1" showScrollbar={false}>
              <div className="py-4 space-y-4">
               <form onSubmit={handleAddSessionSubmitHook(handleAddSessionSubmit)} id="addSessionFormInSheetSessions" className="space-y-4">
-                  
                   <div className="space-y-1.5">
                     <Label htmlFor="clientId-sessionpage">Client</Label>
                     <Controller
@@ -473,7 +464,6 @@ export default function SessionsPage() {
                         />
                     {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor="date-sessionpage">Date</Label>
                     <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive border rounded-md")}>
@@ -490,7 +480,7 @@ export default function SessionsPage() {
                             id="date-sessionpage"
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
                               day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                             }}
                           />
@@ -499,8 +489,6 @@ export default function SessionsPage() {
                     </div>
                     {addSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.date.message}</p>}
                   </div>
-
-
                   <div className="space-y-1.5">
                     <Label htmlFor="time-sessionpage">Time</Label>
                     <Controller
@@ -518,8 +506,6 @@ export default function SessionsPage() {
                     />
                     {addSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.time.message}</p>}
                   </div>
-
-
                   <div className="space-y-1.5">
                     <Label htmlFor="sessionType-sessionpage">Session Type</Label>
                     <Controller
@@ -545,8 +531,6 @@ export default function SessionsPage() {
                     />
                     {addSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.sessionType.message}</p>}
                   </div>
-
-
                   <div className="space-y-1.5">
                     <Label htmlFor="amount-sessionpage">Amount</Label>
                     <Controller name="amount" control={addSessionFormControl}
@@ -637,24 +621,24 @@ export default function SessionsPage() {
                             <div>
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                    <span className="flex items-center">
-                                        <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
-                                        {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
-                                    </span>
-                                    <span className="hidden sm:inline">•</span>
-                                    <span className="flex items-center">
-                                        <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
-                                        {session.time}
-                                    </span>
-                                    {session.amount !== undefined && (
-                                        <>
-                                            <span className="hidden sm:inline">•</span>
-                                            <span className="flex items-center">
-                                                <DollarSign className="inline-block mr-1.5 h-3.5 w-3.5" />
-                                                £{session.amount.toFixed(2)}
-                                            </span>
-                                        </>
-                                    )}
+                                  <span className="flex items-center">
+                                    <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                    {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
+                                  </span>
+                                  <span className="hidden sm:inline">•</span>
+                                  <span className="flex items-center">
+                                      <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                      {session.time}
+                                  </span>
+                                  {session.amount !== undefined && (
+                                    <>
+                                        <span className="hidden sm:inline">•</span>
+                                        <span className="flex items-center">
+                                            <DollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                            £{session.amount.toFixed(2)}
+                                        </span>
+                                    </>
+                                  )}
                                 </div>
                             </div>
                           </div>
@@ -710,7 +694,6 @@ export default function SessionsPage() {
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
                 <SheetTitle>Session Details</SheetTitle>
-                <Separator />
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -737,7 +720,7 @@ export default function SessionsPage() {
         </Sheet>
 
       <Sheet open={isEditSessionSheetOpen} onOpenChange={setIsEditSessionSheetOpen}>
-        <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
+        <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
           <SheetHeader>
             <SheetTitle>Edit Session</SheetTitle>
             <Separator />
@@ -772,7 +755,7 @@ export default function SessionsPage() {
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
                             day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                             }} />
                         )} />
@@ -841,3 +824,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+    

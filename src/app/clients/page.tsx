@@ -610,8 +610,7 @@ export default function ClientsPage() {
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
-                 </SheetHeader>
-
+                </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
                     {clientForViewSheet && (
@@ -626,13 +625,17 @@ export default function ClientsPage() {
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                    <DetailRow label="Postcode:" value={clientForViewSheet.address.postcode || clientForViewSheet.postcode} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                   </>
                                 ) : (
                                   <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 )}
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
+                                <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
+                                    <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
+                                    {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
+                                </Badge>
                                 
                                 <div className="space-y-2 mt-6">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -647,8 +650,8 @@ export default function ClientsPage() {
                                   )}
                                 </div>
 
-                                <Tabs defaultValue="sessions" className="w-full mt-6">
-                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                 <Tabs defaultValue="sessions" className="w-full mt-6">
+                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full border grid grid-cols-2">
                                         <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
@@ -807,6 +810,5 @@ export default function ClientsPage() {
     </div>
   );
 }
-
 
     
