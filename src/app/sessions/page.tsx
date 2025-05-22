@@ -10,7 +10,7 @@ import {
   getClients,
   updateSessionInFirestore,
 } from '@/lib/firebase';
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info } from 'lucide-react';
 import Image from 'next/image';
@@ -68,7 +68,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { buttonVariants } from "@/components/ui/button";
 
 
 const sessionFormSchema = z.object({
@@ -375,6 +374,7 @@ export default function SessionsPage() {
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
     } catch (err) {
+      console.error("Error updating session:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -469,7 +469,7 @@ export default function SessionsPage() {
                         control={addSessionFormControl}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
+                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
                                 <SelectValue placeholder="Select a client" />
                             </SelectTrigger>
                             <SelectContent>
@@ -501,11 +501,11 @@ export default function SessionsPage() {
                             initialFocus
                             disabled={isSubmittingSheet}
                             id="date-sessionpage"
-                            className={cn("!p-1 focus:ring-0 focus:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
+                            className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                                day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white",
-                                day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1 focus:ring-0 focus:ring-offset-0",
-                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
+                                day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
+                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
                             }}
                           />
                         )}
@@ -523,7 +523,7 @@ export default function SessionsPage() {
                           id="time-sessionpage"
                           type="time"
                           {...field}
-                          className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.time ? "border-destructive" : "")}
+                          className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.time ? "border-destructive" : "")}
                           disabled={isSubmittingSheet}
                         />
                       )}
@@ -537,7 +537,7 @@ export default function SessionsPage() {
                       control={addSessionFormControl}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
+                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select session type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -567,7 +567,7 @@ export default function SessionsPage() {
                             {...field}
                             value={field.value === undefined ? '' : String(field.value)}
                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                            className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.amount && "border-destructive")}
+                            className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.amount && "border-destructive")}
                             disabled={isSubmittingSheet}
                         />
                         )}
@@ -645,24 +645,24 @@ export default function SessionsPage() {
                             <div>
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                  <span className="flex items-center">
-                                    <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
-                                    {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
-                                  </span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="flex items-center">
-                                      <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
-                                      {session.time}
-                                  </span>
-                                  {session.amount !== undefined && (
-                                    <>
-                                      <span className="hidden sm:inline">•</span>
-                                      <span className="flex items-center">
-                                          <DollarSign className="inline-block mr-1.5 h-4 w-4" />
-                                          £{session.amount.toFixed(2)}
-                                      </span>
-                                    </>
-                                  )}
+                                    <span className="flex items-center">
+                                        <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                        {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
+                                    </span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span className="flex items-center">
+                                        <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                        {session.time}
+                                    </span>
+                                    {session.amount !== undefined && (
+                                      <>
+                                        <span className="hidden sm:inline">•</span>
+                                        <span className="flex items-center">
+                                            <DollarSign className="inline-block mr-1.5 h-4 w-4" />
+                                            £{session.amount.toFixed(2)}
+                                        </span>
+                                      </>
+                                    )}
                                 </div>
                             </div>
                           </div>
@@ -716,10 +716,10 @@ export default function SessionsPage() {
 
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-           <SheetHeader className="flex flex-row justify-between items-center">
+           <SheetHeader>
               <SheetTitle className="text-center flex-1">Session Details</SheetTitle>
+            <Separator/>
             </SheetHeader>
-            <Separator className="my-2"/>
             <ScrollArea className="flex-1">
               <div className="py-4">
                 {selectedSessionForSheet && (
@@ -759,7 +759,7 @@ export default function SessionsPage() {
                     <Controller name="clientId" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
+                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
                             <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -780,11 +780,11 @@ export default function SessionsPage() {
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
-                          className={cn("!p-1 focus:ring-0 focus:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
+                          className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                           classNames={{
-                            day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white",
-                            day_today: "ring-2 ring-[#92351f] rounded-md ring-offset-background ring-offset-1 focus:ring-0 focus:ring-offset-0", 
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
+                            day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                            day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
+                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
                           }} />
                         )} />
                     </div>
@@ -793,7 +793,7 @@ export default function SessionsPage() {
                 <div className="space-y-1.5">
                     <Label htmlFor="edit-time-sessions">Time</Label>
                     <Controller name="time" control={editSessionFormControl}
-                    render={({ field }) => (<Input id="edit-time-sessions" type="time" {...field} className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                    render={({ field }) => (<Input id="edit-time-sessions" type="time" {...field} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
                     {editSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.time.message}</p>}
                 </div>
                 <div className="space-y-1.5">
@@ -801,7 +801,7 @@ export default function SessionsPage() {
                     <Controller name="sessionType" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
+                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
                             <SelectValue placeholder="Select session type" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -816,7 +816,7 @@ export default function SessionsPage() {
                     <Label htmlFor="edit-amount-sessions">Amount</Label>
                     <Controller name="amount" control={editSessionFormControl}
                     render={({ field }) => (
-                        <Input id="edit-amount-sessions" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
+                        <Input id="edit-amount-sessions" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
                     )} />
                     {editSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.amount.message}</p>}
                   </div>
@@ -852,3 +852,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+
