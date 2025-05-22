@@ -321,7 +321,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     if (isViewSheetOpen && clientForViewSheet) {
-      setSheetViewMode('clientInfo'); // Reset to client info when sheet opens/client changes
+      setSheetViewMode('clientInfo'); 
       setBriefForSheet(null);
       setQuestionnaireForSheet(null);
       setClientSessionsForView(allSessions.filter(s => s.clientId === clientForViewSheet.id));
@@ -617,16 +617,7 @@ export default function ClientsPage() {
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
-                <div className="absolute top-3.5 right-[calc(1rem+24px+0.25rem+24px+0.25rem)] flex items-center gap-1 z-10">
-                    <Button variant="ghost" size="icon" onClick={() => { if (clientForViewSheet) { setClientToEdit(clientForViewSheet); setIsEditSheetOpen(true); setIsViewSheetOpen(false); } }}>
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit Client</span>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete Client</span>
-                    </Button>
-                </div>
+                 {/* Actions removed from here */}
                 {clientForViewSheet && (
                     <>
                         <SheetHeader className="mb-4">
@@ -640,8 +631,9 @@ export default function ClientsPage() {
                         </SheetHeader>
 
                         <ScrollArea className="h-[calc(100vh-160px)] pr-3">
+                          <div className="space-y-0">
                             {sheetViewMode === 'clientInfo' && (
-                                <div className="space-y-0">
+                                <>
                                     <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                     <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
                                     {clientForViewSheet.address ? (
@@ -649,7 +641,7 @@ export default function ClientsPage() {
                                         <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
                                         {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                         <DetailRow label="City:" value={clientForViewSheet.address.city} />
-                                        <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                        <DetailRow label="Postcode:" value={clientForViewSheet.postcode} /> {/* Using client's top-level postcode here */}
                                         <DetailRow label="Country:" value={clientForViewSheet.address.country} />
                                       </>
                                     ) : (
@@ -657,9 +649,7 @@ export default function ClientsPage() {
                                     )}
                                     {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                     <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
-                                    <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
-
-
+                                    
                                     {clientForViewSheet.behaviouralBriefId && (
                                         <Button onClick={handleViewBrief} className="w-full mt-4" variant="outline" disabled={isLoadingBriefForSheet}>
                                         {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
@@ -684,7 +674,7 @@ export default function ClientsPage() {
                                     ) : (
                                     <p className="text-sm text-muted-foreground">No sessions recorded for this client.</p>
                                     )}
-                                </div>
+                                </>
                             )}
 
                             {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
@@ -760,8 +750,35 @@ export default function ClientsPage() {
                                 </div>
                             )}
                              {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
-
+                          </div>
                         </ScrollArea>
+                        <SheetFooter className="mt-4">
+                          <div className="flex w-full gap-2">
+                            <Button 
+                                variant="outline" 
+                                className="w-1/2" 
+                                onClick={() => {
+                                    if (clientForViewSheet) {
+                                        setClientToEdit(clientForViewSheet);
+                                        setIsEditSheetOpen(true);
+                                        setIsViewSheetOpen(false); // Close view sheet when opening edit sheet
+                                    }
+                                }}
+                                disabled={isSubmittingSheet}
+                            >
+                                <Edit className="mr-2 h-4 w-4" /> Edit Client
+                            </Button>
+                            <Button 
+                                variant="destructive" 
+                                className="w-1/2" 
+                                onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
+                                disabled={isSubmittingSheet || !clientForViewSheet}
+                            >
+                                {isSubmittingSheet && clientToDelete && clientToDelete.id === clientForViewSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Delete Client
+                            </Button>
+                          </div>
+                        </SheetFooter>
                     </>
                 )}
             </SheetContent>
@@ -786,3 +803,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+
