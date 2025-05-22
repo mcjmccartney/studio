@@ -10,9 +10,9 @@ import {
   getClients,
   updateSessionInFirestore,
 } from '@/lib/firebase';
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, X, FileQuestion } from 'lucide-react';
+import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, X, FileQuestion, Tag as TagIcon } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -132,6 +132,13 @@ export default function SessionsPage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+        clientId: '',
+        date: undefined,
+        time: '',
+        sessionType: '',
+        amount: undefined,
+    }
   });
   
   const { 
@@ -177,6 +184,13 @@ export default function SessionsPage() {
 
   const editSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+     defaultValues: {
+        clientId: '',
+        date: undefined,
+        time: '',
+        sessionType: '',
+        amount: undefined,
+    }
   });
 
   const {
@@ -360,6 +374,7 @@ export default function SessionsPage() {
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
     } catch (err) {
+      console.error("Error updating session:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -439,7 +454,7 @@ export default function SessionsPage() {
           <SheetTrigger asChild>
             <Button>New Session</Button>
           </SheetTrigger>
-          <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
+          <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
             <SheetHeader>
               <SheetTitle>New Session</SheetTitle>
               <Separator />
@@ -454,7 +469,7 @@ export default function SessionsPage() {
                         control={addSessionFormControl}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
+                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
                                 <SelectValue placeholder="Select a client" />
                             </SelectTrigger>
                             <SelectContent>
@@ -474,7 +489,7 @@ export default function SessionsPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="date-sessionpage">Date</Label>
-                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller
                         name="date"
                         control={addSessionFormControl}
@@ -486,10 +501,10 @@ export default function SessionsPage() {
                             initialFocus
                             disabled={isSubmittingSheet}
                             id="date-sessionpage"
-                            className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
+                            className={cn("!p-1 focus:ring-0 focus:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                                day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
                             }}
                           />
                         )}
@@ -521,7 +536,7 @@ export default function SessionsPage() {
                       control={addSessionFormControl}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
+                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select session type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -721,7 +736,8 @@ export default function SessionsPage() {
                 <Button variant="outline" className="w-1/2" onClick={() => { if(selectedSessionForSheet) {setSessionToEdit(selectedSessionForSheet); setIsEditSessionSheetOpen(true); setIsSessionSheetOpen(false);}}}>
                     Edit Session
                 </Button>
-                <Button variant="destructive" className="w-1/2" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}>
+                <Button variant="destructive" className="w-1/2" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}  disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id}>
+                    {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     Delete Session
                 </Button>
             </SheetFooter>
@@ -729,7 +745,7 @@ export default function SessionsPage() {
         </Sheet>
 
       <Sheet open={isEditSessionSheetOpen} onOpenChange={setIsEditSessionSheetOpen}>
-        <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
+        <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
           <SheetHeader>
             <SheetTitle>Edit Session</SheetTitle>
             <Separator />
@@ -742,7 +758,7 @@ export default function SessionsPage() {
                     <Controller name="clientId" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
+                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
                             <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -759,14 +775,14 @@ export default function SessionsPage() {
                 </div>
                 <div className="space-y-1.5">
                     <Label htmlFor="edit-date-sessions">Date</Label>
-                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
-                          className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
+                          className={cn("!p-1 focus:ring-0 focus:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                           classNames={{
-                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                            day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
                           }} />
                         )} />
                     </div>
@@ -783,7 +799,7 @@ export default function SessionsPage() {
                     <Controller name="sessionType" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
+                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
                             <SelectValue placeholder="Select session type" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -834,5 +850,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-    

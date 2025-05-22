@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Loader2,
   ChevronLeft,
@@ -22,6 +22,7 @@ import {
   Trash2,
   Tag as TagIcon,
   Info,
+  SquareCheck,
 } from 'lucide-react';
 import { DayPicker, type DateFormatter, type DayProps } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -81,6 +82,7 @@ import {
   endOfWeek,
   startOfWeek,
   eachDayOfInterval,
+  isBefore,
 } from 'date-fns';
 import {
   getClients,
@@ -203,6 +205,13 @@ export default function HomePage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+        clientId: '',
+        date: undefined, // Initialize as undefined
+        time: '',       // Initialize as empty
+        sessionType: '',
+        amount: undefined,
+    }
   });
   
   const { 
@@ -218,8 +227,8 @@ export default function HomePage() {
     if (isAddSessionSheetOpen) {
         resetAddSessionForm({
             clientId: '',
-            date: new Date(),
-            time: format(new Date(), "HH:mm"),
+            date: new Date(), // Set initial date on open
+            time: format(new Date(), "HH:mm"), // Set initial time on open
             sessionType: '',
             amount: undefined,
         });
@@ -247,6 +256,13 @@ export default function HomePage() {
 
   const editSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+        clientId: '',
+        date: undefined,
+        time: '',
+        sessionType: '',
+        amount: undefined,
+    }
   });
 
   const {
@@ -534,12 +550,12 @@ export default function HomePage() {
 
     return (
       <div className={cn(
-          "relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left",
+          "relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center",
         )}
       >
         <div
           className={cn(
-            "absolute top-1 right-1 text-xs",
+            "text-xs w-full",
              isToday(props.date)
               ? "text-custom-ring-color font-semibold" 
               : "text-muted-foreground"
@@ -549,7 +565,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1" showScrollbar={false}>
+          <ScrollArea className="w-full mt-1 pr-1" showScrollbar={false}>
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -589,7 +605,7 @@ export default function HomePage() {
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-full max-w-xs sm:max-w-sm">
+             <div className="w-full max-w-xs sm:max-w-sm">
                  <Input
                     type="search"
                     placeholder="Search sessions..."
@@ -607,7 +623,7 @@ export default function HomePage() {
                     <SheetTitle>New Client</SheetTitle>
                     <Separator />
                   </SheetHeader>
-                  <ScrollArea className="flex-1">
+                  <ScrollArea className="flex-1" showScrollbar={false}>
                     <div className="py-4 space-y-4">
                       <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheetDashboard" className="space-y-4">
                         <div className="space-y-1.5">
@@ -645,7 +661,7 @@ export default function HomePage() {
                             name="isMember"
                             control={addClientForm.control}
                             render={({ field }) => (
-                              <Checkbox id="add-isMember-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                              <Checkbox id="add-isMember-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus:ring-0 focus:ring-offset-0"/>
                             )}
                           />
                           <Label htmlFor="add-isMember-dash" className="text-sm font-normal">Is Member?</Label>
@@ -655,7 +671,7 @@ export default function HomePage() {
                             name="isActive"
                             control={addClientForm.control}
                             render={({ field }) => (
-                              <Checkbox id="add-isActive-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                              <Checkbox id="add-isActive-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus:ring-0 focus:ring-offset-0"/>
                             )}
                           />
                           <Label htmlFor="add-isActive-dash" className="text-sm font-normal">Is Active?</Label>
@@ -689,7 +705,7 @@ export default function HomePage() {
                             <Controller name="clientId" control={addSessionFormControl}
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoadingData}>
-                                <SelectTrigger id="clientId-dashboard" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
+                                <SelectTrigger id="clientId-dashboard" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
                                     <SelectValue placeholder="Select a client" />
                                 </SelectTrigger>
                                 <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -711,10 +727,10 @@ export default function HomePage() {
                             <Controller name="date" control={addSessionFormControl}
                                 render={({ field }) => (
                                 <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" 
-                                    className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
+                                    className={cn("!p-1 focus:ring-0 focus:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                                     classNames={{
-                                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                                        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                                        day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
                                     }} />
                                 )} />
                             </div>
@@ -733,7 +749,7 @@ export default function HomePage() {
                             <Controller name="sessionType" control={addSessionFormControl}
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                                <SelectTrigger id="sessionType-dashboard" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0",addSessionFormErrors.sessionType && "border-destructive")}>
+                                <SelectTrigger id="sessionType-dashboard" className={cn("w-full focus:ring-0 focus:ring-offset-0",addSessionFormErrors.sessionType && "border-destructive")}>
                                     <SelectValue placeholder="Select session type" />
                                 </SelectTrigger>
                                 <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -789,8 +805,8 @@ export default function HomePage() {
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
                 day: "h-full w-full p-0",
-                day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
-                day_today: "ring-2 ring-custom-ring-color text-custom-ring-color font-semibold rounded-md ring-offset-background ring-offset-1",
+                day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "text-custom-ring-color ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1",
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -802,47 +818,47 @@ export default function HomePage() {
       <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
             <SheetHeader>
-                <SheetTitle>Session Details</SheetTitle>
+              <SheetTitle>Session Details</SheetTitle>
             </SheetHeader>
-          <ScrollArea className="flex-1">
-            <div className="py-4">
-            {selectedSessionForSheet && (
-              <div className="space-y-0">
-                  <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
-                  <DetailRow label="Time:" value={selectedSessionForSheet.time} />
-                  <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
-                  <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
-                  {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
+            <ScrollArea className="flex-1">
+              <div className="py-4">
+                {selectedSessionForSheet && (
+                  <div className="space-y-0">
+                      <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
+                      <DetailRow label="Time:" value={selectedSessionForSheet.time} />
+                      <DetailRow label="Client:" value={formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)} />
+                      <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
+                      {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
+                  </div>
+                )}
               </div>
-            )}
-            </div>
-          </ScrollArea>
-          <SheetFooter className="border-t pt-4">
-            <Button 
-                variant="outline" 
-                className="w-1/2"
-                onClick={() => {
-                    if (selectedSessionForSheet) {
-                    setSessionToEdit(selectedSessionForSheet);
-                    setIsEditSessionSheetOpen(true);
-                    setIsSessionDetailSheetOpen(false);
-                    }
-                }}
-            >
-                Edit Session
-            </Button>
-            <Button 
-                variant="destructive" 
-                className="w-1/2"
-                onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                disabled={isSubmittingSheet && sessionToDelete !== null}
-            >
-                {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                Delete Session
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+            </ScrollArea>
+            <SheetFooter className="border-t pt-4">
+                <Button 
+                    variant="outline" 
+                    className="w-1/2"
+                    onClick={() => {
+                        if (selectedSessionForSheet) {
+                        setSessionToEdit(selectedSessionForSheet);
+                        setIsEditSessionSheetOpen(true);
+                        setIsSessionDetailSheetOpen(false);
+                        }
+                    }}
+                >
+                    Edit Session
+                </Button>
+                <Button 
+                    variant="destructive" 
+                    className="w-1/2"
+                    onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
+                    disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id}
+                >
+                    {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Delete Session
+                </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
 
       <Sheet open={isEditSessionSheetOpen} onOpenChange={setIsEditSessionSheetOpen}>
         <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
@@ -858,7 +874,7 @@ export default function HomePage() {
                       <Controller name="clientId" control={editSessionFormControl}
                       render={({ field }) => (
                           <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoadingData}>
-                          <SelectTrigger id="edit-clientId-dashboard" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
+                          <SelectTrigger id="edit-clientId-dashboard" className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
                               <SelectValue placeholder="Select a client" />
                           </SelectTrigger>
                           <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -879,10 +895,10 @@ export default function HomePage() {
                       <Controller name="date" control={editSessionFormControl}
                           render={({ field }) => (
                           <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-dashboard" 
-                            className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
+                            className={cn("!p-1 focus:ring-0 focus:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                              day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus:ring-0 focus:ring-offset-0")
                             }} />
                           )} />
                       </div>
@@ -899,7 +915,7 @@ export default function HomePage() {
                       <Controller name="sessionType" control={editSessionFormControl}
                       render={({ field }) => (
                           <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                          <SelectTrigger id="edit-sessionType-dashboard" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
+                          <SelectTrigger id="edit-sessionType-dashboard" className={cn("w-full focus:ring-0 focus:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
                               <SelectValue placeholder="Select session type" />
                           </SelectTrigger>
                           <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -930,23 +946,21 @@ export default function HomePage() {
       </Sheet>
 
       <AlertDialog open={isDeleteSessionDialogOpen} onOpenChange={setIsDeleteSessionDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the session with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet && sessionToDelete !== null}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet && sessionToDelete !== null}>
-              {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                This will permanently delete the session with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet && sessionToDelete !== null}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet && sessionToDelete !== null}>
+                  {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
-    
