@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, PawPrint, Users as UsersIcon, MoreHorizontal, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -492,7 +492,7 @@ export default function ClientsPage() {
                         data-ai-hint="company logo"
                         />
                     )}
-                    <h3 className="font-semibold text-sm">{displayName}</h3>
+                    <h3 className="text-sm font-semibold">{displayName}</h3>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -598,23 +598,16 @@ export default function ClientsPage() {
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-                <SheetHeader>
-                     <SheetTitle>Client Details</SheetTitle>
-                     {clientForViewSheet && (
-                        <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                             <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
-                            {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
-                        </Badge>
-                     )}
+                <SheetHeader className="relative">
+                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
                 </SheetHeader>
 
                 <ScrollArea className="flex-1">
-                  <div className="px-6 py-4">
+                  <div className="py-4">
                     {clientForViewSheet && (
                       <>
                         {sheetViewMode === 'clientInfo' && (
                             <div className="space-y-0">
-                                <DetailRow label="Owner:" value={formatFullNameAndDogName(clientForViewSheet.ownerFirstName + ' ' + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)} />
                                 <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                 <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
                                 {clientForViewSheet.address ? (
@@ -629,9 +622,9 @@ export default function ClientsPage() {
                                   <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 )}
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
-                                {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(clientForViewSheet.submissionDate), 'PPP p')} />}
+                                {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
                                 
-                                <div className="space-y-2 mt-4">
+                                <div className="space-y-2 mt-6">
                                   {clientForViewSheet.behaviouralBriefId && (
                                       <Button onClick={handleViewBrief} className="w-full" variant="outline" disabled={isLoadingBriefForSheet}>
                                       {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
@@ -645,21 +638,21 @@ export default function ClientsPage() {
                                 </div>
 
                                 <Tabs defaultValue="sessions" className="w-full mt-6">
-                                  <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
-                                    <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
-                                      Sessions ({clientSessionsForView.length})
-                                    </TabsTrigger>
-                                    <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
-                                      Membership
-                                    </TabsTrigger>
-                                  </TabsList>
-                                    <TabsContent value="sessions" className="pt-2">
+                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                        Sessions ({clientSessionsForView.length})
+                                        </TabsTrigger>
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                        Membership
+                                        </TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="sessions" className="pt-4">
                                       {clientSessionsForView.length > 0 ? (
                                         <ul className="space-y-0">
                                             {clientSessionsForView.map(session => (
                                             <li key={session.id} className="bg-card border border-border rounded-md p-3 mb-2">
                                                 <div className="text-sm font-medium text-foreground">
-                                                  {format(parseISO(session.date), 'PPP')} at {session.time}
+                                                  {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : session.date} at {session.time}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                   {session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}
@@ -671,7 +664,7 @@ export default function ClientsPage() {
                                         <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded for this client.</p>
                                       )}
                                     </TabsContent>
-                                    <TabsContent value="membership" className="pt-2">
+                                    <TabsContent value="membership" className="pt-4">
                                       <p className="text-sm text-muted-foreground text-center py-4">Membership details are not yet available.</p>
                                     </TabsContent>
                                 </Tabs>
@@ -690,7 +683,7 @@ export default function ClientsPage() {
                                 <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
                                 <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
                                 <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
-                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(briefForSheet.submissionDate), 'PPP p')} />}
+                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
                             </div>
                         )}
                         {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
@@ -747,7 +740,7 @@ export default function ClientsPage() {
                                 {questionnaireForSheet.sociabilityWithPeople && <DetailRow label="Sociability (People):" value={questionnaireForSheet.sociabilityWithPeople} />}
                                 {questionnaireForSheet.additionalInformation && <DetailRow label="Additional Info:" value={questionnaireForSheet.additionalInformation} />}
                                 {questionnaireForSheet.timeDedicatedToTraining && <DetailRow label="Time for Training:" value={questionnaireForSheet.timeDedicatedToTraining} />}
-                                {questionnaireForSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(questionnaireForSheet.submissionDate), 'PPP p')} />}
+                                {questionnaireForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(questionnaireForSheet.submissionDate)) ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : questionnaireForSheet.submissionDate} />}
                             </div>
                         )}
                         {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
@@ -755,33 +748,31 @@ export default function ClientsPage() {
                     )}
                   </div>
                 </ScrollArea>
-                {clientForViewSheet && (
-                    <SheetFooter className="border-t pt-4">
-                        <Button 
-                            variant="outline" 
-                            className="w-1/2"
-                            onClick={() => {
-                                if (clientForViewSheet) {
-                                setClientToEdit(clientForViewSheet);
-                                setIsEditSheetOpen(true);
-                                setIsViewSheetOpen(false);
-                                }
-                            }}
-                            disabled={isProcessingDelete}
-                        >
-                            Edit Contact
-                        </Button>
-                        <Button 
-                            variant="destructive" 
-                            className="w-1/2"
-                            onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
-                            disabled={isProcessingDelete}
-                        >
-                             {isProcessingDelete && clientToDelete && clientToDelete.id === clientForViewSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            Delete Client
-                        </Button>
-                    </SheetFooter>
-                )}
+                <SheetFooter className="border-t pt-4">
+                    <Button 
+                        variant="outline" 
+                        className="w-1/2"
+                        onClick={() => {
+                            if (clientForViewSheet) {
+                            setClientToEdit(clientForViewSheet);
+                            setIsEditSheetOpen(true);
+                            setIsViewSheetOpen(false);
+                            }
+                        }}
+                        disabled={isProcessingDelete}
+                    >
+                        Edit Contact
+                    </Button>
+                    <Button 
+                        variant="destructive" 
+                        className="w-1/2"
+                        onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
+                        disabled={isProcessingDelete}
+                    >
+                          {isProcessingDelete && clientToDelete && clientToDelete.id === clientForViewSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Delete Client
+                    </Button>
+                </SheetFooter>
             </SheetContent>
         </Sheet>
 
