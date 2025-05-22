@@ -226,7 +226,6 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
         if (['sociabilityWithDogs', 'sociabilityWithPeople'].includes(key)) {
             dataToSave[key] = '';
         } else {
-            // Keep optional fields as null if undefined, rather than deleting
             dataToSave[key] = null; 
         }
       }
@@ -290,12 +289,11 @@ const behaviourQuestionnaireConverter: FirestoreDataConverter<BehaviourQuestionn
 };
 
 const sessionConverter: FirestoreDataConverter<Session> = {
-  toFirestore(session: Omit<Session, 'id'>): DocumentData {
+  toFirestore(session: Omit<Session, 'id' | 'createdAt'>): DocumentData {
     const dataToSave: any = {
       ...session,
       sessionType: session.sessionType || 'Unknown',
       createdAt: session.createdAt instanceof Date || session.createdAt instanceof Timestamp ? session.createdAt : serverTimestamp(),
-      notes: session.notes === undefined ? null : session.notes,
       amount: session.amount === undefined ? null : session.amount,
     };
     if (session.dogName === undefined) dataToSave.dogName = null;
@@ -312,7 +310,6 @@ const sessionConverter: FirestoreDataConverter<Session> = {
       time: data.time, 
       sessionType: data.sessionType || 'Unknown',
       amount: data.amount === null ? undefined : data.amount,
-      notes: data.notes === null ? undefined : data.notes,
       createdAt: data.createdAt, 
     } as Session;
   }
@@ -339,7 +336,7 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
-export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string, address?: Address, howHeardAboutServices?: string }): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
@@ -353,8 +350,6 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
     dogName: clientData.dogName || undefined,
     isMember: clientData.isMember || false,
     isActive: clientData.isActive === undefined ? true : clientData.isActive,
-    address: clientData.address || undefined,
-    howHeardAboutServices: clientData.howHeardAboutServices || undefined,
     submissionDate: clientData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     createdAt: serverTimestamp() as Timestamp,
     lastSession: 'N/A',
@@ -362,7 +357,7 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   };
 
   const docRef = await addDoc(clientsCollectionRef, dataToSave);
-  const newClientData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Client; // Simulate server timestamp for immediate use
+  const newClientData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Client; 
   return newClientData;
 };
 
@@ -395,7 +390,6 @@ export const updateClientInFirestore = async (clientId: string, clientData: Edit
     if (clientData[K] !== undefined) {
       updateData[K] = clientData[K];
     } else if (clientData[K] === undefined && (K === 'dogName' || K === 'address' || K === 'howHeardAboutServices')) {
-      // Explicitly set to null if being cleared and it's an optional field that should be null
       updateData[K] = null;
     }
   });
@@ -496,7 +490,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     clientDataForReturn = existingClientDoc.data();
     console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
     
-    const updates: Partial<Client> = { isActive: true }; // Default to active if questionnaire is filled
+    const updates: Partial<Client> = { isActive: true }; 
     if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
         updates.address = {
             addressLine1: formData.addressLine1,
@@ -504,7 +498,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             city: formData.city,
             country: formData.country,
         };
-        updates.postcode = formData.postcode; // Also update the top-level postcode
+        updates.postcode = formData.postcode;
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
@@ -512,7 +506,6 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     if (formData.dogName && (!clientDataForReturn.dogName || clientDataForReturn.dogName !== formData.dogName)) { 
         updates.dogName = formData.dogName;
     }
-    // Update owner names if they are different - helps keep client record primary
     if (formData.ownerFirstName && clientDataForReturn.ownerFirstName !== formData.ownerFirstName) {
         updates.ownerFirstName = formData.ownerFirstName;
     }
@@ -663,7 +656,6 @@ export const getBehaviourQuestionnaireById = async (questionnaireId: string): Pr
   }
 };
 
-// SESSION FIRESTORE FUNCTIONS
 export const getSessionsFromFirestore = async (): Promise<Session[]> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     console.warn("Firebase project ID is not set. Skipping Firestore fetch for sessions.");
@@ -682,7 +674,7 @@ export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'c
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add session.");
   }
-  const dataToSave: DocumentData = { // Explicitly type as DocumentData
+  const dataToSave: DocumentData = { 
     ...sessionData,
     createdAt: serverTimestamp() as Timestamp,
   };
@@ -692,15 +684,42 @@ export const addSessionToFirestore = async (sessionData: Omit<Session, 'id' | 'c
   if (sessionData.dogName === undefined) {
     dataToSave.dogName = null;
   }
-  if (sessionData.notes === undefined) {
-    dataToSave.notes = null; 
-  }
 
   const docRef = await addDoc(sessionsCollectionRef, dataToSave);
-  // Simulate server timestamp for immediate use, actual timestamp comes from server
   const newSessionData = { ...sessionData, id: docRef.id, createdAt: new Date().toISOString() } as Session; 
   return newSessionData;
 };
+
+export const updateSessionInFirestore = async (sessionId: string, sessionData: Partial<Omit<Session, 'id' | 'createdAt' | 'clientName' | 'dogName'>>): Promise<void> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    throw new Error("Firebase project ID is not set. Cannot update session.");
+  }
+  if (!sessionId) {
+    throw new Error("Session ID is required to update a session.");
+  }
+  const sessionDocRef = doc(sessionsCollectionRef, sessionId);
+  
+  // Create an update object with only the defined fields in sessionData
+  const updateData: DocumentData = {};
+  if (sessionData.clientId !== undefined) updateData.clientId = sessionData.clientId;
+  if (sessionData.date !== undefined) updateData.date = sessionData.date;
+  if (sessionData.time !== undefined) updateData.time = sessionData.time;
+  if (sessionData.sessionType !== undefined) updateData.sessionType = sessionData.sessionType;
+  
+  // Handle amount carefully: if it's explicitly set to undefined, it means clear it (store as null)
+  // If it's a number (including 0), store it. If it's not in sessionData, don't touch it.
+  if (sessionData.hasOwnProperty('amount')) {
+    updateData.amount = sessionData.amount === undefined ? null : sessionData.amount;
+  }
+  
+  if (Object.keys(updateData).length === 0) {
+    console.warn("No data provided to update session.");
+    return;
+  }
+
+  await updateDoc(sessionDocRef, updateData);
+};
+
 
 export const deleteSessionFromFirestore = async (sessionId: string): Promise<void> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -728,3 +747,6 @@ export const signOutUser = async () => {
 };
 
 export { db, app, auth, onAuthStateChanged, Timestamp, serverTimestamp, type User };
+
+
+    
