@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, MoreHorizontal, SquareCheck } from 'lucide-react';
+import { Edit, Trash2, Loader2, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, MoreHorizontal, SquareCheck, FileQuestion } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -381,7 +381,7 @@ export default function ClientsPage() {
                       <SheetTitle>New Client</SheetTitle>
                       <Separator />
                     </SheetHeader>
-                    <ScrollArea className="flex-1" showScrollbar={false}>
+                    <ScrollArea className="flex-1">
                       <div className="py-4 space-y-4">
                         <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheet" className="space-y-4">
                           <div className="space-y-1.5">
@@ -540,7 +540,7 @@ export default function ClientsPage() {
               <SheetTitle>Edit Client</SheetTitle>
               <Separator />
             </SheetHeader>
-            <ScrollArea className="flex-1" showScrollbar={false}>
+            <ScrollArea className="flex-1">
               {clientToEdit && (
                 <div className="py-4 space-y-4">
                 <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} id="editClientFormInSheet" className="space-y-4"> 
@@ -625,17 +625,13 @@ export default function ClientsPage() {
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.address.postcode} />
                                   </>
                                 ) : (
                                   <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 )}
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
-                                <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                                    <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
-                                    {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
-                                </Badge>
                                 
                                 <div className="space-y-2 mt-6">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -651,11 +647,11 @@ export default function ClientsPage() {
                                 </div>
 
                                  <Tabs defaultValue="sessions" className="w-full mt-6">
-                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full border grid grid-cols-2">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground font-semibold ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>

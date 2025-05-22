@@ -132,13 +132,6 @@ export default function SessionsPage() {
 
   const addSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
-    defaultValues: {
-      clientId: '',
-      date: undefined,
-      time: '',
-      sessionType: '',
-      amount: undefined,
-    },
   });
   
   const { 
@@ -184,13 +177,6 @@ export default function SessionsPage() {
 
   const editSessionForm = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
-    defaultValues: {
-      clientId: '',
-      date: undefined,
-      time: '',
-      sessionType: '',
-      amount: undefined,
-    },
   });
 
   const {
@@ -503,7 +489,7 @@ export default function SessionsPage() {
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
                               day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                             }}
                           />
                         )}
@@ -643,7 +629,7 @@ export default function SessionsPage() {
                             <div>
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                  <span className="flex items-center">
+                                   <span className="flex items-center">
                                     <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                     {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                   </span>
@@ -714,7 +700,7 @@ export default function SessionsPage() {
 
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-           <SheetHeader className="flex flex-row justify-between items-center">
+           <SheetHeader className="flex flex-row items-center justify-between">
               <SheetTitle>Session Details</SheetTitle>
             </SheetHeader>
             <Separator className="my-2"/>
@@ -776,11 +762,12 @@ export default function SessionsPage() {
                     <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
-                        <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
-                            classNames={{
+                        <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
+                          className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
+                          classNames={{
                             day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
-                            }} />
+                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                          }} />
                         )} />
                     </div>
                     {editSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.date.message}</p>}

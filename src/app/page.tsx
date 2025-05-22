@@ -55,7 +55,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
@@ -216,13 +216,15 @@ export default function HomePage() {
   
   useEffect(() => {
     if (isAddSessionSheetOpen) {
-        setAddSessionValue("clientId", '');
-        setAddSessionValue("date", new Date());
-        setAddSessionValue("time", format(new Date(), "HH:mm"));
-        setAddSessionValue("sessionType", '');
-        setAddSessionValue("amount", undefined);
+        resetAddSessionForm({
+            clientId: '',
+            date: new Date(),
+            time: format(new Date(), "HH:mm"),
+            sessionType: '',
+            amount: undefined,
+        });
     }
-  }, [isAddSessionSheetOpen, setAddSessionValue]);
+  }, [isAddSessionSheetOpen, resetAddSessionForm]);
 
   const watchedClientIdForAddSession = watchAddSessionForm("clientId");
   const watchedSessionTypeForAddSession = watchAddSessionForm("sessionType");
@@ -587,6 +589,15 @@ export default function HomePage() {
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-full max-w-xs sm:max-w-sm">
+                 <Input
+                    type="search"
+                    placeholder="Search sessions..."
+                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
              <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
                 <SheetTrigger asChild>
                     <Button size="sm">New Client</Button>
@@ -596,7 +607,7 @@ export default function HomePage() {
                     <SheetTitle>New Client</SheetTitle>
                     <Separator />
                   </SheetHeader>
-                  <ScrollArea className="flex-1" showScrollbar={false}>
+                  <ScrollArea className="flex-1">
                     <div className="py-4 space-y-4">
                       <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheetDashboard" className="space-y-4">
                         <div className="space-y-1.5">
@@ -661,15 +672,6 @@ export default function HomePage() {
                   </SheetFooter>
                 </SheetContent>
               </Sheet>
-              <div className="w-full max-w-xs sm:max-w-sm">
-                 <Input
-                    type="search"
-                    placeholder="Search sessions..."
-                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
             <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
               <SheetTrigger asChild>
                 <Button size="sm">New Session</Button>
@@ -705,13 +707,14 @@ export default function HomePage() {
 
                         <div className="space-y-1.5">
                            <Label htmlFor="date-dashboard">Date</Label>
-                           <div className={cn("col-span-3 flex justify-center", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                           <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                             <Controller name="date" control={addSessionFormControl}
                                 render={({ field }) => (
-                                <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
+                                <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="date-dashboard" 
+                                    className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                                     classNames={{
-                                    day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                                    day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                                        day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
+                                        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                                     }} />
                                 )} />
                             </div>
@@ -872,14 +875,15 @@ export default function HomePage() {
                   </div>
                   <div className="space-y-1.5">
                       <Label htmlFor="edit-date-dashboard">Date</Label>
-                      <div className={cn("col-span-3 flex justify-center", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                      <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller name="date" control={editSessionFormControl}
                           render={({ field }) => (
-                          <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-dashboard" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
-                              classNames={{
+                          <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-dashboard" 
+                            className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
+                            classNames={{
                               day_selected: "bg-primary text-white focus:bg-primary focus:text-white focus-visible:ring-0 focus-visible:ring-offset-0",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
-                              }} />
+                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
+                            }} />
                           )} />
                       </div>
                       {editSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.date.message}</p>}
@@ -927,20 +931,20 @@ export default function HomePage() {
 
       <AlertDialog open={isDeleteSessionDialogOpen} onOpenChange={setIsDeleteSessionDialogOpen}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                This will permanently delete the session with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet && sessionToDelete !== null}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet && sessionToDelete !== null}>
-                {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
-                </AlertDialogAction>
-            </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the session with {sessionToDelete ? formatFullNameAndDogName(sessionToDelete.clientName, sessionToDelete.dogName) : ''} on {sessionToDelete && isValid(parseISO(sessionToDelete.date)) ? format(parseISO(sessionToDelete.date), 'PPP') : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteSessionDialogOpen(false)} disabled={isSubmittingSheet && sessionToDelete !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteSession} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingSheet && sessionToDelete !== null}>
+              {isSubmittingSheet && sessionToDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
