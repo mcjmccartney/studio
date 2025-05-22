@@ -4,13 +4,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, Users as UsersIcon, CalendarDays as IconCalendarDays, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, Loader2, User, Dog, Mail, Phone, Home, Info, ListChecks, FileText, Activity, ShieldQuestion, MessageSquare, Target, HelpingHand, BookOpen, MapPin, FileQuestion as IconFileQuestion, ArrowLeft, PawPrint, Users as UsersIcon, CalendarDays as IconCalendarDays, MoreHorizontal, X, SquareCheck } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
   SheetClose,
   SheetFooter,
 } from "@/components/ui/sheet";
@@ -597,35 +598,35 @@ export default function ClientsPage() {
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
                  <div className="absolute top-3.5 right-14 flex items-center gap-1 z-10">
-                    <Button variant="ghost" size="icon" onClick={() => {
-                        if (clientForViewSheet) {
-                            setClientToEdit(clientForViewSheet);
-                            setIsEditSheetOpen(true);
-                            setIsViewSheetOpen(false); 
-                        }
-                        }} 
-                        disabled={isSubmittingSheet || !clientForViewSheet}
-                        className="text-muted-foreground hover:text-foreground"
-                    >
-                        <Edit className="h-5 w-5" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
-                        disabled={isSubmittingSheet || !clientForViewSheet}
-                        className="text-destructive hover:text-destructive/90"
-                    >
-                        <Trash2 className="h-5 w-5" />
-                    </Button>
-                </div>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                                if (clientForViewSheet) {
+                                    setClientToEdit(clientForViewSheet);
+                                    setIsEditSheetOpen(true);
+                                    setIsViewSheetOpen(false); 
+                                }
+                            }} 
+                            disabled={isSubmittingSheet || !clientForViewSheet}
+                        >
+                            <Edit className="h-5 w-5" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
+                            disabled={isSubmittingSheet || !clientForViewSheet}
+                            className="text-destructive hover:text-destructive/90"
+                        >
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                    </div>
                 <SheetHeader>
                     <SheetTitle>
                         Client Details
                     </SheetTitle>
                      {clientForViewSheet && (
                         <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
-                             {/* SquareCheck removed, assuming it was MemberIcon or similar. Re-add if needed */}
+                             <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
                             {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"}
                         </Badge>
                      )}
@@ -773,6 +774,16 @@ export default function ClientsPage() {
                           )}
                           {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                     </ScrollArea>
+                    <SheetFooter>
+                      <Button variant="outline" className="w-1/2" onClick={() => {
+                        if (clientForViewSheet) {
+                          setClientToEdit(clientForViewSheet);
+                          setIsEditSheetOpen(true);
+                          setIsViewSheetOpen(false);
+                        }
+                      }}>Edit Client</Button>
+                      <Button variant="destructive" className="w-1/2" onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}>Delete Client</Button>
+                    </SheetFooter>
                 )}
             </SheetContent>
         </Sheet>
