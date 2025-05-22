@@ -379,7 +379,7 @@ export default function ClientsPage() {
                     <SheetHeader>
                       <SheetTitle>New Client</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-6 py-4">
                       <div>
                           <Label htmlFor="add-ownerFirstName">First Name</Label>
                           <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
@@ -598,9 +598,7 @@ export default function ClientsPage() {
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
                 <SheetHeader>
-                     <SheetTitle>
-                       Client Details
-                     </SheetTitle>
+                     <SheetTitle>Client Details</SheetTitle>
                      {clientForViewSheet && (
                         <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit !mt-2">
                              <SquareCheck className="mr-1.5 h-3.5 w-3.5" />
@@ -799,6 +797,7 @@ export default function ClientsPage() {
     </div>
   );
 }
+
 
 
 
