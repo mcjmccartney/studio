@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, PawPrint, Users as UsersIcon, MoreHorizontal, X, SquareCheck, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
+import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, PawPrint, Users as UsersIcon, MoreHorizontal, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -62,6 +62,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SquareCheck } from 'lucide-react';
 
 
 const internalClientFormSchema = z.object({
@@ -379,7 +380,7 @@ export default function ClientsPage() {
                     <SheetHeader>
                       <SheetTitle>New Client</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-6 py-4">
+                    <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} className="space-y-4 py-4">
                       <div>
                           <Label htmlFor="add-ownerFirstName">First Name</Label>
                           <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
@@ -410,7 +411,7 @@ export default function ClientsPage() {
                           <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("mt-1", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                           {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 pt-2">
                           <Controller
                           name="isMember"
                           control={addClientForm.control}
@@ -533,7 +534,7 @@ export default function ClientsPage() {
               <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
             </SheetHeader>
             {clientToEdit && (
-              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-6 py-4"> 
+              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-4 py-4"> 
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
                   <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
@@ -564,7 +565,7 @@ export default function ClientsPage() {
                   <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("mt-1", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                  {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 pt-2">
                   <Controller
                     name="isMember"
                     control={editClientForm.control}
@@ -596,7 +597,7 @@ export default function ClientsPage() {
         </Sheet>
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
-            <SheetContent className="sm:max-w-lg bg-card">
+            <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
                      <SheetTitle>Client Details</SheetTitle>
                      {clientForViewSheet && (
@@ -607,49 +608,52 @@ export default function ClientsPage() {
                      )}
                 </SheetHeader>
 
-                {clientForViewSheet && (
-                  <>
-                    <ScrollArea className="h-[calc(100vh-220px)] pr-3 mt-4"> 
-                          {sheetViewMode === 'clientInfo' && (
-                              <div className="space-y-0">
-                                  <DetailRow label="Owner:" value={formatFullNameAndDogName(clientForViewSheet.ownerFirstName + ' ' + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)} />
-                                  <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
-                                  <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
-                                  {clientForViewSheet.address ? (
-                                    <>
-                                      <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
-                                      {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
-                                      <DetailRow label="City:" value={clientForViewSheet.address.city} />
-                                      <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                      <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                                    </>
-                                  ) : (
+                <ScrollArea className="flex-1">
+                  <div className="px-6 py-4">
+                    {clientForViewSheet && (
+                      <>
+                        {sheetViewMode === 'clientInfo' && (
+                            <div className="space-y-0">
+                                <DetailRow label="Owner:" value={formatFullNameAndDogName(clientForViewSheet.ownerFirstName + ' ' + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)} />
+                                <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
+                                <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
+                                {clientForViewSheet.address ? (
+                                  <>
+                                    <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
+                                    {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
+                                    <DetailRow label="City:" value={clientForViewSheet.address.city} />
+                                    <DetailRow label="Country:" value={clientForViewSheet.address.country} />
                                     <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                                  )}
-                                  {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
-                                  <DetailRow label="Submitted:" value={clientForViewSheet.submissionDate ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : 'N/A'} />
-                                  
+                                  </>
+                                ) : (
+                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                )}
+                                {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
+                                {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(clientForViewSheet.submissionDate), 'PPP p')} />}
+                                
+                                <div className="space-y-2 mt-4">
                                   {clientForViewSheet.behaviouralBriefId && (
-                                      <Button onClick={handleViewBrief} className="w-full mt-4" variant="outline" disabled={isLoadingBriefForSheet}>
+                                      <Button onClick={handleViewBrief} className="w-full" variant="outline" disabled={isLoadingBriefForSheet}>
                                       {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
                                       </Button>
                                   )}
                                   {clientForViewSheet.behaviourQuestionnaireId && (
-                                      <Button onClick={handleViewQuestionnaire} className="w-full mt-2" variant="outline" disabled={isLoadingQuestionnaireForSheet}>
+                                      <Button onClick={handleViewQuestionnaire} className="w-full" variant="outline" disabled={isLoadingQuestionnaireForSheet}>
                                       {isLoadingQuestionnaireForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behaviour Questionnaire
                                       </Button>
                                   )}
+                                </div>
 
-                                  <Tabs defaultValue="sessions" className="w-full mt-6">
-                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
-                                      <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
-                                        Sessions ({clientSessionsForView.length})
-                                      </TabsTrigger>
-                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
-                                        Membership
-                                      </TabsTrigger>
-                                    </TabsList>
-                                     <TabsContent value="sessions" className="pt-2">
+                                <Tabs defaultValue="sessions" className="w-full mt-6">
+                                  <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                    <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
+                                      Sessions ({clientSessionsForView.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
+                                      Membership
+                                    </TabsTrigger>
+                                  </TabsList>
+                                    <TabsContent value="sessions" className="pt-2">
                                       {clientSessionsForView.length > 0 ? (
                                         <ul className="space-y-0">
                                             {clientSessionsForView.map(session => (
@@ -668,87 +672,91 @@ export default function ClientsPage() {
                                       )}
                                     </TabsContent>
                                     <TabsContent value="membership" className="pt-2">
-                                       <p className="text-sm text-muted-foreground text-center py-4">Membership details are not yet available.</p>
+                                      <p className="text-sm text-muted-foreground text-center py-4">Membership details are not yet available.</p>
                                     </TabsContent>
-                                  </Tabs>
-                              </div>
-                          )}
+                                </Tabs>
+                            </div>
+                        )}
 
-                          {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
-                              <div>
-                                  <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-lg font-semibold">Behavioural Brief</h4>
-                                      <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
-                                  </div>
-                                  <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
-                                  <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
-                                  <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
-                                  <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
-                                  <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
-                                  <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
-                                  <DetailRow label="Submitted:" value={briefForSheet.submissionDate ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : 'N/A'} />
-                              </div>
-                          )}
-                          {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                        {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
+                            <div>
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-lg font-semibold">Behavioural Brief</h4>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                </div>
+                                <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
+                                <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
+                                <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
+                                <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
+                                <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
+                                <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
+                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(briefForSheet.submissionDate), 'PPP p')} />}
+                            </div>
+                        )}
+                        {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
 
 
-                          {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
-                              <div>
-                                  <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
-                                      <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
-                                  </div>
-                                  <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
-                                  <DetailRow label="Dog Age:" value={questionnaireForSheet.dogAge} />
-                                  <DetailRow label="Dog Sex:" value={questionnaireForSheet.dogSex} />
-                                  <DetailRow label="Dog Breed:" value={questionnaireForSheet.dogBreed} />
-                                  <DetailRow label="Neutered/Spayed:" value={questionnaireForSheet.neuteredSpayedDetails} />
-                                  <DetailRow label="Main Problem:" value={questionnaireForSheet.mainProblem} />
-                                  <DetailRow label="Problem First Noticed:" value={questionnaireForSheet.problemTendencyFirstNoticed} />
-                                  <DetailRow label="Problem Frequency:" value={questionnaireForSheet.problemFrequencyDetails} />
-                                  <DetailRow label="Problem Recent Changes:" value={questionnaireForSheet.problemRecentChanges} />
-                                  <DetailRow label="Problem Anticipation:" value={questionnaireForSheet.problemAnticipationDetails} />
-                                  <DetailRow label="Dog Motivation (Problem):" value={questionnaireForSheet.dogMotivationForProblem} />
-                                  <DetailRow label="Problem Attempts:" value={questionnaireForSheet.problemAddressingAttempts} />
-                                  <DetailRow label="Ideal Outcome:" value={questionnaireForSheet.idealTrainingOutcome} />
-                                  {questionnaireForSheet.otherHelpNeeded && <DetailRow label="Other Help Needed:" value={questionnaireForSheet.otherHelpNeeded} />}
-                                  {questionnaireForSheet.medicalHistory && <DetailRow label="Medical History:" value={questionnaireForSheet.medicalHistory} />}
-                                  {questionnaireForSheet.vetConsultationDetails && <DetailRow label="Vet Consultation:" value={questionnaireForSheet.vetConsultationDetails} />}
-                                  {questionnaireForSheet.dogOrigin && <DetailRow label="Dog Origin:" value={questionnaireForSheet.dogOrigin} />}
-                                  {questionnaireForSheet.rescueBackground && <DetailRow label="Rescue Background:" value={questionnaireForSheet.rescueBackground} />}
-                                  {questionnaireForSheet.dogAgeWhenAcquired && <DetailRow label="Age Acquired:" value={questionnaireForSheet.dogAgeWhenAcquired} />}
-                                  {questionnaireForSheet.dietDetails && <DetailRow label="Diet:" value={questionnaireForSheet.dietDetails} />}
-                                  {questionnaireForSheet.foodMotivationLevel && <DetailRow label="Food Motivation:" value={questionnaireForSheet.foodMotivationLevel} />}
-                                  {questionnaireForSheet.mealtimeRoutine && <DetailRow label="Mealtime Routine:" value={questionnaireForSheet.mealtimeRoutine} />}
-                                  {questionnaireForSheet.treatRoutine && <DetailRow label="Treat Routine:" value={questionnaireForSheet.treatRoutine} />}
-                                  {questionnaireForSheet.externalTreatsConsent && <DetailRow label="External Treats Consent:" value={questionnaireForSheet.externalTreatsConsent} />}
-                                  {questionnaireForSheet.playEngagement && <DetailRow label="Play Engagement:" value={questionnaireForSheet.playEngagement} />}
-                                  {questionnaireForSheet.affectionResponse && <DetailRow label="Affection Response:" value={questionnaireForSheet.affectionResponse} />}
-                                  {questionnaireForSheet.exerciseRoutine && <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />}
-                                  {questionnaireForSheet.muzzleUsage && <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />}
-                                  {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />}
-                                  {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />}
-                                  {questionnaireForSheet.housetrainedStatus && <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />}
-                                  {questionnaireForSheet.activitiesAsideFromWalks && <DetailRow label="Other Activities:" value={questionnaireForSheet.activitiesAsideFromWalks} />}
-                                  {questionnaireForSheet.dogLikes && <DetailRow label="Dog Likes:" value={questionnaireForSheet.dogLikes} />}
-                                  <DetailRow label="Dog Challenges:" value={questionnaireForSheet.dogChallenges} />
-                                  <DetailRow label="Positive Reinforcement:" value={questionnaireForSheet.positiveReinforcementMethods} />
-                                  <DetailRow label="Favorite Rewards:" value={questionnaireForSheet.favoriteRewards} />
-                                  <DetailRow label="Correction Methods:" value={questionnaireForSheet.correctionMethods} />
-                                  <DetailRow label="Correction Effects:" value={questionnaireForSheet.correctionEffects} />
-                                  <DetailRow label="Previous Training:" value={questionnaireForSheet.previousProfessionalTraining} />
-                                  <DetailRow label="Previous Methods Used:" value={questionnaireForSheet.previousTrainingMethodsUsed} />
-                                  <DetailRow label="Previous Training Results:" value={questionnaireForSheet.previousTrainingExperienceResults} />
-                                  {questionnaireForSheet.sociabilityWithDogs && <DetailRow label="Sociability (Dogs):" value={questionnaireForSheet.sociabilityWithDogs} />}
-                                  {questionnaireForSheet.sociabilityWithPeople && <DetailRow label="Sociability (People):" value={questionnaireForSheet.sociabilityWithPeople} />}
-                                  {questionnaireForSheet.additionalInformation && <DetailRow label="Additional Info:" value={questionnaireForSheet.additionalInformation} />}
-                                  {questionnaireForSheet.timeDedicatedToTraining && <DetailRow label="Time for Training:" value={questionnaireForSheet.timeDedicatedToTraining} />}
-                                  <DetailRow label="Submitted:" value={questionnaireForSheet.submissionDate ? format(parseISO(questionnaireForSheet.submissionDate), 'PPP p') : 'N/A'} />
-                              </div>
-                          )}
-                          {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
-                    </ScrollArea>
-                    <SheetFooter>
+                        {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
+                            <div>
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                </div>
+                                <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
+                                <DetailRow label="Dog Age:" value={questionnaireForSheet.dogAge} />
+                                <DetailRow label="Dog Sex:" value={questionnaireForSheet.dogSex} />
+                                <DetailRow label="Dog Breed:" value={questionnaireForSheet.dogBreed} />
+                                <DetailRow label="Neutered/Spayed:" value={questionnaireForSheet.neuteredSpayedDetails} />
+                                <DetailRow label="Main Problem:" value={questionnaireForSheet.mainProblem} />
+                                <DetailRow label="Problem First Noticed:" value={questionnaireForSheet.problemTendencyFirstNoticed} />
+                                <DetailRow label="Problem Frequency:" value={questionnaireForSheet.problemFrequencyDetails} />
+                                <DetailRow label="Problem Recent Changes:" value={questionnaireForSheet.problemRecentChanges} />
+                                <DetailRow label="Problem Anticipation:" value={questionnaireForSheet.problemAnticipationDetails} />
+                                <DetailRow label="Dog Motivation (Problem):" value={questionnaireForSheet.dogMotivationForProblem} />
+                                <DetailRow label="Problem Attempts:" value={questionnaireForSheet.problemAddressingAttempts} />
+                                <DetailRow label="Ideal Outcome:" value={questionnaireForSheet.idealTrainingOutcome} />
+                                {questionnaireForSheet.otherHelpNeeded && <DetailRow label="Other Help Needed:" value={questionnaireForSheet.otherHelpNeeded} />}
+                                {questionnaireForSheet.medicalHistory && <DetailRow label="Medical History:" value={questionnaireForSheet.medicalHistory} />}
+                                {questionnaireForSheet.vetConsultationDetails && <DetailRow label="Vet Consultation:" value={questionnaireForSheet.vetConsultationDetails} />}
+                                {questionnaireForSheet.dogOrigin && <DetailRow label="Dog Origin:" value={questionnaireForSheet.dogOrigin} />}
+                                {questionnaireForSheet.rescueBackground && <DetailRow label="Rescue Background:" value={questionnaireForSheet.rescueBackground} />}
+                                {questionnaireForSheet.dogAgeWhenAcquired && <DetailRow label="Age Acquired:" value={questionnaireForSheet.dogAgeWhenAcquired} />}
+                                {questionnaireForSheet.dietDetails && <DetailRow label="Diet:" value={questionnaireForSheet.dietDetails} />}
+                                {questionnaireForSheet.foodMotivationLevel && <DetailRow label="Food Motivation:" value={questionnaireForSheet.foodMotivationLevel} />}
+                                {questionnaireForSheet.mealtimeRoutine && <DetailRow label="Mealtime Routine:" value={questionnaireForSheet.mealtimeRoutine} />}
+                                {questionnaireForSheet.treatRoutine && <DetailRow label="Treat Routine:" value={questionnaireForSheet.treatRoutine} />}
+                                {questionnaireForSheet.externalTreatsConsent && <DetailRow label="External Treats Consent:" value={questionnaireForSheet.externalTreatsConsent} />}
+                                {questionnaireForSheet.playEngagement && <DetailRow label="Play Engagement:" value={questionnaireForSheet.playEngagement} />}
+                                {questionnaireForSheet.affectionResponse && <DetailRow label="Affection Response:" value={questionnaireForSheet.affectionResponse} />}
+                                {questionnaireForSheet.exerciseRoutine && <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />}
+                                {questionnaireForSheet.muzzleUsage && <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />}
+                                {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />}
+                                {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />}
+                                {questionnaireForSheet.housetrainedStatus && <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />}
+                                {questionnaireForSheet.activitiesAsideFromWalks && <DetailRow label="Other Activities:" value={questionnaireForSheet.activitiesAsideFromWalks} />}
+                                {questionnaireForSheet.dogLikes && <DetailRow label="Dog Likes:" value={questionnaireForSheet.dogLikes} />}
+                                <DetailRow label="Dog Challenges:" value={questionnaireForSheet.dogChallenges} />
+                                <DetailRow label="Positive Reinforcement:" value={questionnaireForSheet.positiveReinforcementMethods} />
+                                <DetailRow label="Favorite Rewards:" value={questionnaireForSheet.favoriteRewards} />
+                                <DetailRow label="Correction Methods:" value={questionnaireForSheet.correctionMethods} />
+                                <DetailRow label="Correction Effects:" value={questionnaireForSheet.correctionEffects} />
+                                <DetailRow label="Previous Training:" value={questionnaireForSheet.previousProfessionalTraining} />
+                                <DetailRow label="Previous Methods Used:" value={questionnaireForSheet.previousTrainingMethodsUsed} />
+                                <DetailRow label="Previous Training Results:" value={questionnaireForSheet.previousTrainingExperienceResults} />
+                                {questionnaireForSheet.sociabilityWithDogs && <DetailRow label="Sociability (Dogs):" value={questionnaireForSheet.sociabilityWithDogs} />}
+                                {questionnaireForSheet.sociabilityWithPeople && <DetailRow label="Sociability (People):" value={questionnaireForSheet.sociabilityWithPeople} />}
+                                {questionnaireForSheet.additionalInformation && <DetailRow label="Additional Info:" value={questionnaireForSheet.additionalInformation} />}
+                                {questionnaireForSheet.timeDedicatedToTraining && <DetailRow label="Time for Training:" value={questionnaireForSheet.timeDedicatedToTraining} />}
+                                {questionnaireForSheet.submissionDate && <DetailRow label="Submitted:" value={format(parseISO(questionnaireForSheet.submissionDate), 'PPP p')} />}
+                            </div>
+                        )}
+                        {isLoadingQuestionnaireForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+                {clientForViewSheet && (
+                    <SheetFooter className="border-t pt-4">
                         <Button 
                             variant="outline" 
                             className="w-1/2"
@@ -773,7 +781,6 @@ export default function ClientsPage() {
                             Delete Client
                         </Button>
                     </SheetFooter>
-                  </>
                 )}
             </SheetContent>
         </Sheet>
@@ -797,7 +804,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-
-
-
-
