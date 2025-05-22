@@ -65,7 +65,7 @@ import { Separator } from '@/components/ui/separator';
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
   date: z.date({ required_error: "Session date is required." }),
-  time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM (24-hour)." }),
+  time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM." }),
   sessionType: z.string().min(1, { message: 'Session type is required.' }),
   amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
@@ -126,8 +126,8 @@ export default function SessionsPage() {
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
-      date: undefined,
-      time: '',
+      date: new Date(), 
+      time: format(new Date(), "HH:mm"),
       sessionType: '',
       amount: undefined,
     }
@@ -359,6 +359,7 @@ export default function SessionsPage() {
       setIsEditSessionSheetOpen(false);
       setSessionToEdit(null);
     } catch (err) {
+      console.error("Error updating session:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to update session.";
       toast({ title: "Error Updating Session", description: errorMessage, variant: "destructive" });
     } finally {
@@ -489,8 +490,8 @@ export default function SessionsPage() {
                             id="date-sessionpage"
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                              day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground focus-visible:ring-0 focus-visible:ring-offset-0")
+                              day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                              day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                             }}
                           />
                         )}
@@ -663,7 +664,7 @@ export default function SessionsPage() {
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                                   <span className="sr-only">Open menu</span>
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -707,24 +708,9 @@ export default function SessionsPage() {
 
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-           <SheetHeader className="flex flex-row justify-between items-center pr-10">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    if (selectedSessionForSheet) {
-                      setSessionToEdit(selectedSessionForSheet);
-                      setIsEditSessionSheetOpen(true);
-                      setIsSessionSheetOpen(false);
-                    }
-                  }} className="text-muted-foreground hover:text-foreground">
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit Session</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)} className="text-destructive hover:text-destructive/90">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete Session</span>
-                  </Button>
-                </div>
-                <SheetTitle className="text-center flex-1">Session Details</SheetTitle>
+           <SheetHeader>
+                <SheetTitle>Session Details</SheetTitle>
+                <Separator />
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -786,8 +772,8 @@ export default function SessionsPage() {
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                            day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground focus-visible:ring-0 focus-visible:ring-offset-0")
+                            day_selected: "bg-primary text-white focus:bg-primary focus:text-white",
+                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0")
                             }} />
                         )} />
                     </div>
@@ -855,6 +841,3 @@ export default function SessionsPage() {
     </div>
   );
 }
-
-
-    

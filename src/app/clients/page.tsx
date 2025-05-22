@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, Loader2, FileText as IconFileText, ArrowLeft, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, MoreHorizontal, SquareCheck } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -374,71 +374,73 @@ export default function ClientsPage() {
                       <Separator />
                     </SheetHeader>
                     <ScrollArea className="flex-1">
-                      <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheet" className="py-4 space-y-4">
-                        <div>
-                            <Label htmlFor="add-ownerFirstName">First Name</Label>
-                            <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="add-ownerLastName">Last Name</Label>
-                            <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="add-dogName">Dog's Name</Label>
-                            <Input id="add-dogName" {...addClientForm.register("dogName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="add-contactEmail">Email</Label>
-                            <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="add-contactNumber">Number</Label>
-                            <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
-                        </div>
-                        <div>
-                            <Label htmlFor="add-postcode">Postcode</Label>
-                            <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                            {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
-                        </div>
-                        <div className="flex items-center space-x-2 pt-2">
-                            <Controller
-                            name="isMember"
-                            control={addClientForm.control}
-                            render={({ field }) => (
-                                <Checkbox
-                                id="add-isMember"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                disabled={isSubmittingSheet}
-                                className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                />
-                            )}
-                            />
-                            <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
-                        </div>
-                         <div className="flex items-center space-x-2">
-                            <Controller
-                            name="isActive"
-                            control={addClientForm.control}
-                            render={({ field }) => (
-                                <Checkbox
-                                id="add-isActive"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                disabled={isSubmittingSheet}
-                                className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                />
-                            )}
-                            />
-                            <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
-                        </div>
-                        <input type="hidden" {...addClientForm.register("submissionDate")} />
-                      </form>
+                      <div className="py-4 space-y-4">
+                        <form onSubmit={addClientForm.handleSubmit(handleAddClientSubmit)} id="addClientFormInSheet" className="space-y-4">
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-ownerFirstName">First Name</Label>
+                              <Input id="add-ownerFirstName" {...addClientForm.register("ownerFirstName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerFirstName.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-ownerLastName">Last Name</Label>
+                              <Input id="add-ownerLastName" {...addClientForm.register("ownerLastName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.ownerLastName.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-dogName">Dog's Name</Label>
+                              <Input id="add-dogName" {...addClientForm.register("dogName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.dogName.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-contactEmail">Email</Label>
+                              <Input id="add-contactEmail" type="email" {...addClientForm.register("contactEmail")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-contactNumber">Number</Label>
+                              <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                              <Label htmlFor="add-postcode">Postcode</Label>
+                              <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                              {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
+                          </div>
+                          <div className="flex items-center space-x-2 pt-2">
+                              <Controller
+                              name="isMember"
+                              control={addClientForm.control}
+                              render={({ field }) => (
+                                  <Checkbox
+                                  id="add-isMember"
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  disabled={isSubmittingSheet}
+                                  className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  />
+                              )}
+                              />
+                              <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                              <Controller
+                              name="isActive"
+                              control={addClientForm.control}
+                              render={({ field }) => (
+                                  <Checkbox
+                                  id="add-isActive"
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  disabled={isSubmittingSheet}
+                                  className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  />
+                              )}
+                              />
+                              <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
+                          </div>
+                          <input type="hidden" {...addClientForm.register("submissionDate")} />
+                        </form>
+                      </div>
                     </ScrollArea>
                     <SheetFooter className="border-t pt-4">
                         <Button type="submit" form="addClientFormInSheet" className="w-full" disabled={isSubmittingSheet}>
@@ -492,7 +494,7 @@ export default function ClientsPage() {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <span className="sr-only">Open menu</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -532,35 +534,36 @@ export default function ClientsPage() {
             </SheetHeader>
             <ScrollArea className="flex-1">
               {clientToEdit && (
-                <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} id="editClientFormInSheet" className="py-4 space-y-4"> 
-                  <div>
+                <div className="py-4 space-y-4">
+                <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} id="editClientFormInSheet" className="space-y-4"> 
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-ownerFirstName">First Name</Label>
-                    <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.ownerFirstName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerFirstName.message}</p>}
                   </div>
-                  <div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-ownerLastName">Last Name</Label>
-                    <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-ownerLastName" {...editClientForm.register("ownerLastName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.ownerLastName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.ownerLastName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.ownerLastName.message}</p>}
                   </div>
-                  <div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-dogName">Dog's Name</Label>
-                    <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-dogName" {...editClientForm.register("dogName")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.dogName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.dogName && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.dogName.message}</p>}
                   </div>
-                  <div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-contactEmail">Email</Label>
-                    <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-contactEmail" type="email" {...editClientForm.register("contactEmail")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
                   </div>
-                  <div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-contactNumber">Number</Label>
-                    <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
                   </div>
-                  <div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="edit-postcode">Postcode</Label>
-                    <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("mt-1 focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
+                    <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                    {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
                   </div>
                   <div className="flex items-center space-x-2 pt-2">
@@ -584,6 +587,7 @@ export default function ClientsPage() {
                      <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
                   </div>
                 </form>
+                </div>
               )}
             </ScrollArea>
             <SheetFooter className="border-t pt-4">
@@ -598,6 +602,7 @@ export default function ClientsPage() {
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
+                    <Separator />
                 </SheetHeader>
 
                 <ScrollArea className="flex-1">
@@ -605,7 +610,7 @@ export default function ClientsPage() {
                     {clientForViewSheet && (
                       <>
                         {sheetViewMode === 'clientInfo' && (
-                            <div className="space-y-0">
+                            <div>
                                 <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                 <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
                                 {clientForViewSheet.address ? (
@@ -675,6 +680,7 @@ export default function ClientsPage() {
                                     <h4 className="text-lg font-semibold">Behavioural Brief</h4>
                                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                                 </div>
+                                <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
                                 <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
                                 <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
@@ -693,6 +699,7 @@ export default function ClientsPage() {
                                     <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
                                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
                                 </div>
+                                <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
                                 <DetailRow label="Dog Age:" value={questionnaireForSheet.dogAge} />
                                 <DetailRow label="Dog Sex:" value={questionnaireForSheet.dogSex} />
@@ -759,7 +766,7 @@ export default function ClientsPage() {
                         }}
                         disabled={isProcessingDelete || sheetViewMode !== 'clientInfo'}
                     >
-                        Edit Contact
+                        Edit Client
                     </Button>
                     <Button 
                         variant="destructive" 
