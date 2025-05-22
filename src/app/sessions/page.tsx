@@ -264,7 +264,8 @@ export default function SessionsPage() {
       }
     };
     fetchData();
-  }, [toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddSession: SubmitHandler<SessionFormValues> = async (data) => {
     setIsSubmittingSheet(true);
@@ -520,7 +521,7 @@ export default function SessionsPage() {
                   control={addSessionFormControl}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                      <SelectTrigger id="sessionType-sessionpage" className={cn("mt-1", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
+                      <SelectTrigger id="sessionType-sessionpage" className={cn("w-full mt-1", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
                         <SelectValue placeholder="Select session type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -643,7 +644,7 @@ export default function SessionsPage() {
                                   {session.amount !== undefined && (
                                       <span className="flex items-center">
                                           <span className="mx-1 hidden sm:inline">•</span>
-                                          <DollarSign className="inline-block mr-1.5 h-3.5 w-3.5" />
+                                          <DollarSign className="inline-block mr-1.5 h-4 w-4" />
                                           £{session.amount.toFixed(2)}
                                       </span>
                                   )}
@@ -701,34 +702,11 @@ export default function SessionsPage() {
       <Sheet open={isSessionSheetOpen} onOpenChange={setIsSessionSheetOpen}>
         <SheetContent className="sm:max-w-lg bg-card">
             <SheetHeader>
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                            if (selectedSessionForSheet) {
-                            setSessionToEdit(selectedSessionForSheet);
-                            setIsEditSessionSheetOpen(true);
-                            setIsSessionSheetOpen(false); 
-                            }
-                        }}
-                        disabled={!selectedSessionForSheet}
-                    >
-                        <Edit className="h-5 w-5" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                        disabled={!selectedSessionForSheet || isSubmittingSheet}
-                        className="text-destructive hover:text-destructive/90"
-                    >
-                        {isSubmittingSheet && sessionToDelete && sessionToDelete.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="h-5 w-5" />}
-                    </Button>
-                    <SheetTitle>Session Details</SheetTitle>
-                </div>
+                <SheetTitle>Session Details</SheetTitle>
             </SheetHeader>
             {selectedSessionForSheet && (
                 <>
-                    <ScrollArea className="h-[calc(100vh-140px)] pr-3 mt-4"> 
+                    <ScrollArea className="h-[calc(100vh-160px)] pr-3 mt-4"> 
                     <div className="space-y-0">
                         <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                         <DetailRow label="Time:" value={selectedSessionForSheet.time} />
@@ -755,7 +733,7 @@ export default function SessionsPage() {
                             variant="destructive" 
                             className="w-1/2"
                             onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                            disabled={isSubmittingSheet}
+                            disabled={isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id}
                         >
                             {isSubmittingSheet && sessionToDelete && sessionToDelete.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             Delete Session
@@ -817,7 +795,7 @@ export default function SessionsPage() {
                 <Controller name="sessionType" control={editSessionFormControl}
                 render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                    <SelectTrigger id="edit-sessionType-sessions" className={cn("mt-1",editSessionFormErrors.sessionType && "border-destructive")}>
+                    <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full mt-1",editSessionFormErrors.sessionType && "border-destructive")}>
                         <SelectValue placeholder="Select session type" />
                     </SelectTrigger>
                     <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -868,4 +846,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
 

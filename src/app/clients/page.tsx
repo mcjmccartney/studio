@@ -533,7 +533,7 @@ export default function ClientsPage() {
               <SheetTitle>Edit Client: {clientToEdit ? formatFullNameAndDogName(clientToEdit.ownerFirstName + " " + clientToEdit.ownerLastName, clientToEdit.dogName) : ''}</SheetTitle>
             </SheetHeader>
             {clientToEdit && (
-              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="grid gap-4 py-4"> 
+              <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} className="space-y-6 py-4"> 
                 <div>
                   <Label htmlFor="edit-ownerFirstName">First Name</Label>
                   <Input id="edit-ownerFirstName" {...editClientForm.register("ownerFirstName")} className={cn("mt-1", editClientForm.formState.errors.ownerFirstName ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
@@ -597,28 +597,6 @@ export default function ClientsPage() {
 
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="sm:max-w-lg bg-card">
-                 <div className="absolute top-3.5 right-[calc(1rem+2.5rem+0.25rem+2.5rem+0.25rem)] flex items-center gap-1 z-10">
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                            if (clientForViewSheet) {
-                                setClientToEdit(clientForViewSheet);
-                                setIsEditSheetOpen(true);
-                                setIsViewSheetOpen(false);
-                            }
-                        }}
-                    >
-                        <Edit className="h-5 w-5" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => clientForViewSheet && handleDeleteClientRequest(clientForViewSheet)}
-                        disabled={isProcessingDelete && clientToDelete?.id === clientForViewSheet?.id}
-                        className="text-destructive hover:text-destructive/90"
-                    >
-                        {isProcessingDelete && clientToDelete?.id === clientForViewSheet?.id ? <Loader2 className="h-5 w-5 animate-spin"/> : <Trash2 className="h-5 w-5" />}
-                    </Button>
-                </div>
                 <SheetHeader>
                      <SheetTitle>
                        Client Details
@@ -633,7 +611,7 @@ export default function ClientsPage() {
 
                 {clientForViewSheet && (
                   <>
-                    <ScrollArea className="h-[calc(100vh-140px)] pr-3 mt-4"> 
+                    <ScrollArea className="h-[calc(100vh-220px)] pr-3 mt-4"> 
                           {sheetViewMode === 'clientInfo' && (
                               <div className="space-y-0">
                                   <DetailRow label="Owner:" value={formatFullNameAndDogName(clientForViewSheet.ownerFirstName + ' ' + clientForViewSheet.ownerLastName, clientForViewSheet.dogName)} />
@@ -665,11 +643,11 @@ export default function ClientsPage() {
                                   )}
 
                                   <Tabs defaultValue="sessions" className="w-full mt-6">
-                                    <TabsList className="grid w-full grid-cols-2 items-center justify-center rounded-md bg-card p-1 border text-muted-foreground">
-                                      <TabsTrigger value="sessions" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary">
+                                    <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border grid grid-cols-2">
+                                      <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                       </TabsTrigger>
-                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary">
+                                      <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=inactive]:text-muted-foreground font-semibold">
                                         Membership
                                       </TabsTrigger>
                                     </TabsList>
@@ -821,5 +799,6 @@ export default function ClientsPage() {
     </div>
   );
 }
+
 
 
