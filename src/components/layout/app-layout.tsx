@@ -11,35 +11,36 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger, // Ensure SidebarTrigger is imported if used in header
+  SidebarTrigger,
+  useSidebar, // Import useSidebar
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
-import { Settings, LogOut, Loader2, PanelLeft } from 'lucide-react'; // Added PanelLeft for header
+import { Settings, LogOut, Loader2, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-// Removed import for MobileBottomNav as it's being deleted
 import { useAuth } from '@/contexts/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-
+import { Fab } from '@/components/ui/fab'; // Import the new FAB component
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 const publicPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
-const noSidebarPaths = ['/behavioural-brief', '/behaviour-questionnaire', '/login'];
+const noSidebarPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const sidebarContext = useSidebar(); // Get sidebar context for the FAB
 
   const useSpecialBackground = pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire';
-  const hideSidebarForCurrentPath = noSidebarPaths.includes(pathname);
+  const hideMainAppLayout = noSidebarPaths.includes(pathname);
 
   const isMobile = useIsMobile();
   const [mounted, setMounted] = React.useState(false);
@@ -77,7 +78,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  if (hideSidebarForCurrentPath || (!user && publicPaths.includes(pathname))) {
+  if (hideMainAppLayout || (!user && publicPaths.includes(pathname))) {
     return (
       <main className={cn(
         useSpecialBackground ? "bg-[#4f6749]" : "bg-background",
@@ -88,10 +89,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
   
-  if (user) {
+  // This inner component is needed because useSidebar must be used within SidebarProvider
+  const AppLayoutContent = () => {
+    const { toggleSidebar } = useSidebar(); // Get toggleSidebar from context
+
     return (
-      <SidebarProvider defaultOpen={false}>
-        {mounted && !isMobile && !hideSidebarForCurrentPath && (
+      <>
+        {mounted && !isMobile && (
           <Sidebar variant="sidebar" collapsible="icon" side="left">
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
               {/* Logo image removed previously */}
@@ -117,12 +121,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
 
         <SidebarInset>
-           {/* Header with mobile trigger can be added here if needed for non-noSidebarPaths on mobile */}
-           {mounted && isMobile && !hideSidebarForCurrentPath && (
+           {mounted && isMobile && (
             <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-              <SidebarTrigger className="md:hidden" /> {/* Ensure SidebarTrigger is from ui/sidebar */}
+              <SidebarTrigger className="md:hidden" /> {/* For mobile slide-out sidebar */}
               <div className="flex-1">
-                {/* You can add a page title here if desired */}
+                {/* Page title could go here */}
               </div>
             </header>
            )}
@@ -132,20 +135,31 @@ export default function AppLayout({ children }: AppLayoutProps) {
               !mounted && "bg-background p-6",
               mounted && (
                 useSpecialBackground 
-                  ? "bg-[#4f6749]"
-                  : "bg-[#fafafa] p-6"
-              ),
-              // Removed mobile-specific padding: mounted && isMobile && "pb-16" 
+                  ? "bg-[#4f6749]" // public-intake, behaviour-questionnaire
+                  : "bg-background p-6" // All other pages including dashboard
+              )
             )}
           >
             {children}
           </div>
         </SidebarInset>
+        
+        {mounted && isMobile && user && (
+          <Fab onClick={toggleSidebar} />
+        )}
+      </>
+    );
+  };
 
-        {/* MobileBottomNav component rendering removed */}
+
+  if (user) {
+    return (
+      <SidebarProvider defaultOpen={false}>
+        <AppLayoutContent />
       </SidebarProvider>
     );
   }
 
+  // Fallback for non-user, non-public path (should be caught by redirection logic, but good for safety)
   return <main className={cn(useSpecialBackground ? "bg-[#4f6749]" : "bg-background")}>{children}</main>;
 }
