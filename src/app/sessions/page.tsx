@@ -490,7 +490,7 @@ export default function SessionsPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="date-sessionpage">Date</Label>
-                    <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller
                         name="date"
                         control={addSessionFormControl}
@@ -524,7 +524,7 @@ export default function SessionsPage() {
                           id="time-sessionpage"
                           type="time"
                           {...field}
-                          className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.time ? "border-destructive" : "")}
+                          className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.time ? "border-destructive" : "")}
                           disabled={isSubmittingSheet}
                         />
                       )}
@@ -568,7 +568,7 @@ export default function SessionsPage() {
                             {...field}
                             value={field.value === undefined ? '' : String(field.value)}
                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                            className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.amount && "border-destructive")}
+                            className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.amount && "border-destructive")}
                             disabled={isSubmittingSheet}
                         />
                         )}
@@ -654,12 +654,12 @@ export default function SessionsPage() {
                                         {session.time}
                                     </span>
                                     {session.amount !== undefined && (
-                                        <>
-                                            <span className="sm:inline">•</span>
-                                            <span className="flex items-center">
-                                                £{session.amount.toFixed(2)}
-                                            </span>
-                                        </>
+                                      <>
+                                        <span className="sm:inline">•</span>
+                                        <span className="flex items-center">
+                                            £{session.amount.toFixed(2)}
+                                        </span>
+                                      </>
                                     )}
                                 </div>
                             </div>
@@ -789,7 +789,7 @@ export default function SessionsPage() {
                 </div>
                 <div className="space-y-1.5">
                     <Label htmlFor="edit-date-sessions">Date</Label>
-                    <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                    <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
@@ -806,7 +806,7 @@ export default function SessionsPage() {
                 <div className="space-y-1.5">
                     <Label htmlFor="edit-time-sessions">Time</Label>
                     <Controller name="time" control={editSessionFormControl}
-                    render={({ field }) => (<Input id="edit-time-sessions" type="time" {...field} className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                    render={({ field }) => (<Input id="edit-time-sessions" type="time" {...field} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
                     {editSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.time.message}</p>}
                 </div>
                 <div className="space-y-1.5">
@@ -829,7 +829,7 @@ export default function SessionsPage() {
                     <Label htmlFor="edit-amount-sessions">Amount</Label>
                     <Controller name="amount" control={editSessionFormControl}
                     render={({ field }) => (
-                        <Input id="edit-amount-sessions" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
+                        <Input id="edit-amount-sessions" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
                     )} />
                     {editSessionFormErrors.amount && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.amount.message}</p>}
                   </div>
@@ -867,3 +867,4 @@ export default function SessionsPage() {
 }
 
     
+

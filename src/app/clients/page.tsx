@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion } from 'lucide-react';
+import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, MoreHorizontal, SquareCheck } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -504,8 +504,7 @@ export default function ClientsPage() {
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <span className="sr-only">Open menu</span>
-                        {/* Replaced MoreHorizontal icon with text for debugging, will be reverted or fixed */}
-                        <span>...</span> 
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -607,8 +606,7 @@ export default function ClientsPage() {
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
-                    <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
-                    {/* Removed SheetDescription */}
+                  <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
@@ -631,6 +629,7 @@ export default function ClientsPage() {
                                 )}
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
+                                <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
                                 
                                 <div className="space-y-2 mt-6">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -683,7 +682,7 @@ export default function ClientsPage() {
                             <div>
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="text-lg font-semibold">Behavioural Brief</h4>
-                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><Info className="h-4 w-4" /> {/* Changed to Info Icon */} </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><ArrowLeft className="h-4 w-4" /> </Button>
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
@@ -702,7 +701,7 @@ export default function ClientsPage() {
                             <div>
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
-                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><Info className="h-4 w-4" /> {/* Changed to Info Icon */} </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><ArrowLeft className="h-4 w-4" /> </Button>
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
@@ -734,7 +733,7 @@ export default function ClientsPage() {
                                 {questionnaireForSheet.exerciseRoutine && <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />}
                                 {questionnaireForSheet.muzzleUsage && <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />}
                                 {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />}
-                                {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />}
+                                {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForViewSheet.reactionToUnfamiliarPeople} />}
                                 {questionnaireForSheet.housetrainedStatus && <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />}
                                 {questionnaireForSheet.activitiesAsideFromWalks && <DetailRow label="Other Activities:" value={questionnaireForSheet.activitiesAsideFromWalks} />}
                                 {questionnaireForSheet.dogLikes && <DetailRow label="Dog Likes:" value={questionnaireForSheet.dogLikes} />}
