@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import type { Client, BehaviouralBrief, BehaviourQuestionnaire, Address, Session } from './types';
 import { format } from 'date-fns';
+import { formatPhoneNumber } from './utils';
 
 // This type is for the full form data coming from behavioural-brief/page.tsx
 export interface BehaviouralBriefFormValues {
@@ -128,6 +129,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
     const { behaviouralBriefId, behaviourQuestionnaireId, ...clientData } = client;
     const dataToSave: any = { 
       ...clientData,
+      contactNumber: formatPhoneNumber(client.contactNumber),
       createdAt: client.createdAt instanceof Date || client.createdAt instanceof Timestamp ? client.createdAt : serverTimestamp(),
       submissionDate: client.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss"),
       lastSession: client.lastSession || 'N/A',
@@ -135,6 +137,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       isMember: client.isMember === undefined ? false : client.isMember,
       isActive: client.isActive === undefined ? true : client.isActive,
       dogName: client.dogName === undefined ? null : client.dogName, 
+      fullAddress: client.fullAddress === undefined ? null : client.fullAddress,
       address: client.address === undefined ? null : client.address, 
       howHeardAboutServices: client.howHeardAboutServices === undefined ? null : client.howHeardAboutServices, 
     };
@@ -143,7 +146,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
     
      Object.keys(dataToSave).forEach(key => {
       if (dataToSave[key] === undefined) {
-        if (['dogName', 'address', 'howHeardAboutServices', 'behaviouralBriefId', 'behaviourQuestionnaireId'].includes(key)) {
+        if (['dogName', 'address', 'howHeardAboutServices', 'behaviouralBriefId', 'behaviourQuestionnaireId', 'fullAddress'].includes(key)) {
           dataToSave[key] = null;
         } else if (key === 'isMember') {
             dataToSave[key] = false;
@@ -151,7 +154,9 @@ const clientConverter: FirestoreDataConverter<Client> = {
             dataToSave[key] = true; 
         }
          else {
-          delete dataToSave[key]; 
+          // For other undefined fields, we might want to delete them or set to null based on requirements
+          // For now, let's set to null to ensure fields are present in Firestore if expected
+          dataToSave[key] = null; 
         }
       }
     });
@@ -166,6 +171,7 @@ const clientConverter: FirestoreDataConverter<Client> = {
       contactEmail: data.contactEmail || '',
       contactNumber: data.contactNumber || '',
       postcode: data.postcode || (data.address ? data.address.postcode : ''), 
+      fullAddress: data.fullAddress === null ? undefined : data.fullAddress,
       address: data.address === null ? undefined : data.address,
       howHeardAboutServices: data.howHeardAboutServices === null ? undefined : data.howHeardAboutServices,
       dogName: data.dogName === null ? undefined : data.dogName,
@@ -192,7 +198,7 @@ const behaviouralBriefConverter: FirestoreDataConverter<BehaviouralBrief> = {
     Object.keys(dataToSave).forEach(key => {
         if (dataToSave[key] === undefined) {
              if (key === 'idealSessionTypes') dataToSave[key] = [];
-             else delete dataToSave[key];
+             else dataToSave[key] = null; // Default other undefined fields to null
         }
     });
     return dataToSave;
@@ -355,7 +361,7 @@ export const getClientById = async (clientId: string): Promise<Client | null> =>
   }
 };
 
-export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string }): Promise<Client> => {
+export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string, fullAddress?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
   }
@@ -364,8 +370,9 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
     ownerFirstName: clientData.ownerFirstName,
     ownerLastName: clientData.ownerLastName,
     contactEmail: clientData.contactEmail,
-    contactNumber: clientData.contactNumber,
+    contactNumber: formatPhoneNumber(clientData.contactNumber),
     postcode: clientData.postcode,
+    fullAddress: clientData.fullAddress || undefined,
     dogName: clientData.dogName || undefined,
     isMember: clientData.isMember || false,
     isActive: clientData.isActive === undefined ? true : clientData.isActive,
@@ -376,6 +383,7 @@ export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'beha
   };
 
   const docRef = await addDoc(clientsCollectionRef, dataToSave);
+  // For client-side update, convert serverTimestamp to a usable format if needed, or refetch
   const newClientData = { ...dataToSave, id: docRef.id, createdAt: new Date().toISOString() } as Client; 
   return newClientData;
 };
@@ -386,10 +394,11 @@ export type EditableClientData = {
   contactEmail?: string;
   contactNumber?: string;
   postcode?: string;
+  fullAddress?: string; // Add fullAddress here
   dogName?: string;
   isMember?: boolean;
   isActive?: boolean;
-  address?: Address;
+  address?: Address; // Keep for compatibility with detailed forms
   howHeardAboutServices?: string;
 };
 
@@ -407,8 +416,12 @@ export const updateClientInFirestore = async (clientId: string, clientData: Edit
   Object.keys(clientData).forEach(key => {
     const K = key as keyof EditableClientData;
     if (clientData[K] !== undefined) {
-      updateData[K] = clientData[K];
-    } else if (clientData[K] === undefined && (K === 'dogName' || K === 'address' || K === 'howHeardAboutServices')) {
+      if (K === 'contactNumber') {
+        updateData[K] = formatPhoneNumber(clientData[K]);
+      } else {
+        updateData[K] = clientData[K];
+      }
+    } else if (clientData[K] === undefined && (K === 'dogName' || K === 'address' || K === 'howHeardAboutServices' || K === 'fullAddress')) {
       updateData[K] = null;
     }
   });
@@ -444,11 +457,11 @@ export const addClientAndBriefToFirestore = async (formData: BehaviouralBriefFor
 
   const submissionTimestamp = formData.submissionDate || format(new Date(), "yyyy-MM-dd HH:mm:ss");
 
-  const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices'> = {
+  const clientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'fullAddress'> = {
     ownerFirstName: formData.ownerFirstName,
     ownerLastName: formData.ownerLastName,
     contactEmail: formData.contactEmail,
-    contactNumber: formData.contactNumber,
+    contactNumber: formatPhoneNumber(formData.contactNumber),
     postcode: formData.postcode, 
     dogName: formData.dogName, 
     isMember: false, 
@@ -507,7 +520,6 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     const existingClientDoc = querySnapshot.docs[0];
     targetClientId = existingClientDoc.id;
     clientDataForReturn = existingClientDoc.data();
-    console.log(`Found existing client by email: ${formData.contactEmail}, ID: ${targetClientId}`);
     
     const updates: Partial<Client> = { isActive: true }; 
     if (formData.addressLine1 && formData.city && formData.country && formData.postcode) {
@@ -516,9 +528,8 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             addressLine2: formData.addressLine2 || undefined,
             city: formData.city,
             country: formData.country,
-            // postcode: formData.postcode, // Postcode is now part of client.postcode
         };
-         updates.postcode = formData.postcode; // Ensure top-level postcode is also updated
+         updates.postcode = formData.postcode; 
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
@@ -532,32 +543,31 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
     if (formData.ownerLastName && clientDataForReturn.ownerLastName !== formData.ownerLastName) {
         updates.ownerLastName = formData.ownerLastName;
     }
-    if (formData.contactNumber && clientDataForReturn.contactNumber !== formData.contactNumber) {
-        updates.contactNumber = formData.contactNumber;
+     const formattedContactNumber = formatPhoneNumber(formData.contactNumber);
+    if (formattedContactNumber && clientDataForReturn.contactNumber !== formattedContactNumber) {
+        updates.contactNumber = formattedContactNumber;
     }
 
 
     if (Object.keys(updates).length > 0) {
-        await updateDoc(doc(clientsCollectionRef, targetClientId), updates as DocumentData); // Cast to DocumentData
+        await updateDoc(doc(clientsCollectionRef, targetClientId), updates as DocumentData);
         clientDataForReturn = { ...clientDataForReturn, ...updates };
     }
 
   } else {
-    console.log(`No existing client found for email: ${formData.contactEmail}. Creating new client.`);
     const clientAddress: Address = {
       addressLine1: formData.addressLine1,
       addressLine2: formData.addressLine2 || undefined,
       city: formData.city,
       country: formData.country,
-      // postcode: formData.postcode // postcode is directly on Client type now
     };
 
-    const newClientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
+    const newClientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'fullAddress'> = {
       ownerFirstName: formData.ownerFirstName,
       ownerLastName: formData.ownerLastName,
       contactEmail: formData.contactEmail,
-      contactNumber: formData.contactNumber,
-      postcode: formData.postcode, // Use top-level postcode
+      contactNumber: formatPhoneNumber(formData.contactNumber),
+      postcode: formData.postcode, 
       dogName: formData.dogName,
       isMember: false, 
       isActive: true, 

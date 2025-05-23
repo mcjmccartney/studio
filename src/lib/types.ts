@@ -10,13 +10,14 @@ export interface Client {
   ownerLastName: string;
   contactEmail: string;
   contactNumber: string;
-  postcode: string;
-  address?: {
+  fullAddress?: string; // New simple address field
+  address?: { // Structured address, populated by detailed forms
     addressLine1: string;
     addressLine2?: string;
     city: string;
     country: string;
   };
+  postcode: string;
   howHeardAboutServices?: string;
 
   dogName?: string; // Primary dog's name for quick display
@@ -133,7 +134,6 @@ export interface Session {
   time: string; // Should be in 'HH:MM' (24-hour) format
   sessionType: string;
   amount?: number;
-  notes?: string;
   createdAt?: Timestamp | Date | string; // Firestore Timestamp or ISO string/Date for client-side
 }
 

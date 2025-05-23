@@ -8,8 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Loader2,
   ChevronLeft,
@@ -31,6 +30,7 @@ import 'react-day-picker/dist/style.css';
 import type { Session, Client, EditableClientData, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Sheet,
   SheetContent,
@@ -99,7 +99,7 @@ import {
   getBehaviourQuestionnaireById,
 } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { cn, formatFullNameAndDogName } from '@/lib/utils';
+import { cn, formatFullNameAndDogName, formatPhoneNumber } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar as ShadCalendar } from '@/components/ui/calendar';
 
@@ -109,6 +109,7 @@ const internalClientFormSchema = z.object({
   ownerLastName: z.string().min(1, { message: "Last name is required." }),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
+  fullAddress: z.string().optional(),
   postcode: z.string().min(3, { message: "Postcode is required." }),
   dogName: z.string().optional(),
   isMember: z.boolean().optional(),
@@ -174,6 +175,7 @@ export default function HomePage() {
 
   const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
+  
   const [clientForSelectedSession, setClientForSelectedSession] = useState<Client | null>(null);
   const [isLoadingClientForSession, setIsLoadingClientForSession] = useState<boolean>(false);
   const [sessionSheetViewMode, setSessionSheetViewMode] = useState<'sessionInfo' | 'behaviouralBrief' | 'behaviourQuestionnaire'>('sessionInfo');
@@ -195,6 +197,7 @@ export default function HomePage() {
       ownerLastName: '',
       contactEmail: '',
       contactNumber: '',
+      fullAddress: '',
       postcode: '',
       dogName: '',
       isMember: false,
@@ -210,6 +213,7 @@ export default function HomePage() {
         ownerLastName: '',
         contactEmail: '',
         contactNumber: '',
+        fullAddress: '',
         postcode: '',
         dogName: '',
         isMember: false,
@@ -378,7 +382,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isSessionDetailSheetOpen && selectedSessionForSheet && selectedSessionForSheet.clientId) {
-      setSessionSheetViewMode('sessionInfo'); // Reset view mode
+      setSessionSheetViewMode('sessionInfo'); 
       setBriefForSessionSheet(null);
       setQuestionnaireForSessionSheet(null);
       setIsLoadingClientForSession(true);
@@ -446,11 +450,12 @@ export default function HomePage() {
   const handleAddClientSubmit: SubmitHandler<InternalClientFormValuesDash> = async (data) => {
     setIsSubmittingSheet(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string; fullAddress?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
         contactNumber: data.contactNumber,
+        fullAddress: data.fullAddress || undefined,
         postcode: data.postcode,
         dogName: data.dogName || undefined,
         isMember: data.isMember || false,
@@ -617,12 +622,12 @@ export default function HomePage() {
 
     return (
       <div className={cn(
-          "relative h-full min-h-[7rem] p-1 flex flex-col items-start text-left", 
+          "relative h-full min-h-[7rem] p-1 flex flex-col items-center text-center", 
         )}
       >
         <div
           className={cn(
-            "absolute top-1 right-1 text-xs", 
+            "w-full text-xs mb-1", 
              isToday(props.date) ? "text-custom-ring-color font-semibold" : "text-muted-foreground"
           )}
         >
@@ -630,7 +635,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1" showScrollbar={false}>
+          <ScrollArea className="w-full flex-1">
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -669,7 +674,7 @@ export default function HomePage() {
                 <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto">
                 <div className="w-full max-w-xs sm:max-w-sm">
                     <Input
                         type="search"
@@ -712,34 +717,41 @@ export default function HomePage() {
                                   {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
                               </div>
                               <div className="space-y-1.5">
-                                  <Label htmlFor="add-contactNumber-dash">Number</Label>
+                                  <Label htmlFor="add-contactNumber-dash">Contact Number</Label>
                                   <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                                   {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                              </div>
+                               <div className="space-y-1.5">
+                                <Label htmlFor="add-fullAddress-dash">Address</Label>
+                                <Textarea id="add-fullAddress-dash" {...addClientForm.register("fullAddress")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.fullAddress ? "border-destructive" : "")} disabled={isSubmittingSheet} rows={3}/>
+                                {addClientForm.formState.errors.fullAddress && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.fullAddress.message}</p>}
                               </div>
                               <div className="space-y-1.5">
                                   <Label htmlFor="add-postcode-dash">Postcode</Label>
                                   <Input id="add-postcode-dash" {...addClientForm.register("postcode")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                                   {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
                               </div>
-                              <div className="flex items-center space-x-2 pt-2">
-                                  <Controller
-                                      name="isMember"
-                                      control={addClientForm.control}
-                                      render={({ field }) => (
-                                      <Checkbox id="add-isMember-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                                      )}
-                                  />
-                                  <Label htmlFor="add-isMember-dash" className="text-sm font-normal">Is Member?</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                  <Controller
-                                      name="isActive"
-                                      control={addClientForm.control}
-                                      render={({ field }) => (
-                                      <Checkbox id="add-isActive-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                                      )}
-                                  />
-                                  <Label htmlFor="add-isActive-dash" className="text-sm font-normal">Is Active?</Label>
+                               <div className="flex items-center space-x-4 pt-2">
+                                <div className="flex items-center space-x-2">
+                                    <Controller
+                                        name="isMember"
+                                        control={addClientForm.control}
+                                        render={({ field }) => (
+                                        <Checkbox id="add-isMember-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                                        )}
+                                    />
+                                    <Label htmlFor="add-isMember-dash" className="text-sm font-normal">Membership</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Controller
+                                        name="isActive"
+                                        control={addClientForm.control}
+                                        render={({ field }) => (
+                                        <Checkbox id="add-isActive-dash" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                                        )}
+                                    />
+                                    <Label htmlFor="add-isActive-dash" className="text-sm font-normal">Active</Label>
+                                </div>
                               </div>
                               <input type="hidden" {...addClientForm.register("submissionDate")} />
                           </form>
@@ -932,7 +944,7 @@ export default function HomePage() {
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
                 <SheetTitle>Session Details</SheetTitle>
-                <Separator/>
+                 <Separator/>
             </SheetHeader>
             <ScrollArea className="flex-1">
                 <div className="py-4">
@@ -996,10 +1008,6 @@ export default function HomePage() {
                     <Separator className="mb-3" />
                     <DetailRow label="Dog Name:" value={questionnaireForSessionSheet.dogName} />
                     <DetailRow label="Dog Age:" value={questionnaireForSessionSheet.dogAge} />
-                    <DetailRow label="Dog Sex:" value={questionnaireForSessionSheet.dogSex} />
-                    <DetailRow label="Dog Breed:" value={questionnaireForSessionSheet.dogBreed} />
-                    <DetailRow label="Neutered/Spayed:" value={questionnaireForSessionSheet.neuteredSpayedDetails} />
-                    <DetailRow label="Main Problem:" value={questionnaireForSessionSheet.mainProblem} />
                     {/* ... (add all other questionnaire fields as DetailRow) ... */}
                     <DetailRow label="Time for Training:" value={questionnaireForSessionSheet.timeDedicatedToTraining} />
                     {questionnaireForSessionSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(questionnaireForSessionSheet.submissionDate)) ? format(parseISO(questionnaireForSessionSheet.submissionDate), 'PPP p') : questionnaireForSessionSheet.submissionDate} />}

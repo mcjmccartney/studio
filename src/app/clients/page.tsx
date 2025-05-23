@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address, EditableClientData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide } from 'lucide-react';
+import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, MoreHorizontal, PawPrint } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -33,11 +33,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -61,7 +61,7 @@ import {
 } from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, formatFullNameAndDogName } from '@/lib/utils';
+import { cn, formatFullNameAndDogName, formatPhoneNumber } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -71,6 +71,7 @@ const internalClientFormSchema = z.object({
   dogName: z.string().optional(),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
+  fullAddress: z.string().optional(), // For the Textarea
   postcode: z.string().min(3, { message: "Postcode is required." }),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
@@ -132,6 +133,7 @@ export default function ClientsPage() {
       dogName: '',
       contactEmail: '',
       contactNumber: '',
+      fullAddress: '',
       postcode: '',
       isMember: false,
       isActive: true,
@@ -147,6 +149,7 @@ export default function ClientsPage() {
       dogName: '',
       contactEmail: '',
       contactNumber: '',
+      fullAddress: '',
       postcode: '',
       isMember: false,
       isActive: true,
@@ -207,6 +210,7 @@ export default function ClientsPage() {
             dogName: '',
             contactEmail: '',
             contactNumber: '',
+            fullAddress: '',
             postcode: '',
             isMember: false,
             isActive: true,
@@ -223,7 +227,8 @@ export default function ClientsPage() {
         ownerLastName: clientToEdit.ownerLastName,
         dogName: clientToEdit.dogName || '',
         contactEmail: clientToEdit.contactEmail,
-        contactNumber: clientToEdit.contactNumber,
+        contactNumber: formatPhoneNumber(clientToEdit.contactNumber) || '',
+        fullAddress: clientToEdit.fullAddress || '',
         postcode: clientToEdit.postcode,
         isMember: clientToEdit.isMember || false,
         isActive: clientToEdit.isActive === undefined ? true : clientToEdit.isActive,
@@ -235,11 +240,12 @@ export default function ClientsPage() {
   const handleAddClientSubmit: SubmitHandler<InternalClientFormValues> = async (data) => {
     setIsSubmittingSheet(true);
     try {
-      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession' | 'createdAt'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string } = {
+      const clientDataForFirestore: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean; isActive?: boolean; submissionDate?: string; fullAddress?: string } = {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
-        contactNumber: data.contactNumber,
+        contactNumber: data.contactNumber, // Formatting happens in addClientToFirestore
+        fullAddress: data.fullAddress || undefined,
         postcode: data.postcode,
         dogName: data.dogName || undefined,
         isMember: data.isMember || false,
@@ -255,7 +261,7 @@ export default function ClientsPage() {
           return 0;
         }));
       toast({ title: "Client Added", description: `${formatFullNameAndDogName(data.ownerFirstName + " " + data.ownerLastName, data.dogName)} has been successfully added.` });
-      addClientForm.reset({ ownerFirstName: '', ownerLastName: '', dogName: '', contactEmail: '', contactNumber: '', postcode: '', isMember: false, isActive: true, submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss")});
+      addClientForm.reset();
       setIsAddClientSheetOpen(false);
     } catch (err) {
       console.error("Error adding client to Firestore:", err);
@@ -275,13 +281,14 @@ export default function ClientsPage() {
             ownerLastName: data.ownerLastName,
             dogName: data.dogName || undefined,
             contactEmail: data.contactEmail,
-            contactNumber: data.contactNumber,
+            contactNumber: data.contactNumber, // Formatting happens in updateClientInFirestore
+            fullAddress: data.fullAddress || undefined,
             postcode: data.postcode,
             isMember: data.isMember || false,
             isActive: data.isActive === undefined ? true : data.isActive,
         };
         await updateClientInFirestore(clientToEdit.id, updateData);
-        setClients(prevClients => prevClients.map(c => c.id === clientToEdit.id ? { ...c, ...updateData } : c)
+        setClients(prevClients => prevClients.map(c => c.id === clientToEdit.id ? { ...c, ...updateData, contactNumber: formatPhoneNumber(data.contactNumber) || data.contactNumber } : c) // Update local state with formatted number
         .sort((a, b) => {
           const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
           const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
@@ -423,46 +430,53 @@ export default function ClientsPage() {
                               {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
                           </div>
                           <div className="space-y-1.5">
-                              <Label htmlFor="add-contactNumber">Number</Label>
+                              <Label htmlFor="add-contactNumber">Contact Number</Label>
                               <Input id="add-contactNumber" type="tel" {...addClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                               {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="add-fullAddress">Address</Label>
+                            <Textarea id="add-fullAddress" {...addClientForm.register("fullAddress")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.fullAddress ? "border-destructive" : "")} disabled={isSubmittingSheet} rows={3}/>
+                            {addClientForm.formState.errors.fullAddress && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.fullAddress.message}</p>}
                           </div>
                           <div className="space-y-1.5">
                               <Label htmlFor="add-postcode">Postcode</Label>
                               <Input id="add-postcode" {...addClientForm.register("postcode")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                               {addClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.postcode.message}</p>}
                           </div>
-                          <div className="flex items-center space-x-2 pt-2">
-                              <Controller
-                              name="isMember"
-                              control={addClientForm.control}
-                              render={({ field }) => (
-                                  <Checkbox
-                                  id="add-isMember"
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  disabled={isSubmittingSheet}
-                                  className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                  />
-                              )}
-                              />
-                              <Label htmlFor="add-isMember" className="text-sm font-normal">Is Member?</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                              <Controller
-                              name="isActive"
-                              control={addClientForm.control}
-                              render={({ field }) => (
-                                  <Checkbox
-                                  id="add-isActive"
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  disabled={isSubmittingSheet}
-                                  className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                  />
-                              )}
-                              />
-                              <Label htmlFor="add-isActive" className="text-sm font-normal">Is Active?</Label>
+                          <div className="flex items-center space-x-4 pt-2">
+                            <div className="flex items-center space-x-2">
+                                <Controller
+                                name="isMember"
+                                control={addClientForm.control}
+                                render={({ field }) => (
+                                    <Checkbox
+                                    id="add-isMember"
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isSubmittingSheet}
+                                    className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    />
+                                )}
+                                />
+                                <Label htmlFor="add-isMember" className="text-sm font-normal">Membership</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Controller
+                                name="isActive"
+                                control={addClientForm.control}
+                                render={({ field }) => (
+                                    <Checkbox
+                                    id="add-isActive"
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isSubmittingSheet}
+                                    className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    />
+                                )}
+                                />
+                                <Label htmlFor="add-isActive" className="text-sm font-normal">Active</Label>
+                            </div>
                           </div>
                           <input type="hidden" {...addClientForm.register("submissionDate")} />
                         </form>
@@ -580,34 +594,41 @@ export default function ClientsPage() {
                     {editClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactEmail.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit-contactNumber">Number</Label>
+                    <Label htmlFor="edit-contactNumber">Contact Number</Label>
                     <Input id="edit-contactNumber" type="tel" {...editClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                     {editClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.contactNumber.message}</p>}
+                  </div>
+                   <div className="space-y-1.5">
+                    <Label htmlFor="edit-fullAddress">Address</Label>
+                    <Textarea id="edit-fullAddress" {...editClientForm.register("fullAddress")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.fullAddress ? "border-destructive" : "")} disabled={isSubmittingSheet} rows={3}/>
+                    {editClientForm.formState.errors.fullAddress && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.fullAddress.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-postcode">Postcode</Label>
                     <Input id="edit-postcode" {...editClientForm.register("postcode")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editClientForm.formState.errors.postcode ? "border-destructive" : "")} disabled={isSubmittingSheet}/>
                    {editClientForm.formState.errors.postcode && <p className="text-xs text-destructive mt-1">{editClientForm.formState.errors.postcode.message}</p>}
                   </div>
-                  <div className="flex items-center space-x-2 pt-2">
-                    <Controller
-                      name="isMember"
-                      control={editClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox id="edit-isMember" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                      )}
-                    />
-                    <Label htmlFor="edit-isMember" className="text-sm font-normal">Is Member?</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Controller
-                      name="isActive"
-                      control={editClientForm.control}
-                      render={({ field }) => (
-                        <Checkbox id="edit-isActive" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                      )}
-                    />
-                     <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
+                  <div className="flex items-center space-x-4 pt-2">
+                    <div className="flex items-center space-x-2">
+                        <Controller
+                        name="isMember"
+                        control={editClientForm.control}
+                        render={({ field }) => (
+                            <Checkbox id="edit-isMember" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                        )}
+                        />
+                        <Label htmlFor="edit-isMember" className="text-sm font-normal">Membership</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Controller
+                        name="isActive"
+                        control={editClientForm.control}
+                        render={({ field }) => (
+                            <Checkbox id="edit-isActive" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmittingSheet} className="focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                        )}
+                        />
+                        <Label htmlFor="edit-isActive" className="text-sm font-normal">Active</Label>
+                    </div>
                   </div>
                 </form>
                 )}
@@ -633,19 +654,28 @@ export default function ClientsPage() {
                         {sheetViewMode === 'clientInfo' && (
                             <div>
                                 <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
-                                <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
-                                {clientForViewSheet.address && (
+                                <DetailRow label="Contact Number:" value={formatPhoneNumber(clientForViewSheet.contactNumber)} />
+                                {clientForViewSheet.address ? (
                                   <>
                                     <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                   </>
+                                ) : clientForViewSheet.fullAddress ? (
+                                  <>
+                                  <DetailRow label="Address:" value={clientForViewSheet.fullAddress} />
+                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                  </>
+                                ) : (
+                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 )}
-                                <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+
+                                <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
+                                <DetailRow label="Status:" value={clientForViewSheet.isActive ? "Active Client" : "Inactive Client"} />
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
-                                <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
                                 
                                 <div className="mt-6 space-y-2">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -661,11 +691,11 @@ export default function ClientsPage() {
                                 </div>
 
                                  <Tabs defaultValue="sessions" className="w-full mt-6">
-                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=active]:font-semibold">
+                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full border">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=active]:font-semibold">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>
@@ -677,7 +707,7 @@ export default function ClientsPage() {
                                                 <div className="text-sm font-medium text-foreground">
                                                   {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : session.date} at {session.time}
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">
+                                                 <div className="text-xs text-muted-foreground">
                                                   {session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}
                                                 </div>
                                             </li>
@@ -809,6 +839,7 @@ export default function ClientsPage() {
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                 This will permanently delete the client: {clientToDelete ? formatFullNameAndDogName(clientToDelete.ownerFirstName + " " + clientToDelete.ownerLastName, clientToDelete.dogName) : ''}.
+                This action cannot be undone.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -822,14 +853,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-    
-
-    
-
-
-
-
-
-    
-
-    
