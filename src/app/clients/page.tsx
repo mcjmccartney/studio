@@ -4,16 +4,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address, EditableClientData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, MoreHorizontal, PawPrint, Users as UsersIcon } from 'lucide-react';
+import { Loader2, Edit, Trash2, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, Filter, Check } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
-  SheetClose,
   SheetFooter,
+  SheetTrigger,
+  SheetClose
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -32,6 +32,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -71,7 +73,7 @@ const internalClientFormSchema = z.object({
   dogName: z.string().optional(),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
-  fullAddress: z.string().optional(), 
+  fullAddress: z.string().optional(),
   postcode: z.string().min(3, { message: "Postcode is required." }),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
@@ -86,7 +88,7 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | Reac
     return null;
   }
   return (
-    <div className={cn("flex justify-between items-start py-3 border-b border-border", className)}>
+    <div className={cn("flex justify-between items-start py-3", className)}>
       <span className="text-sm text-muted-foreground pr-2">{label}</span>
       <span className="text-sm text-foreground text-right break-words whitespace-pre-wrap">{value}</span>
     </div>
@@ -244,7 +246,7 @@ export default function ClientsPage() {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
-        contactNumber: data.contactNumber, 
+        contactNumber: formatPhoneNumber(data.contactNumber),
         fullAddress: data.fullAddress || undefined,
         postcode: data.postcode,
         dogName: data.dogName || undefined,
@@ -281,7 +283,7 @@ export default function ClientsPage() {
             ownerLastName: data.ownerLastName,
             dogName: data.dogName || undefined,
             contactEmail: data.contactEmail,
-            contactNumber: data.contactNumber, 
+            contactNumber: formatPhoneNumber(data.contactNumber), 
             fullAddress: data.fullAddress || undefined,
             postcode: data.postcode,
             isMember: data.isMember || false,
@@ -387,16 +389,23 @@ export default function ClientsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
         <div className="flex items-center gap-2">
-            <Select value={memberFilter} onValueChange={(value) => setMemberFilter(value as MemberFilterType)}>
-              <SelectTrigger className="w-[180px] h-9 focus:ring-0 focus:ring-offset-0">
-                <SelectValue placeholder="Show: All Clients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Show: All Clients</SelectItem>
-                <SelectItem value="members">Show: Members Only</SelectItem>
-                <SelectItem value="nonMembers">Show: Non-Members Only</SelectItem>
-              </SelectContent>
-            </Select>
+           <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9 focus:ring-0 focus:ring-offset-0">
+                  <Filter className="h-4 w-4" />
+                  <span className="sr-only">Filter Clients</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Filter by Membership</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={memberFilter} onValueChange={(value) => setMemberFilter(value as MemberFilterType)}>
+                  <DropdownMenuRadioItem value="all">Show: All Clients</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="members">Show: Members Only</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="nonMembers">Show: Non-Members Only</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
                 <SheetTrigger asChild>
                   <Button size="sm">New Client</Button>
@@ -532,30 +541,7 @@ export default function ClientsPage() {
                     )}
                     <h3 className="text-sm font-semibold">{displayName}</h3>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setClientToEdit(client); setIsEditSheetOpen(true); setIsViewSheetOpen(false);}}>
-                        <Edit className="mr-2 h-4 w-4" />Edit Contact
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast({ title: "Schedule Session", description: `Scheduling session for ${displayName} (Feature not fully implemented).`}) }}>
-                        <CalendarIconLucide className="mr-2 h-4 w-4" />Schedule Session
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteClientRequest(client); }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />Delete Client
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Removed DropdownMenu for this view */}
                 </div>
               </div>
             );
@@ -675,6 +661,7 @@ export default function ClientsPage() {
                                 )}
                                 <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
                                 <DetailRow label="Status:" value={clientForViewSheet.isActive ? "Active Client" : "Inactive Client"} />
+
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
                                 
@@ -693,10 +680,10 @@ export default function ClientsPage() {
 
                                  <Tabs defaultValue="sessions" className="w-full mt-6">
                                      <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full border">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>
@@ -737,7 +724,7 @@ export default function ClientsPage() {
                                 <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
                                 <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
                                 <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
-                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSessionSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
+                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
                             </div>
                         )}
                         {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
@@ -817,7 +804,7 @@ export default function ClientsPage() {
                         }}
                         disabled={isProcessingDelete || sheetViewMode !== 'clientInfo'}
                     >
-                        Edit Client
+                        Edit Contact
                     </Button>
                     <Button 
                         variant="destructive" 
@@ -852,4 +839,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-
