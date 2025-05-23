@@ -4,16 +4,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, MoreHorizontal, SquareCheck, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
   SheetTrigger,
   SheetClose,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  MoreHorizontal,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -198,6 +199,23 @@ export default function ClientsPage() {
     fetchInitialData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isAddClientSheetOpen) {
+        addClientForm.reset({
+            ownerFirstName: '',
+            ownerLastName: '',
+            dogName: '',
+            contactEmail: '',
+            contactNumber: '',
+            postcode: '',
+            isMember: false,
+            isActive: true,
+            submissionDate: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+        });
+    }
+  }, [isAddClientSheetOpen, addClientForm]);
+
 
   useEffect(() => {
     if (clientToEdit) {
@@ -607,7 +625,7 @@ export default function ClientsPage() {
         <Sheet open={isViewSheetOpen} onOpenChange={(isOpen) => { setIsViewSheetOpen(isOpen); if (!isOpen) setClientForViewSheet(null); }}>
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
-                    <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
+                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
@@ -618,18 +636,17 @@ export default function ClientsPage() {
                                 <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                 <DetailRow label="Number:" value={clientForViewSheet.contactNumber} />
                                 {clientForViewSheet.address && (
-                                    <>
-                                        <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
-                                        {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
-                                        <DetailRow label="City:" value={clientForViewSheet.address.city} />
-                                        <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                    </>
+                                  <>
+                                    <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
+                                    {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
+                                    <DetailRow label="City:" value={clientForViewSheet.address.city} />
+                                    <DetailRow label="Country:" value={clientForViewSheet.address.country} />
+                                  </>
                                 )}
                                 <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
                                 <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
-                                {/* Removed Active status badge from here */}
                                 
                                 <div className="mt-6 space-y-2">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -646,10 +663,10 @@ export default function ClientsPage() {
 
                                  <Tabs defaultValue="sessions" className="w-full mt-6">
                                      <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0 font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0 font-semibold">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>
@@ -689,7 +706,7 @@ export default function ClientsPage() {
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
                                 <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
                                 <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
-                                <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
+                                <DetailRow label="Life &amp; Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
                                 <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
                                 <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
                                 {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
@@ -734,7 +751,7 @@ export default function ClientsPage() {
                                 {questionnaireForSheet.affectionResponse && <DetailRow label="Affection Response:" value={questionnaireForSheet.affectionResponse} />}
                                 {questionnaireForSheet.exerciseRoutine && <DetailRow label="Exercise Routine:" value={questionnaireForSheet.exerciseRoutine} />}
                                 {questionnaireForSheet.muzzleUsage && <DetailRow label="Muzzle Usage:" value={questionnaireForSheet.muzzleUsage} />}
-                                {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={clientForViewSheet.reactionToFamiliarPeople} />}
+                                {questionnaireForSheet.reactionToFamiliarPeople && <DetailRow label="Reaction to Familiar People:" value={questionnaireForSheet.reactionToFamiliarPeople} />}
                                 {questionnaireForSheet.reactionToUnfamiliarPeople && <DetailRow label="Reaction to Unfamiliar People:" value={questionnaireForSheet.reactionToUnfamiliarPeople} />}
                                 {questionnaireForSheet.housetrainedStatus && <DetailRow label="Housetrained Status:" value={questionnaireForSheet.housetrainedStatus} />}
                                 {questionnaireForSheet.activitiesAsideFromWalks && <DetailRow label="Other Activities:" value={questionnaireForSheet.activitiesAsideFromWalks} />}
@@ -809,5 +826,6 @@ export default function ClientsPage() {
     
 
     
+
 
 
