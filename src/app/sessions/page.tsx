@@ -63,11 +63,12 @@ import {
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { cn, formatFullNameAndDogName, getSessionTypeBadgeClasses } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { buttonVariants } from "@/components/ui/button";
 
 
 const sessionFormSchema = z.object({
@@ -501,11 +502,11 @@ export default function SessionsPage() {
                             initialFocus
                             disabled={isSubmittingSheet}
                             id="date-sessionpage"
-                            className={cn("!p-1", addSessionFormErrors.date && "border-destructive")}
+                            className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
                                 day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
-                                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
-                                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
+                                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
+                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                             }}
                           />
                         )}
@@ -646,19 +647,16 @@ export default function SessionsPage() {
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span className="flex items-center">
-                                        <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                     </span>
                                     <span className="sm:inline">•</span>
                                     <span className="flex items-center">
-                                        <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {session.time}
                                     </span>
                                     {session.amount !== undefined && (
                                         <>
                                             <span className="sm:inline">•</span>
                                             <span className="flex items-center">
-                                                <DollarSign className="inline-block mr-1.5 h-3.5 w-3.5" />
                                                 £{session.amount.toFixed(2)}
                                             </span>
                                         </>
@@ -717,7 +715,8 @@ export default function SessionsPage() {
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
-                <SheetTitle>{selectedSessionForSheet ? `Session Details: ${formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}` : "Session Details"}</SheetTitle>
+                <SheetTitle>Session Details</SheetTitle>
+                <Separator/>
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -794,11 +793,11 @@ export default function SessionsPage() {
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
-                          className={cn("!p-1", editSessionFormErrors.date && "border-destructive")}
+                          className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                           classNames={{
                             day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
-                            day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold", 
-                            day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
+                            day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
+                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                           }} />
                         )} />
                     </div>

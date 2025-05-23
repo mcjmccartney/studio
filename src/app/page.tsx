@@ -225,7 +225,7 @@ export default function HomePage() {
     handleSubmit: handleAddSessionSubmitHook 
   } = addSessionForm;
   
-  useEffect(() => {
+ useEffect(() => {
     if (isAddSessionSheetOpen) {
        setAddSessionValue("date", new Date());
        setAddSessionValue("time", format(new Date(), "HH:mm"));
@@ -565,7 +565,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full mt-5 pr-1" >
+          <ScrollArea className="w-full mt-5 pr-1">
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -605,14 +605,7 @@ export default function HomePage() {
                 <Button variant="outline" size="icon" className="h-8 w-8 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
             <div className="flex items-center gap-2">
-                <Input
-                    type="search"
-                    placeholder="Search sessions..."
-                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 max-w-xs sm:max-w-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
+                 <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
                     <SheetTrigger asChild>
                         <Button size="sm">New Client</Button>
                     </SheetTrigger>
@@ -686,6 +679,13 @@ export default function HomePage() {
                         </SheetFooter>
                     </SheetContent>
                 </Sheet>
+                <Input
+                    type="search"
+                    placeholder="Search sessions..."
+                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 max-w-xs sm:max-w-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
                 <Sheet open={isAddSessionSheetOpen} onOpenChange={setIsAddSessionSheetOpen}>
                     <SheetTrigger asChild>
                         <Button size="sm">New Session</Button>
@@ -729,7 +729,7 @@ export default function HomePage() {
                                             classNames={{
                                                 day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
                                                 day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
-                                                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
+                                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                                             }} />
                                         )} />
                                     </div>
@@ -739,7 +739,7 @@ export default function HomePage() {
                                 <div className="space-y-1.5">
                                     <Label htmlFor="time-dashboard">Time</Label>
                                     <Controller name="time" control={addSessionFormControl}
-                                    render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                                    render={({ field }) => (<Input id="time-dashboard" type="time" {...field} className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
                                     {addSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.time.message}</p>}
                                 </div>
 
@@ -817,7 +817,8 @@ export default function HomePage() {
       <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) setSelectedSessionForSheet(null); }}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
-                <SheetTitle>{selectedSessionForSheet ? `Session Details: ${formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}` : "Session Details"}</SheetTitle>
+              <SheetTitle>Session Details</SheetTitle>
+              <Separator/>
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -890,7 +891,7 @@ export default function HomePage() {
                   </div>
                   <div className="space-y-1.5">
                       <Label htmlFor="edit-date-dashboard">Date</Label>
-                      <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
+                       <div className={cn("flex justify-center w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller name="date" control={editSessionFormControl}
                           render={({ field }) => (
                           <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-dashboard" 
@@ -898,7 +899,7 @@ export default function HomePage() {
                             classNames={{
                                 day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
                                 day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
-                                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
+                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                             }} />
                           )} />
                       </div>
@@ -907,7 +908,7 @@ export default function HomePage() {
                   <div className="space-y-1.5">
                       <Label htmlFor="edit-time-dashboard">Time</Label>
                       <Controller name="time" control={editSessionFormControl}
-                      render={({ field }) => (<Input id="edit-time-dashboard" type="time" {...field} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
+                      render={({ field }) => (<Input id="edit-time-dashboard" type="time" {...field} className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.time && "border-destructive")} disabled={isSubmittingSheet} />)} />
                       {editSessionFormErrors.time && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.time.message}</p>}
                   </div>
                   <div className="space-y-1.5">
