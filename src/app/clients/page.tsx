@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
+import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address, EditableClientData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, MoreHorizontal } from 'lucide-react';
+import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,7 +58,6 @@ import {
   getBehaviourQuestionnaireById,
   updateClientInFirestore,
   getSessionsFromFirestore,
-  type EditableClientData
 } from '@/lib/firebase';
 import { format, parseISO, isValid } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -556,8 +556,8 @@ export default function ClientsPage() {
               <Separator />
             </SheetHeader>
             <ScrollArea className="flex-1">
+              <div className="py-4 space-y-4">
               {clientToEdit && (
-                <div className="py-4 space-y-4">
                 <form onSubmit={editClientForm.handleSubmit(handleUpdateClient)} id="editClientFormInSheet" className="space-y-4"> 
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-ownerFirstName">First Name</Label>
@@ -610,8 +610,8 @@ export default function ClientsPage() {
                      <Label htmlFor="edit-isActive" className="text-sm font-normal">Is Active?</Label>
                   </div>
                 </form>
-                </div>
-              )}
+                )}
+              </div>
             </ScrollArea>
             <SheetFooter className="border-t pt-4">
               <Button type="submit" form="editClientFormInSheet" className="w-full" disabled={isSubmittingSheet}>
@@ -646,7 +646,6 @@ export default function ClientsPage() {
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
                                 <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
-                                <DetailRow label="Status:" value={ <Badge variant={clientForViewSheet.isActive ? "default" : "secondary"} className="w-fit"> <SquareCheck className="mr-1.5 h-3.5 w-3.5" /> {clientForViewSheet.isActive ? "Active Client" : "Inactive Client"} </Badge>} />                                
                                 
                                 <div className="mt-6 space-y-2">
                                   {clientForViewSheet.behaviouralBriefId && (
@@ -662,11 +661,11 @@ export default function ClientsPage() {
                                 </div>
 
                                  <Tabs defaultValue="sessions" className="w-full mt-6">
-                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md p-1 text-muted-foreground w-full border bg-card">
-                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0 font-semibold">
+                                     <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-card p-1 text-muted-foreground w-full border">
+                                        <TabsTrigger value="sessions"  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=active]:font-semibold">
                                         Sessions ({clientSessionsForView.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground ring-0 data-[state=active]:ring-primary data-[state=active]:ring-0 font-semibold">
+                                        <TabsTrigger value="membership" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=active]:font-semibold">
                                         Membership
                                         </TabsTrigger>
                                     </TabsList>
@@ -706,7 +705,7 @@ export default function ClientsPage() {
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
                                 <DetailRow label="Dog Sex:" value={briefForSheet.dogSex} />
                                 <DetailRow label="Dog Breed:" value={briefForSheet.dogBreed} />
-                                <DetailRow label="Life &amp; Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
+                                <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
                                 <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
                                 <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
                                 {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
