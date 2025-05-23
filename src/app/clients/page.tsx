@@ -357,6 +357,7 @@ export default function ClientsPage() {
     return clients.filter(client => memberFilter === 'members' ? client.isMember : !client.isMember);
   }, [clients, memberFilter]);
 
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -483,7 +484,7 @@ export default function ClientsPage() {
             return (
               <div
                 key={client.id}
-                className="bg-card shadow-sm rounded-md mb-2 cursor-pointer hover:bg-muted/50 transition-colors px-4 py-2"
+                className="cursor-pointer hover:bg-muted/50 px-4 py-2 border-b border-border last:border-b-0"
                 onClick={() => { setClientForViewSheet(client); setIsViewSheetOpen(true); }}
               >
                 <div className="flex items-center justify-between">
@@ -509,7 +510,7 @@ export default function ClientsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setClientToEdit(client); setIsEditSheetOpen(true); }}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setClientToEdit(client); setIsEditSheetOpen(true); setIsViewSheetOpen(false);}}>
                         Edit Contact
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast({ title: "Schedule Session", description: `Scheduling session for ${displayName} (Feature not fully implemented).`}) }}>
@@ -531,7 +532,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-        <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+        <Sheet open={isEditSheetOpen} onOpenChange={(isOpen) => {setIsEditSheetOpen(isOpen); if(!isOpen) setClientToEdit(null); }}>
           <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>Edit Client</SheetTitle>
@@ -622,16 +623,17 @@ export default function ClientsPage() {
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
-                                    <DetailRow label="Postcode:" value={clientForViewSheet.address.postcode} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.address.postcode} /> {/* Postcode from address object */}
                                   </>
                                 ) : (
-                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} /> 
                                 )}
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
                                 {clientForViewSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(clientForViewSheet.submissionDate)) ? format(parseISO(clientForViewSheet.submissionDate), 'PPP p') : clientForViewSheet.submissionDate} />}
                                 <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
+                                <DetailRow label="Status:" value={clientForViewSheet.isActive ? "Active Client" : "Inactive Client"} />
                                 
-                                <div className="space-y-2 mt-6">
+                                <div className="mt-6 space-y-2">
                                   {clientForViewSheet.behaviouralBriefId && (
                                       <Button onClick={handleViewBrief} className="w-full" variant="outline" disabled={isLoadingBriefForSheet}>
                                       {isLoadingBriefForSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} View Behavioural Brief
@@ -681,8 +683,9 @@ export default function ClientsPage() {
                         {sheetViewMode === 'behaviouralBrief' && briefForSheet && (
                             <div>
                                 <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-lg font-semibold">Behavioural Brief</h4>
                                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><ArrowLeft className="h-4 w-4" /> </Button>
+                                    <h4 className="text-lg font-semibold">Behavioural Brief</h4>
+                                    <div className="w-9 h-9"></div> {/* Spacer */}
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
@@ -700,8 +703,9 @@ export default function ClientsPage() {
                         {sheetViewMode === 'behaviourQuestionnaire' && questionnaireForSheet && (
                             <div>
                                 <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
                                     <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><ArrowLeft className="h-4 w-4" /> </Button>
+                                    <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
+                                     <div className="w-9 h-9"></div> {/* Spacer */}
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
@@ -807,3 +811,4 @@ export default function ClientsPage() {
     
 
     
+
