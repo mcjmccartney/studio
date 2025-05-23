@@ -10,7 +10,7 @@ import {
   getClients,
   updateSessionInFirestore,
 } from '@/lib/firebase';
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
 import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, Tag as TagIcon } from 'lucide-react';
 import Image from 'next/image';
@@ -21,7 +21,6 @@ import {
   SheetTitle,
   SheetFooter,
   SheetTrigger,
-  SheetClose,
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -469,7 +468,7 @@ export default function SessionsPage() {
                         control={addSessionFormControl}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
+                            <SelectTrigger id="clientId-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.clientId && "border-destructive")}>
                                 <SelectValue placeholder="Select a client" />
                             </SelectTrigger>
                             <SelectContent>
@@ -503,9 +502,9 @@ export default function SessionsPage() {
                             id="date-sessionpage"
                             className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.date && "border-destructive")}
                             classNames={{
-                                day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                                day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
                                 day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
-                                day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
+                                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                             }}
                           />
                         )}
@@ -537,7 +536,7 @@ export default function SessionsPage() {
                       control={addSessionFormControl}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
+                          <SelectTrigger id="sessionType-sessionpage" className={cn("w-full focus:ring-0 focus:ring-offset-0", addSessionFormErrors.sessionType ? "border-destructive" : "")}>
                             <SelectValue placeholder="Select session type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -646,19 +645,16 @@ export default function SessionsPage() {
                                <h3 className="font-semibold text-sm">{displayName}</h3>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                     <span className="flex items-center">
-                                        <CalendarIconLucide className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'dd/MM/yyyy') : 'Invalid Date'}
                                     </span>
                                     <span className="sm:inline">•</span>
                                     <span className="flex items-center">
-                                        <Clock className="inline-block mr-1.5 h-3.5 w-3.5" />
                                         {session.time}
                                     </span>
                                     {session.amount !== undefined && (
                                       <>
                                         <span className="sm:inline">•</span>
                                         <span className="flex items-center">
-                                            <DollarSign className="inline-block mr-1.5 h-4 w-4" />
                                             £{session.amount.toFixed(2)}
                                         </span>
                                       </>
@@ -717,12 +713,7 @@ export default function SessionsPage() {
       <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => {setIsSessionSheetOpen(isOpen); if(!isOpen) setSelectedSessionForSheet(null);}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
-              <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => { if (selectedSessionForSheet) { setSessionToEdit(selectedSessionForSheet); setIsEditSessionSheetOpen(true); setIsSessionSheetOpen(false); } }}> <Edit className="h-4 w-4" /> <span className="sr-only">Edit Session</span></Button>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}> <Trash2 className="h-4 w-4" /> <span className="sr-only">Delete Session</span></Button>
-              </div>
-              <SheetTitle>{selectedSessionForSheet ? formatFullNameAndDogName(selectedSessionForSheet.clientName || '', selectedSessionForSheet.dogName) : "Session Details"}</SheetTitle>
-            <Separator/>
+                <SheetTitle>{selectedSessionForSheet ? `Session: ${formatFullNameAndDogName(selectedSessionForSheet.clientName, selectedSessionForSheet.dogName)}` : "Session Details"}</SheetTitle>
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="py-4">
@@ -763,7 +754,7 @@ export default function SessionsPage() {
                     <Controller name="clientId" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet || isLoading}>
-                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
+                        <SelectTrigger id="edit-clientId-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0", editSessionFormErrors.clientId && "border-destructive")}>
                             <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
@@ -786,9 +777,9 @@ export default function SessionsPage() {
                         <ShadCalendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus disabled={isSubmittingSheet} id="edit-date-sessions" 
                           className={cn("!p-1 focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.date && "border-destructive")}
                           classNames={{
-                            day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white rounded-md focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                            day_selected: "bg-[#92351f] text-white focus:bg-[#92351f] focus:text-white !rounded-md",
                             day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
-                            day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none rounded-md")
+                            day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#92351f] hover:text-white focus-visible:outline-none !rounded-md")
                           }} />
                         )} />
                     </div>
@@ -805,7 +796,7 @@ export default function SessionsPage() {
                     <Controller name="sessionType" control={editSessionFormControl}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isSubmittingSheet}>
-                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
+                        <SelectTrigger id="edit-sessionType-sessions" className={cn("w-full focus:ring-0 focus:ring-offset-0",editSessionFormErrors.sessionType && "border-destructive")}>
                             <SelectValue placeholder="Select session type" />
                         </SelectTrigger>
                         <SelectContent><SelectGroup><SelectLabel>Session Types</SelectLabel>
@@ -856,3 +847,5 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+    

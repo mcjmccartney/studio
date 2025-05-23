@@ -4,16 +4,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2, Users as UsersIcon, X, Info, CalendarDays as CalendarIconLucide, Clock, Tag as TagIcon, DollarSign, MoreHorizontal, SquareCheck, FileQuestion } from 'lucide-react';
+import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetFooter,
   SheetTrigger,
   SheetClose,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -363,7 +363,7 @@ export default function ClientsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
         <div className="flex items-center gap-2">
             <Select value={memberFilter} onValueChange={(value) => setMemberFilter(value as MemberFilterType)}>
-              <SelectTrigger className="w-[180px] h-9 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <SelectTrigger className="w-[180px] h-9 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Show: All Clients" />
               </SelectTrigger>
               <SelectContent>
@@ -376,7 +376,7 @@ export default function ClientsPage() {
                 <SheetTrigger asChild>
                   <Button size="sm">New Client</Button>
                 </SheetTrigger>
-                <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+                <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
                     <SheetHeader>
                       <SheetTitle>New Client</SheetTitle>
                       <Separator />
@@ -504,17 +504,16 @@ export default function ClientsPage() {
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" className="h-8 w-8 p-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                         <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
+                        {/* Replaced MoreHorizontal icon with text for debugging, will be reverted or fixed */}
+                        <span>...</span> 
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setClientToEdit(client); setIsEditSheetOpen(true); }}>
-                        <Edit className="mr-2 h-4 w-4" />
                         Edit Contact
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast({ title: "Schedule Session", description: `Scheduling session for ${displayName} (Feature not fully implemented).`}) }}>
-                        <UsersIcon className="mr-2 h-4 w-4" />
                         Schedule Session
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -522,7 +521,6 @@ export default function ClientsPage() {
                         className="text-destructive focus:bg-destructive focus:text-destructive-foreground data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
                         onClick={(e) => { e.stopPropagation(); handleDeleteClientRequest(client); }}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
                         Delete Client
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -535,7 +533,7 @@ export default function ClientsPage() {
       )}
 
         <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-          <SheetContent className="sm:max-w-md bg-card flex flex-col h-full">
+          <SheetContent className="flex flex-col h-full sm:max-w-md bg-card">
             <SheetHeader>
               <SheetTitle>Edit Client</SheetTitle>
               <Separator />
@@ -610,6 +608,7 @@ export default function ClientsPage() {
             <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
                 <SheetHeader>
                     <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
+                    {/* Removed SheetDescription */}
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
@@ -684,7 +683,7 @@ export default function ClientsPage() {
                             <div>
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="text-lg font-semibold">Behavioural Brief</h4>
-                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><Info className="h-4 w-4" /> {/* Changed to Info Icon */} </Button>
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={briefForSheet.dogName} />
@@ -703,7 +702,7 @@ export default function ClientsPage() {
                             <div>
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
-                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><X className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setSheetViewMode('clientInfo')}><Info className="h-4 w-4" /> {/* Changed to Info Icon */} </Button>
                                 </div>
                                 <Separator className="mb-3" />
                                 <DetailRow label="Dog Name:" value={questionnaireForSheet.dogName} />
@@ -806,5 +805,6 @@ export default function ClientsPage() {
     </div>
   );
 }
+    
 
     
