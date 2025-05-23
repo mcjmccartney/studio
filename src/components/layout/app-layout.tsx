@@ -16,14 +16,18 @@ import {
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
-import { Settings, LogOut, Loader2 } from 'lucide-react';
+import { Settings, LogOut, Loader2, Menu as MenuIcon, UserPlus, CalendarPlus, Search as SearchIcon, X as XIcon } from 'lucide-react'; // Corrected import
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Fab } from '@/components/ui/fab'; // FAB component
+import { Fab } from '@/components/ui/fab';
+
+interface AppLayoutProps {
+  children: ReactNode;
+}
 
 const publicPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
 const noSidebarPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
@@ -38,7 +42,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire';
   const hideMainAppLayout = noSidebarPaths.includes(pathname);
 
-  const isMobile = useIsMobile();
+  const isMobileHook = useIsMobile(); // Renamed to avoid conflict with context isMobile
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     setMounted(true);
@@ -53,18 +57,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
       router.replace('/');
     }
   }, [user, authLoading, pathname, router, mounted]);
-
-
-  const handleLogout = async () => {
-    try {
-      await signOutUser();
-      toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      router.replace('/login');
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({ title: "Logout Failed", description: "Could not log you out. Please try again.", variant: "destructive" });
-    }
-  };
   
   if (authLoading || !mounted) {
     return (
@@ -81,8 +73,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         !mounted && "bg-background", 
         mounted && ( 
           useSpecialBackground 
-            ? "bg-[#4f6749]" // Green background for special forms
-            : "bg-background" // Default background for login
+            ? "bg-[#4f6749]" 
+            : "bg-background" 
         ),
       )}>
         {children}
@@ -91,13 +83,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
   
   const AppLayoutContent = () => {
-    const { isMobile: sidebarIsMobile, toggleSidebar } = useSidebar(); 
+    const { isMobile: sidebarIsMobileContext, open: desktopOpen, toggleSidebar } = useSidebar(); 
+    const isIconOnly = sidebarIsMobileContext || !desktopOpen;
+
+    const handleLogout = async () => {
+      try {
+        await signOutUser();
+        toast({ title: "Logged Out", description: "You have been successfully logged out." });
+        router.replace('/login');
+      } catch (error) {
+        console.error("Logout error:", error);
+        toast({ title: "Logout Failed", description: "Could not log you out. Please try again.", variant: "destructive" });
+      }
+    };
 
     return (
       <>
-        <Sidebar variant="sidebar" collapsible="icon" side="left">
+        <Sidebar variant="sidebar" collapsible="icon" side="left" defaultOpen={false}>
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-              {/* Logo removed */}
+              {/* Logo placeholder/text removed as per previous requests */}
             </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarNav />
@@ -106,35 +110,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Button 
                 variant="ghost" 
                 className={cn(
-                  "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center",
-                  sidebarIsMobile && "justify-center" 
+                  "w-full gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  isIconOnly ? '!justify-center !size-8 !p-2' : 'justify-start'
                 )}
               >
-                <Settings className="h-5 w-5" />
-                <span className={cn(
-                  "group-data-[collapsible=icon]:hidden",
-                  sidebarIsMobile && "hidden"
-                )}>Settings</span>
+                <Settings className="h-5 w-5" /> {/* Explicit h-5 w-5, overridden by button variant to size-4 */}
+                <span className={cn(isIconOnly && "hidden")}>Settings</span>
               </Button>
               <Button 
                 variant="ghost" 
                 className={cn(
-                  "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center",
-                   sidebarIsMobile && "justify-center"
+                  "w-full gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  isIconOnly ? '!justify-center !size-8 !p-2' : 'justify-start'
                 )}
                 onClick={handleLogout}
               >
-                <LogOut className="h-5 w-5" />
-                <span className={cn(
-                  "group-data-[collapsible=icon]:hidden",
-                  sidebarIsMobile && "hidden" 
-                )}>Log Out</span>
+                <LogOut className="h-5 w-5" /> {/* Explicit h-5 w-5, overridden by button variant to size-4 */}
+                <span className={cn(isIconOnly && "hidden")}>Log Out</span>
               </Button>
             </SidebarFooter>
           </Sidebar>
 
         <SidebarInset>
-           {/* Header with mobile sidebar trigger removed */}
           <div
             className={cn(
               "flex-1 overflow-auto",
@@ -142,7 +139,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               mounted && (
                 useSpecialBackground
                   ? "bg-[#4f6749]" 
-                  : isMobile ? "bg-[#fafafa] px-4 py-6" : "bg-[#fafafa] p-6" 
+                  : isMobileHook ? "bg-[#fafafa] px-4 py-6" : "bg-[#fafafa] p-6" 
               ),
             )}
           >
@@ -150,7 +147,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </SidebarInset>
         
-        {mounted && isMobile && user && !hideMainAppLayout && (
+        {mounted && isMobileHook && user && !hideMainAppLayout && (
           <Fab />
         )}
       </>
@@ -159,20 +156,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   if (user && !hideMainAppLayout) { 
     return (
-      <SidebarProvider defaultOpen={false}>
+      <SidebarProvider defaultOpen={false}> {/* Default to collapsed */}
         <AppLayoutContent />
       </SidebarProvider>
     );
   }
 
-  // Fallback for non-authenticated public pages that might not be explicitly handled by hideMainAppLayout
   return <main className={cn(
     "flex-1 overflow-auto",
     !mounted && "bg-background", 
     mounted && (
       useSpecialBackground 
-        ? "bg-[#4f6749]" // Green background for special forms
-        : "bg-background" // Default for login or other non-authed public pages
+        ? "bg-[#4f6749]" 
+        : "bg-background" 
     )
   )}>{children}</main>;
 }
+
