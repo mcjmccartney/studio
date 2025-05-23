@@ -5,10 +5,12 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { buttonVariants } from "@/components/ui/button";
 import {
   Loader2,
   ChevronLeft,
@@ -22,7 +24,7 @@ import {
   Tag as TagIcon,
   Info,
   Users,
-  Separator as SeparatorIcon, // Renamed to avoid conflict if Separator component is also used
+  ArrowLeft
 } from 'lucide-react';
 import { DayPicker, type DateFormatter, type DayProps } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -143,6 +145,10 @@ const sessionTypeOptions = [
   'Coaching',
 ];
 
+const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i).padStart(2, '0'), label: String(i).padStart(2, '0') }));
+const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => ({ value: m, label: m }));
+
+
 const DetailRow: React.FC<{ label: string; value?: string | number | null | React.ReactNode; className?: string; }> = ({ label, value, className }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
     return null;
@@ -154,9 +160,6 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | Reac
     </div>
   );
 };
-
-const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i).padStart(2, '0'), label: String(i).padStart(2, '0') }));
-const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => ({ value: m, label: m }));
 
 
 export default function HomePage() {
@@ -223,7 +226,14 @@ export default function HomePage() {
     }
   }, [isAddClientSheetOpen, addClientForm]);
 
-  const addSessionForm = useForm<SessionFormValues>({
+  const { 
+    watch: watchAddSessionForm, 
+    setValue: setAddSessionValue, 
+    control: addSessionFormControl, 
+    reset: resetAddSessionForm, 
+    formState: { errors: addSessionFormErrors }, 
+    handleSubmit: handleAddSessionSubmitHook 
+  } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
       clientId: '',
@@ -234,27 +244,12 @@ export default function HomePage() {
     }
   });
   
-  const { 
-    watch: watchAddSessionForm, 
-    setValue: setAddSessionValue, 
-    control: addSessionFormControl, 
-    reset: resetAddSessionForm, 
-    formState: { errors: addSessionFormErrors }, 
-    handleSubmit: handleAddSessionSubmitHook 
-  } = addSessionForm;
-  
  useEffect(() => {
     if (isAddSessionSheetOpen) {
-       resetAddSessionForm({
-            clientId: '',
-            date: new Date(), // Will be set to today by default
-            time: format(new Date(), "HH:mm"), // Current time in 24h format
-            sessionType: '',
-            amount: undefined,
-       });
+       setAddSessionValue("date", new Date());
+       setAddSessionValue("time", format(new Date(), "HH:mm"));
     }
-  }, [isAddSessionSheetOpen, resetAddSessionForm]);
-
+  }, [isAddSessionSheetOpen, setAddSessionValue]);
 
   const watchedClientIdForAddSession = watchAddSessionForm("clientId");
   const watchedSessionTypeForAddSession = watchAddSessionForm("sessionType");
@@ -274,7 +269,14 @@ export default function HomePage() {
     }
   }, [isAddSessionSheetOpen, watchedClientIdForAddSession, watchedSessionTypeForAddSession, clients, setAddSessionValue]);
 
-  const editSessionForm = useForm<SessionFormValues>({
+  const {
+    watch: watchEditSessionForm,
+    setValue: setEditSessionValue,
+    control: editSessionFormControl,
+    reset: resetEditSessionForm,
+    formState: { errors: editSessionFormErrors },
+    handleSubmit: handleEditSessionSubmitHook,
+  } = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
     defaultValues: {
         clientId: '',
@@ -285,21 +287,12 @@ export default function HomePage() {
     }
   });
 
-  const {
-    watch: watchEditSessionForm,
-    setValue: setEditSessionValue,
-    control: editSessionFormControl,
-    reset: resetEditSessionForm,
-    formState: { errors: editSessionFormErrors },
-    handleSubmit: handleEditSessionSubmitHook,
-  } = editSessionForm;
-
   useEffect(() => {
     if (isEditSessionSheetOpen && sessionToEdit) {
       resetEditSessionForm({
         clientId: sessionToEdit.clientId,
         date: parseISO(sessionToEdit.date),
-        time: sessionToEdit.time, // Already in HH:mm
+        time: sessionToEdit.time, 
         sessionType: sessionToEdit.sessionType || '',
         amount: sessionToEdit.amount,
       });
@@ -341,8 +334,8 @@ export default function HomePage() {
         getSessionsFromFirestore()
       ]);
       setClients(firestoreClients.sort((a, b) => {
-        const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
-        const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
+        const nameA = formatFullNameAndDogName(a.ownerFirstName + " " + a.ownerLastName, a.dogName).toLowerCase();
+        const nameB = formatFullNameAndDogName(b.ownerFirstName + " " + b.ownerLastName, b.dogName).toLowerCase();
         if (nameA < nameB) return -1;
         if (nameA > nameB) return 1;
         return 0;
@@ -464,8 +457,8 @@ export default function HomePage() {
       };
       const newClient = await fbAddClient(clientDataForFirestore);
       setClients(prevClients => [...prevClients, newClient].sort((a, b) => {
-        const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
-        const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
+        const nameA = formatFullNameAndDogName(a.ownerFirstName + " " + a.ownerLastName, a.dogName).toLowerCase();
+        const nameB = formatFullNameAndDogName(b.ownerFirstName + " " + b.ownerLastName, b.dogName).toLowerCase();
         if (nameA < nameB) return -1;
         if (nameA > nameB) return 1;
         return 0;
@@ -667,22 +660,21 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <Card className="shadow-lg flex-1 flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b space-x-4">
+        <div className="flex items-center justify-between py-3"> {/* Removed CardHeader specific classes */}
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" className="h-8 w-8 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft className="h-4 w-4" /></Button>
                 <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-             <div className="flex items-center gap-2 ml-auto">
-                 <Input
-                    type="search"
-                    placeholder="Search sessions..."
-                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 w-full max-w-xs sm:max-w-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                 <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
+            <div className="flex items-center gap-2">
+                <Input
+                  type="search"
+                  placeholder="Search sessions..."
+                  className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 w-full max-w-xs sm:max-w-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
                   <SheetTrigger asChild>
                       <Button size="sm">New Client</Button>
                   </SheetTrigger>
@@ -714,10 +706,10 @@ export default function HomePage() {
                                   <Input id="add-contactEmail-dash" type="email" {...addClientForm.register("contactEmail")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactEmail ? "border-destructive" : "")} disabled={isSubmittingSheet} />
                                   {addClientForm.formState.errors.contactEmail && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactEmail.message}</p>}
                               </div>
-                              <div className="space-y-1.5">
-                                  <Label htmlFor="add-contactNumber-dash">Contact Number</Label>
-                                  <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
-                                  {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
+                               <div className="space-y-1.5">
+                                <Label htmlFor="add-contactNumber-dash">Contact Number</Label>
+                                <Input id="add-contactNumber-dash" type="tel" {...addClientForm.register("contactNumber")} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addClientForm.formState.errors.contactNumber ? "border-destructive" : "")} disabled={isSubmittingSheet} />
+                                {addClientForm.formState.errors.contactNumber && <p className="text-xs text-destructive mt-1">{addClientForm.formState.errors.contactNumber.message}</p>}
                               </div>
                                <div className="space-y-1.5">
                                 <Label htmlFor="add-fullAddress-dash">Address</Label>
@@ -786,7 +778,7 @@ export default function HomePage() {
                                         <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
                                             {clients.map(client => (
                                             <SelectItem key={client.id} value={client.id}>
-                                                {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
+                                                {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
                                             </SelectItem>
                                             ))}
                                         </SelectGroup></SelectContent>
@@ -903,8 +895,9 @@ export default function HomePage() {
                     </SheetContent>
                 </Sheet>
             </div>
-        </CardHeader>
-        <CardContent className="p-0 flex-1">
+        </div>
+        
+        <div className="flex-1"> {/* Removed CardContent p-0 */}
           {isLoadingData ? (
             <div className="flex justify-center items-center h-full"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-3">Loading calendar...</p></div>
           ) : (
@@ -928,22 +921,21 @@ export default function HomePage() {
                   "[&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
                 ),
                 day: "h-full w-full p-0",
-                day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground !rounded-md",
                 day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => { setIsSessionSheetOpen(isOpen); if (!isOpen) {setSelectedSessionForSheet(null); setClientForSelectedSession(null); setSessionSheetViewMode('sessionInfo');} }}>
+      <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => { setIsSessionSheetOpen(isOpen); if (!isOpen) {setSelectedSessionForSheet(null); setClientForSelectedSession(null); setSessionSheetViewMode('sessionInfo'); }}}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
-           <SheetHeader>
+           <SheetHeader className="flex-row justify-between items-center">
                 <SheetTitle>Session Details</SheetTitle>
-                 <Separator/>
             </SheetHeader>
+            <Separator className="mb-4"/>
             <ScrollArea className="flex-1">
                 <div className="py-4">
                 {selectedSessionForSheet && sessionSheetViewMode === 'sessionInfo' && (
@@ -977,7 +969,7 @@ export default function HomePage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                         <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
+                            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behavioural Brief</h4>
                         <div className="w-36"></div> {/* Spacer */}
@@ -998,7 +990,7 @@ export default function HomePage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                          <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
+                            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
                         <div className="w-36"></div> {/* Spacer */}
@@ -1065,7 +1057,7 @@ export default function HomePage() {
                           <SelectContent><SelectGroup><SelectLabel>Clients</SelectLabel>
                               {clients.map(client => (
                               <SelectItem key={client.id} value={client.id}>
-                                  {formatFullNameAndDogName(`${client.ownerFirstName} ${client.ownerLastName}`, client.dogName)}
+                                  {formatFullNameAndDogName(client.ownerFirstName + " " + client.ownerLastName, client.dogName)}
                               </SelectItem>
                               ))}
                           </SelectGroup></SelectContent>
@@ -1092,7 +1084,7 @@ export default function HomePage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-time-dashboard-hours">Booking Time</Label>
-                    <div className="flex gap-2 w-full">
+                     <div className="flex gap-2 w-full">
                         <Controller
                             name="time"
                             control={editSessionFormControl}
@@ -1196,3 +1188,4 @@ export default function HomePage() {
     </div>
   );
 }
+

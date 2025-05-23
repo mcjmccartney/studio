@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Client, Session, BehaviouralBrief, BehaviourQuestionnaire, Address, EditableClientData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Loader2, Edit, Trash2, Users as UsersIcon, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, MoreHorizontal, PawPrint } from 'lucide-react';
+import { Loader2, Edit, Trash2, Info, FileQuestion, ArrowLeft, SquareCheck, CalendarDays as CalendarIconLucide, MoreHorizontal, PawPrint, Users as UsersIcon } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -71,7 +71,7 @@ const internalClientFormSchema = z.object({
   dogName: z.string().optional(),
   contactEmail: z.string().email({ message: "Invalid email address." }),
   contactNumber: z.string().min(5, { message: "Contact number is required." }),
-  fullAddress: z.string().optional(), // For the Textarea
+  fullAddress: z.string().optional(), 
   postcode: z.string().min(3, { message: "Postcode is required." }),
   isMember: z.boolean().optional(),
   isActive: z.boolean().optional(),
@@ -244,7 +244,7 @@ export default function ClientsPage() {
         ownerFirstName: data.ownerFirstName,
         ownerLastName: data.ownerLastName,
         contactEmail: data.contactEmail,
-        contactNumber: data.contactNumber, // Formatting happens in addClientToFirestore
+        contactNumber: data.contactNumber, 
         fullAddress: data.fullAddress || undefined,
         postcode: data.postcode,
         dogName: data.dogName || undefined,
@@ -281,14 +281,14 @@ export default function ClientsPage() {
             ownerLastName: data.ownerLastName,
             dogName: data.dogName || undefined,
             contactEmail: data.contactEmail,
-            contactNumber: data.contactNumber, // Formatting happens in updateClientInFirestore
+            contactNumber: data.contactNumber, 
             fullAddress: data.fullAddress || undefined,
             postcode: data.postcode,
             isMember: data.isMember || false,
             isActive: data.isActive === undefined ? true : data.isActive,
         };
         await updateClientInFirestore(clientToEdit.id, updateData);
-        setClients(prevClients => prevClients.map(c => c.id === clientToEdit.id ? { ...c, ...updateData, contactNumber: formatPhoneNumber(data.contactNumber) || data.contactNumber } : c) // Update local state with formatted number
+        setClients(prevClients => prevClients.map(c => c.id === clientToEdit.id ? { ...c, ...updateData, contactNumber: formatPhoneNumber(data.contactNumber) || data.contactNumber } : c) 
         .sort((a, b) => {
           const nameA = formatFullNameAndDogName(`${a.ownerFirstName} ${a.ownerLastName}`, a.dogName).toLowerCase();
           const nameB = formatFullNameAndDogName(`${b.ownerFirstName} ${b.ownerLastName}`, b.dogName).toLowerCase();
@@ -515,7 +515,7 @@ export default function ClientsPage() {
             return (
               <div
                 key={client.id}
-                className="cursor-pointer hover:bg-muted/50 px-4 py-2 border-b border-border last:border-b-0"
+                className="py-3 border-b border-border last:border-b-0 cursor-pointer hover:bg-muted/50"
                 onClick={() => { setClientForViewSheet(client); setIsViewSheetOpen(true); }}
               >
                 <div className="flex items-center justify-between">
@@ -647,6 +647,7 @@ export default function ClientsPage() {
                 <SheetHeader>
                      <SheetTitle>{clientForViewSheet ? formatFullNameAndDogName(clientForViewSheet.ownerFirstName + " " + clientForViewSheet.ownerLastName, clientForViewSheet.dogName) : "Client Details"}</SheetTitle>
                 </SheetHeader>
+                <Separator className="mb-4"/>
                 <ScrollArea className="flex-1">
                   <div className="py-4"> 
                     {clientForViewSheet && (
@@ -655,23 +656,23 @@ export default function ClientsPage() {
                             <div>
                                 <DetailRow label="Email:" value={clientForViewSheet.contactEmail} />
                                 <DetailRow label="Contact Number:" value={formatPhoneNumber(clientForViewSheet.contactNumber)} />
+                                
                                 {clientForViewSheet.address ? (
-                                  <>
+                                <>
                                     <DetailRow label="Address L1:" value={clientForViewSheet.address.addressLine1} />
                                     {clientForViewSheet.address.addressLine2 && <DetailRow label="Address L2:" value={clientForViewSheet.address.addressLine2} />}
                                     <DetailRow label="City:" value={clientForViewSheet.address.city} />
                                     <DetailRow label="Country:" value={clientForViewSheet.address.country} />
                                     <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                                  </>
+                                </>
                                 ) : clientForViewSheet.fullAddress ? (
-                                  <>
-                                  <DetailRow label="Address:" value={clientForViewSheet.fullAddress} />
-                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
-                                  </>
+                                <>
+                                    <DetailRow label="Address:" value={clientForViewSheet.fullAddress} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                </>
                                 ) : (
-                                  <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
+                                    <DetailRow label="Postcode:" value={clientForViewSheet.postcode} />
                                 )}
-
                                 <DetailRow label="Membership:" value={clientForViewSheet.isMember ? "Active Member" : "Not a Member"} />
                                 <DetailRow label="Status:" value={clientForViewSheet.isActive ? "Active Client" : "Inactive Client"} />
                                 {clientForViewSheet.howHeardAboutServices && <DetailRow label="Heard Via:" value={clientForViewSheet.howHeardAboutServices} />}
@@ -700,9 +701,8 @@ export default function ClientsPage() {
                                         </TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="sessions" className="pt-4">
-                                      {clientSessionsForView.length > 0 ? (
                                         <ul className="space-y-0">
-                                            {clientSessionsForView.map(session => (
+                                            {clientSessionsForView.length > 0 ? clientSessionsForView.map(session => (
                                             <li key={session.id} className="bg-card border border-border rounded-md p-3 mb-2">
                                                 <div className="text-sm font-medium text-foreground">
                                                   {isValid(parseISO(session.date)) ? format(parseISO(session.date), 'PPP') : session.date} at {session.time}
@@ -711,12 +711,11 @@ export default function ClientsPage() {
                                                   {session.sessionType} {session.amount ? `- £${session.amount.toFixed(2)}` : ''}
                                                 </div>
                                             </li>
-                                            ))}
+                                            )) : (
+                                            <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded for this client.</p>
+                                            )}
                                         </ul>
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-4">No sessions recorded for this client.</p>
-                                      )}
-                                    </TabsContent>
+                                      </TabsContent>
                                     <TabsContent value="membership" className="pt-4">
                                       <p className="text-sm text-muted-foreground text-center py-4">Membership details are not yet available.</p>
                                     </TabsContent>
@@ -738,7 +737,7 @@ export default function ClientsPage() {
                                 <DetailRow label="Life & Help Needed:" value={briefForSheet.lifeWithDogAndHelpNeeded} />
                                 <DetailRow label="Best Outcome:" value={briefForSheet.bestOutcome} />
                                 <DetailRow label="Ideal Sessions:" value={briefForSheet.idealSessionTypes?.join(', ')} />
-                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
+                                {briefForSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(briefForSheet.submissionDate)) ? format(parseISO(briefForSessionSheet.submissionDate), 'PPP p') : briefForSheet.submissionDate} />}
                             </div>
                         )}
                         {isLoadingBriefForSheet && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
@@ -853,3 +852,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+
