@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
-  useSidebar, // Import useSidebar
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Fab } from '@/components/ui/fab'; // Import the new FAB component
+import { Fab } from '@/components/ui/fab';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -37,9 +37,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const sidebarContext = useSidebar(); // Get sidebar context for the FAB
+  // Removed: const sidebarContext = useSidebar(); // This was causing the error
 
-  const useSpecialBackground = pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire';
+  const useSpecialBackground =
+    pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire';
   const hideMainAppLayout = noSidebarPaths.includes(pathname);
 
   const isMobile = useIsMobile();
@@ -81,24 +82,29 @@ export default function AppLayout({ children }: AppLayoutProps) {
   if (hideMainAppLayout || (!user && publicPaths.includes(pathname))) {
     return (
       <main className={cn(
-        useSpecialBackground ? "bg-[#4f6749]" : "bg-background",
-        (pathname === '/behavioural-brief' || pathname === '/behaviour-questionnaire') && "min-h-screen"
+        "flex-1 overflow-auto",
+        !mounted && "bg-background p-6", // SSR and initial client render
+        mounted && ( // After client-side mount
+          useSpecialBackground 
+            ? "bg-[#4f6749]" // public-intake, behaviour-questionnaire
+            : "bg-background" // All other pages
+        ),
+        mounted && isMobile && "pb-0" // Remove bottom padding if FAB is present
       )}>
         {children}
       </main>
     );
   }
   
-  // This inner component is needed because useSidebar must be used within SidebarProvider
   const AppLayoutContent = () => {
-    const { toggleSidebar } = useSidebar(); // Get toggleSidebar from context
+    const { toggleSidebar } = useSidebar();
 
     return (
       <>
         {mounted && !isMobile && (
           <Sidebar variant="sidebar" collapsible="icon" side="left">
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-              {/* Logo image removed previously */}
+              {/* Logo removed */}
             </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarNav />
@@ -121,9 +127,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
 
         <SidebarInset>
-           {mounted && isMobile && (
+           {mounted && isMobile && user && (
             <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-              <SidebarTrigger className="md:hidden" /> {/* For mobile slide-out sidebar */}
+              <SidebarTrigger className="md:hidden" />
               <div className="flex-1">
                 {/* Page title could go here */}
               </div>
@@ -135,9 +141,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
               !mounted && "bg-background p-6",
               mounted && (
                 useSpecialBackground 
-                  ? "bg-[#4f6749]" // public-intake, behaviour-questionnaire
-                  : "bg-background p-6" // All other pages including dashboard
-              )
+                  ? "bg-[#4f6749]"
+                  : "bg-background p-6"
+              ),
+              mounted && isMobile && "pb-0"
             )}
           >
             {children}
@@ -160,6 +167,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // Fallback for non-user, non-public path (should be caught by redirection logic, but good for safety)
-  return <main className={cn(useSpecialBackground ? "bg-[#4f6749]" : "bg-background")}>{children}</main>;
+  return <main className={cn(
+    "flex-1 overflow-auto",
+    !mounted && "bg-background p-6",
+    mounted && (
+      useSpecialBackground 
+        ? "bg-[#4f6749]"
+        : "bg-background"
+    ),
+    mounted && isMobile && "pb-0"
+  )}>{children}</main>;
 }
