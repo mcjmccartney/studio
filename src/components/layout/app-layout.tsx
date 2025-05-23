@@ -82,13 +82,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return (
       <main className={cn(
         "flex-1 overflow-auto",
-        !mounted && "bg-background", // SSR and initial client render - remove p-6 if page specific
-        mounted && ( // After client-side mount
+        !mounted && "bg-background", 
+        mounted && ( 
           useSpecialBackground 
-            ? "bg-[#4f6749]" // public forms
-            : "bg-background" // Default for other pages like login
+            ? "bg-[#4f6749]" 
+            : "bg-background"
         ),
-         // No general padding, pages handle their own
       )}>
         {children}
       </main>
@@ -96,14 +95,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
   
   const AppLayoutContent = () => {
-    const { toggleSidebar, isMobile: sidebarIsMobile } = useSidebar(); // Use isMobile from context for consistency
+    const { isMobile: sidebarIsMobile } = useSidebar(); 
 
     return (
       <>
-        {mounted && !sidebarIsMobile && (
-          <Sidebar variant="sidebar" collapsible="icon" side="left">
+        <Sidebar variant="sidebar" collapsible="icon" side="left">
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-              {/* Logo removed */}
+              {/* Logo is removed */}
             </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarNav />
@@ -113,48 +111,47 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 variant="ghost" 
                 className={cn(
                   "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center",
-                  sidebarIsMobile && "justify-center" // For narrow mobile sheet
+                  sidebarIsMobile && "justify-center" 
                 )}
               >
                 <Settings className="h-5 w-5" />
                 <span className={cn(
                   "group-data-[collapsible=icon]:hidden",
-                  sidebarIsMobile && "hidden" // For narrow mobile sheet
+                  sidebarIsMobile && "hidden"
                 )}>Settings</span>
               </Button>
               <Button 
                 variant="ghost" 
                 className={cn(
                   "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center",
-                   sidebarIsMobile && "justify-center" // For narrow mobile sheet
+                   sidebarIsMobile && "justify-center"
                 )}
                 onClick={handleLogout}
               >
                 <LogOut className="h-5 w-5" />
                 <span className={cn(
                   "group-data-[collapsible=icon]:hidden",
-                  sidebarIsMobile && "hidden" // For narrow mobile sheet
+                  sidebarIsMobile && "hidden" 
                 )}>Log Out</span>
               </Button>
             </SidebarFooter>
           </Sidebar>
-        )}
 
         <SidebarInset>
            {mounted && sidebarIsMobile && user && !noSidebarPaths.includes(pathname) && (
             <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-              <SidebarTrigger className="md:hidden" /> {/* This trigger opens the mobile Sheet */}
+              <SidebarTrigger className="md:hidden" /> 
               <div className="flex-1">
                 {/* Page title could go here */}
               </div>
             </header>
            )}
           <div
-             className={cn(
+            className={cn(
               "flex-1 overflow-auto",
-              !mounted && "bg-background p-6", 
+              !mounted && "bg-background p-6",
               mounted && (
-                useSpecialBackground 
+                useSpecialBackground
                   ? "bg-[#4f6749]" 
                   : "bg-[#fafafa] p-6" 
               ),
@@ -165,22 +162,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </SidebarInset>
         
         {mounted && sidebarIsMobile && user && !noSidebarPaths.includes(pathname) && (
-          <Fab onClick={toggleSidebar} />
+          <Fab /> // Removed onClick={toggleSidebar}
         )}
       </>
     );
   };
 
-
-  if (user && !hideMainAppLayout) { // hideMainAppLayout logic already considers noSidebarPaths
+  if (user && !hideMainAppLayout) { 
     return (
-      <SidebarProvider defaultOpen={false}> {/* defaultOpen=false makes desktop sidebar start collapsed */}
+      <SidebarProvider defaultOpen={false}>
         <AppLayoutContent />
       </SidebarProvider>
     );
   }
 
-  // Fallback for login page or public forms if no user (though already handled by hideMainAppLayout)
   return <main className={cn(
     "flex-1 overflow-auto",
     !mounted && "bg-background", 
