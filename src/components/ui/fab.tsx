@@ -1,7 +1,7 @@
 
 "use client";
 
-import type * as React from "react";
+import * as React from "react"; // Changed from "import type"
 import { Menu } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
