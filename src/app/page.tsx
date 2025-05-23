@@ -22,9 +22,8 @@ import {
   Tag as TagIcon,
   Info,
   Users,
-  ArrowLeft,
+  Separator as SeparatorIcon, // Renamed to avoid conflict if Separator component is also used
 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { DayPicker, type DateFormatter, type DayProps } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import type { Session, Client, EditableClientData, BehaviouralBrief, BehaviourQuestionnaire } from '@/lib/types';
@@ -99,9 +98,10 @@ import {
   getBehaviourQuestionnaireById,
 } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { cn, formatFullNameAndDogName, formatPhoneNumber } from '@/lib/utils';
+import { cn, formatFullNameAndDogName } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar as ShadCalendar } from '@/components/ui/calendar';
+import { Separator } from '@/components/ui/separator';
 
 
 const internalClientFormSchema = z.object({
@@ -120,14 +120,14 @@ type InternalClientFormValuesDash = z.infer<typeof internalClientFormSchema>;
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: 'Client selection is required.' }),
-  date: z.date({ required_error: 'Session date is required.' }),
+  date: z.date({ required_error: 'Booking Date is required.' }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: 'Invalid time format. Use HH:MM (24-hour).',
   }),
   sessionType: z.string().min(1, { message: 'Session type is required.' }),
   amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
-    z.number().nonnegative({ message: 'Amount must be a positive number.' }).optional()
+    z.number().nonnegative({ message: 'Quote must be a positive number.' }).optional()
   ),
 });
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
@@ -156,7 +156,7 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | Reac
 };
 
 const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i).padStart(2, '0'), label: String(i).padStart(2, '0') }));
-const minuteOptions = ['00', '15', '30', '45'].map(m => ({ value: m, label: m }));
+const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => ({ value: m, label: m }));
 
 
 export default function HomePage() {
@@ -173,7 +173,7 @@ export default function HomePage() {
 
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
 
-  const [isSessionDetailSheetOpen, setIsSessionDetailSheetOpen] = useState(false);
+  const [isSessionSheetOpen, setIsSessionSheetOpen] = useState(false);
   const [selectedSessionForSheet, setSelectedSessionForSheet] = useState<Session | null>(null);
   
   const [clientForSelectedSession, setClientForSelectedSession] = useState<Client | null>(null);
@@ -247,8 +247,8 @@ export default function HomePage() {
     if (isAddSessionSheetOpen) {
        resetAddSessionForm({
             clientId: '',
-            date: new Date(),
-            time: format(new Date(), "HH:mm"),
+            date: new Date(), // Will be set to today by default
+            time: format(new Date(), "HH:mm"), // Current time in 24h format
             sessionType: '',
             amount: undefined,
        });
@@ -299,7 +299,7 @@ export default function HomePage() {
       resetEditSessionForm({
         clientId: sessionToEdit.clientId,
         date: parseISO(sessionToEdit.date),
-        time: sessionToEdit.time,
+        time: sessionToEdit.time, // Already in HH:mm
         sessionType: sessionToEdit.sessionType || '',
         amount: sessionToEdit.amount,
       });
@@ -381,7 +381,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (isSessionDetailSheetOpen && selectedSessionForSheet && selectedSessionForSheet.clientId) {
+    if (isSessionSheetOpen && selectedSessionForSheet && selectedSessionForSheet.clientId) {
       setSessionSheetViewMode('sessionInfo'); 
       setBriefForSessionSheet(null);
       setQuestionnaireForSessionSheet(null);
@@ -400,7 +400,7 @@ export default function HomePage() {
     } else {
       setClientForSelectedSession(null);
     }
-  }, [isSessionDetailSheetOpen, selectedSessionForSheet, toast]);
+  }, [isSessionSheetOpen, selectedSessionForSheet, toast]);
 
 
   const handleViewBriefForSession = async () => {
@@ -590,7 +590,7 @@ export default function HomePage() {
       await deleteSessionFromFirestore(sessionToDelete.id);
       setSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
       toast({ title: "Session Deleted", description: "The session has been deleted." });
-      setIsSessionDetailSheetOpen(false); 
+      setIsSessionSheetOpen(false); 
       setSelectedSessionForSheet(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to delete session.";
@@ -635,7 +635,7 @@ export default function HomePage() {
         </div>
 
         {daySessions.length > 0 && (
-          <ScrollArea className="w-full flex-1">
+          <ScrollArea className="w-full mt-5 pr-1">
             <div className="space-y-1">
               {daySessions.map((session) => (
                 <Badge
@@ -643,7 +643,7 @@ export default function HomePage() {
                   className="block w-full text-left text-xs p-1 truncate cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80 rounded-md"
                   onClick={() => {
                     setSelectedSessionForSheet(session);
-                    setIsSessionDetailSheetOpen(true);
+                    setIsSessionSheetOpen(true);
                   }}
                 >
                   {session.time} - {formatFullNameAndDogName(session.clientName, session.dogName)}
@@ -674,16 +674,14 @@ export default function HomePage() {
                 <h2 className="text-lg font-semibold text-center min-w-[120px]">{format(currentMonth, 'MMMM yyyy')}</h2>
                 <Button variant="outline" size="icon" className="h-8 w-8 focus-visible:ring-0 focus-visible:ring-offset-0" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-            <div className="flex items-center gap-2 ml-auto">
-                <div className="w-full max-w-xs sm:max-w-sm">
-                    <Input
-                        type="search"
-                        placeholder="Search sessions..."
-                        className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 w-full"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+             <div className="flex items-center gap-2 ml-auto">
+                 <Input
+                    type="search"
+                    placeholder="Search sessions..."
+                    className="h-9 focus-visible:ring-0 focus-visible:ring-offset-0 w-full max-w-xs sm:max-w-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                  <Sheet open={isAddClientSheetOpen} onOpenChange={setIsAddClientSheetOpen}>
                   <SheetTrigger asChild>
                       <Button size="sm">New Client</Button>
@@ -799,7 +797,7 @@ export default function HomePage() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="date-dashboard">Date</Label>
+                                    <Label htmlFor="date-dashboard">Booking Date</Label>
                                     <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                                     <Controller name="date" control={addSessionFormControl}
                                         render={({ field }) => (
@@ -816,7 +814,7 @@ export default function HomePage() {
                                 </div>
 
                                  <div className="space-y-1.5">
-                                    <Label htmlFor="time-dashboard-hours">Time</Label>
+                                    <Label htmlFor="time-dashboard-hours">Booking Time</Label>
                                     <div className="flex gap-2 w-full">
                                         <Controller
                                             name="time"
@@ -887,7 +885,7 @@ export default function HomePage() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="amount-dashboard">Amount</Label>
+                                    <Label htmlFor="amount-dashboard">Quote</Label>
                                     <Controller name="amount" control={addSessionFormControl}
                                     render={({ field }) => (
                                         <Input id="amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", addSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
@@ -931,7 +929,7 @@ export default function HomePage() {
                 ),
                 day: "h-full w-full p-0",
                 day_selected: "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none",
+                day_today: "ring-2 ring-custom-ring-color rounded-md ring-offset-background ring-offset-1 text-custom-ring-color font-semibold focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none", 
                 day_outside: "text-muted-foreground opacity-50",
               }}
               components={{ DayContent: CustomDayContent }}
@@ -940,7 +938,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <Sheet open={isSessionDetailSheetOpen} onOpenChange={(isOpen) => { setIsSessionDetailSheetOpen(isOpen); if (!isOpen) {setSelectedSessionForSheet(null); setClientForSelectedSession(null); setSessionSheetViewMode('sessionInfo');} }}>
+      <Sheet open={isSessionSheetOpen} onOpenChange={(isOpen) => { setIsSessionSheetOpen(isOpen); if (!isOpen) {setSelectedSessionForSheet(null); setClientForSelectedSession(null); setSessionSheetViewMode('sessionInfo');} }}>
         <SheetContent className="flex flex-col h-full sm:max-w-lg bg-card">
            <SheetHeader>
                 <SheetTitle>Session Details</SheetTitle>
@@ -954,7 +952,7 @@ export default function HomePage() {
                     <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                     <DetailRow label="Time:" value={selectedSessionForSheet.time} />
                     <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
-                    {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
+                    {selectedSessionForSheet.amount !== undefined && <DetailRow label="Quote:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
                     
                     {isLoadingClientForSession && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin"/> <span className="ml-2">Loading client info...</span></div>}
                     
@@ -979,10 +977,10 @@ export default function HomePage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                         <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behavioural Brief</h4>
-                        <div className="w-16"></div> {/* Spacer */}
+                        <div className="w-36"></div> {/* Spacer */}
                     </div>
                     <Separator className="mb-3" />
                     <DetailRow label="Dog Name:" value={briefForSessionSheet.dogName} />
@@ -1000,15 +998,18 @@ export default function HomePage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                          <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
-                        <div className="w-16"></div> {/* Spacer */}
+                        <div className="w-36"></div> {/* Spacer */}
                     </div>
                     <Separator className="mb-3" />
                     <DetailRow label="Dog Name:" value={questionnaireForSessionSheet.dogName} />
                     <DetailRow label="Dog Age:" value={questionnaireForSessionSheet.dogAge} />
-                    {/* ... (add all other questionnaire fields as DetailRow) ... */}
+                    <DetailRow label="Dog Sex:" value={questionnaireForSessionSheet.dogSex} />
+                    <DetailRow label="Dog Breed:" value={questionnaireForSessionSheet.dogBreed} />
+                    <DetailRow label="Neutered/Spayed:" value={questionnaireForSessionSheet.neuteredSpayedDetails} />
+                    <DetailRow label="Main Problem:" value={questionnaireForSessionSheet.mainProblem} />
                     <DetailRow label="Time for Training:" value={questionnaireForSessionSheet.timeDedicatedToTraining} />
                     {questionnaireForSessionSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(questionnaireForSessionSheet.submissionDate)) ? format(parseISO(questionnaireForSessionSheet.submissionDate), 'PPP p') : questionnaireForSessionSheet.submissionDate} />}
                 </div>
@@ -1025,10 +1026,9 @@ export default function HomePage() {
                         if (selectedSessionForSheet) {
                         setSessionToEdit(selectedSessionForSheet);
                         setIsEditSessionSheetOpen(true);
-                        setIsSessionDetailSheetOpen(false); 
+                        setIsSessionSheetOpen(false); 
                         }
                     }}
-                    disabled={sessionSheetViewMode !== 'sessionInfo'}
                     >
                     Edit Session
                 </Button>
@@ -1036,7 +1036,7 @@ export default function HomePage() {
                     variant="destructive"
                     className="w-1/2"
                     onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}
-                    disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id || sessionSheetViewMode !== 'sessionInfo'}
+                    disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id}
                     >
                     {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     Delete Session
@@ -1075,7 +1075,7 @@ export default function HomePage() {
                       {editSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.clientId.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                      <Label htmlFor="edit-date-dashboard">Date</Label>
+                      <Label htmlFor="edit-date-dashboard">Booking Date</Label>
                        <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller name="date" control={editSessionFormControl}
                           render={({ field }) => (
@@ -1091,7 +1091,7 @@ export default function HomePage() {
                       {editSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.date.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit-time-dashboard-hours">Time</Label>
+                    <Label htmlFor="edit-time-dashboard-hours">Booking Time</Label>
                     <div className="flex gap-2 w-full">
                         <Controller
                             name="time"
@@ -1159,7 +1159,7 @@ export default function HomePage() {
                       {editSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.sessionType.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                      <Label htmlFor="edit-amount-dashboard">Amount</Label>
+                      <Label htmlFor="edit-amount-dashboard">Quote</Label>
                       <Controller name="amount" control={editSessionFormControl}
                       render={({ field }) => (
                           <Input id="edit-amount-dashboard" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />

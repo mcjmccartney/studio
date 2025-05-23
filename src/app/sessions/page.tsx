@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import { format, parseISO, isValid, parse } from 'date-fns';
-import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, Tag as TagIcon, ArrowLeft } from 'lucide-react';
+import { Edit, Trash2, Clock, CalendarDays as CalendarIconLucide, DollarSign, MoreHorizontal, Loader2, Info, Tag as TagIcon, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 import {
   Sheet,
@@ -76,12 +76,12 @@ import { Separator } from '@/components/ui/separator';
 
 const sessionFormSchema = z.object({
   clientId: z.string().min(1, { message: "Client selection is required." }),
-  date: z.date({ required_error: "Session date is required." }),
+  date: z.date({ required_error: "Booking Date is required." }),
   time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format. Use HH:MM." }),
   sessionType: z.string().min(1, { message: 'Session type is required.' }),
   amount: z.preprocess(
     (val) => (String(val).trim() === '' ? undefined : parseFloat(String(val))),
-    z.number().nonnegative({ message: 'Amount must be a positive number.' }).optional()
+    z.number().nonnegative({ message: 'Quote must be a positive number.' }).optional()
   ),
 });
 
@@ -115,7 +115,7 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null | Reac
 };
 
 const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i).padStart(2, '0'), label: String(i).padStart(2, '0') }));
-const minuteOptions = ['00', '15', '30', '45'].map(m => ({ value: m, label: m }));
+const minuteOptions = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => ({ value: m, label: m }));
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -556,7 +556,7 @@ export default function SessionsPage() {
                     {addSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.clientId.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="date-sessionpage">Date</Label>
+                    <Label htmlFor="date-sessionpage">Booking Date</Label>
                     <div className={cn("flex justify-center w-full", addSessionFormErrors.date && "border-destructive border rounded-md")}>
                       <Controller
                         name="date"
@@ -582,7 +582,7 @@ export default function SessionsPage() {
                     {addSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.date.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="time-sessionpage-hours">Time</Label>
+                    <Label htmlFor="time-sessionpage-hours">Booking Time</Label>
                     <div className="flex gap-2 w-full">
                         <Controller
                             name="time"
@@ -659,7 +659,7 @@ export default function SessionsPage() {
                     {addSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{addSessionFormErrors.sessionType.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="amount-sessionpage">Amount</Label>
+                    <Label htmlFor="amount-sessionpage">Quote</Label>
                     <Controller name="amount" control={addSessionFormControl}
                         render={({ field }) => (
                         <Input
@@ -830,7 +830,7 @@ export default function SessionsPage() {
                         <DetailRow label="Date:" value={isValid(parseISO(selectedSessionForSheet.date)) ? format(parseISO(selectedSessionForSheet.date), 'PPP') : 'Invalid Date'} />
                         <DetailRow label="Time:" value={selectedSessionForSheet.time} />
                         <DetailRow label="Session Type:" value={selectedSessionForSheet.sessionType} />
-                        {selectedSessionForSheet.amount !== undefined && <DetailRow label="Amount:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
+                        {selectedSessionForSheet.amount !== undefined && <DetailRow label="Quote:" value={`£${selectedSessionForSheet.amount.toFixed(2)}`} />}
                         
                         {isLoadingClientForSession && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin"/> <span className="ml-2">Loading client info...</span></div>}
                         
@@ -854,10 +854,10 @@ export default function SessionsPage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                         <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behavioural Brief</h4>
-                        <div className="w-16"></div> {/* Spacer */}
+                        <div className="w-36"></div> {/* Spacer */}
                     </div>
                     <Separator className="mb-3" />
                     <DetailRow label="Dog Name:" value={briefForSessionSheet.dogName} />
@@ -875,15 +875,18 @@ export default function SessionsPage() {
                 <div>
                     <div className="flex justify-between items-center mb-3">
                          <Button variant="ghost" size="sm" onClick={() => setSessionSheetViewMode('sessionInfo')} className="px-2">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Session Info
                         </Button>
                         <h4 className="text-lg font-semibold">Behaviour Questionnaire</h4>
-                        <div className="w-16"></div> {/* Spacer */}
+                        <div className="w-36"></div> {/* Spacer */}
                     </div>
                     <Separator className="mb-3" />
                     <DetailRow label="Dog Name:" value={questionnaireForSessionSheet.dogName} />
                     <DetailRow label="Dog Age:" value={questionnaireForSessionSheet.dogAge} />
-                    {/* ... (add all other questionnaire fields as DetailRow) ... */}
+                    <DetailRow label="Dog Sex:" value={questionnaireForSessionSheet.dogSex} />
+                    <DetailRow label="Dog Breed:" value={questionnaireForSessionSheet.dogBreed} />
+                    <DetailRow label="Neutered/Spayed:" value={questionnaireForSessionSheet.neuteredSpayedDetails} />
+                    <DetailRow label="Main Problem:" value={questionnaireForSessionSheet.mainProblem} />
                     <DetailRow label="Time for Training:" value={questionnaireForSessionSheet.timeDedicatedToTraining} />
                     {questionnaireForSessionSheet.submissionDate && <DetailRow label="Submitted:" value={isValid(parseISO(questionnaireForSessionSheet.submissionDate)) ? format(parseISO(questionnaireForSessionSheet.submissionDate), 'PPP p') : questionnaireForSessionSheet.submissionDate} />}
                 </div>
@@ -903,7 +906,6 @@ export default function SessionsPage() {
                             setIsSessionSheetOpen(false);
                         }
                     }}
-                    disabled={sessionSheetViewMode !== 'sessionInfo'}
                 >
                     Edit Session
                 </Button>
@@ -911,7 +913,7 @@ export default function SessionsPage() {
                     variant="destructive" 
                     className="w-1/2"
                     onClick={() => selectedSessionForSheet && handleDeleteSessionRequest(selectedSessionForSheet)}  
-                    disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id || sessionSheetViewMode !== 'sessionInfo'}
+                    disabled={isSubmittingSheet && sessionToDelete !== null && sessionToDelete.id === selectedSessionForSheet?.id}
                 >
                     {isSubmittingSheet && sessionToDelete?.id === selectedSessionForSheet?.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     Delete Session
@@ -950,7 +952,7 @@ export default function SessionsPage() {
                     {editSessionFormErrors.clientId && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.clientId.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                    <Label htmlFor="edit-date-sessions">Date</Label>
+                    <Label htmlFor="edit-date-sessions">Booking Date</Label>
                     <div className={cn("flex justify-center w-full", editSessionFormErrors.date && "border-destructive border rounded-md")}>
                     <Controller name="date" control={editSessionFormControl}
                         render={({ field }) => (
@@ -966,7 +968,7 @@ export default function SessionsPage() {
                     {editSessionFormErrors.date && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.date.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                    <Label htmlFor="edit-time-sessions-hours">Time</Label>
+                    <Label htmlFor="edit-time-sessions-hours">Booking Time</Label>
                      <div className="flex gap-2 w-full">
                         <Controller
                             name="time"
@@ -1034,7 +1036,7 @@ export default function SessionsPage() {
                     {editSessionFormErrors.sessionType && <p className="text-xs text-destructive mt-1">{editSessionFormErrors.sessionType.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                    <Label htmlFor="edit-amount-sessions">Amount</Label>
+                    <Label htmlFor="edit-amount-sessions">Quote</Label>
                     <Controller name="amount" control={editSessionFormControl}
                     render={({ field }) => (
                         <Input id="edit-amount-sessions" type="number" placeholder="e.g. 75.50" step="0.01" {...field} value={field.value === undefined ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} className={cn("w-full focus-visible:ring-0 focus-visible:ring-offset-0", editSessionFormErrors.amount && "border-destructive")} disabled={isSubmittingSheet} />
