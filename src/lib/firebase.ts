@@ -336,6 +336,25 @@ export const getClients = async (): Promise<Client[]> => {
   }
 };
 
+export const getClientById = async (clientId: string): Promise<Client | null> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !clientId) {
+    console.warn("Firebase project ID or Client ID is not set. Skipping Firestore fetch for client.");
+    return null;
+  }
+  try {
+    const clientDocRef = doc(clientsCollectionRef, clientId);
+    const clientSnap = await getDoc(clientDocRef);
+    if (clientSnap.exists()) {
+      return clientSnap.data();
+    }
+    console.log(`No client found with ID: ${clientId}`);
+    return null;
+  } catch (error) {
+    console.error(`Error fetching client with ID ${clientId}:`, error);
+    return null;
+  }
+};
+
 export const addClientToFirestore = async (clientData: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId' | 'createdAt' | 'address' | 'howHeardAboutServices' | 'lastSession' | 'nextSession'> & { dogName?: string; isMember?: boolean, isActive?: boolean, submissionDate?: string }): Promise<Client> => {
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     throw new Error("Firebase project ID is not set. Cannot add client.");
@@ -497,8 +516,9 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
             addressLine2: formData.addressLine2 || undefined,
             city: formData.city,
             country: formData.country,
+            // postcode: formData.postcode, // Postcode is now part of client.postcode
         };
-        updates.postcode = formData.postcode;
+         updates.postcode = formData.postcode; // Ensure top-level postcode is also updated
     }
     if (formData.howHeardAboutServices) {
         updates.howHeardAboutServices = formData.howHeardAboutServices;
@@ -518,7 +538,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
 
 
     if (Object.keys(updates).length > 0) {
-        await updateDoc(doc(clientsCollectionRef, targetClientId), updates);
+        await updateDoc(doc(clientsCollectionRef, targetClientId), updates as DocumentData); // Cast to DocumentData
         clientDataForReturn = { ...clientDataForReturn, ...updates };
     }
 
@@ -529,6 +549,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
       addressLine2: formData.addressLine2 || undefined,
       city: formData.city,
       country: formData.country,
+      // postcode: formData.postcode // postcode is directly on Client type now
     };
 
     const newClientRecord: Omit<Client, 'id' | 'behaviouralBriefId' | 'behaviourQuestionnaireId'> = {
@@ -536,7 +557,7 @@ export const addClientAndBehaviourQuestionnaireToFirestore = async (
       ownerLastName: formData.ownerLastName,
       contactEmail: formData.contactEmail,
       contactNumber: formData.contactNumber,
-      postcode: formData.postcode,
+      postcode: formData.postcode, // Use top-level postcode
       dogName: formData.dogName,
       isMember: false, 
       isActive: true, 
@@ -699,15 +720,12 @@ export const updateSessionInFirestore = async (sessionId: string, sessionData: P
   }
   const sessionDocRef = doc(sessionsCollectionRef, sessionId);
   
-  // Create an update object with only the defined fields in sessionData
   const updateData: DocumentData = {};
   if (sessionData.clientId !== undefined) updateData.clientId = sessionData.clientId;
   if (sessionData.date !== undefined) updateData.date = sessionData.date;
   if (sessionData.time !== undefined) updateData.time = sessionData.time;
   if (sessionData.sessionType !== undefined) updateData.sessionType = sessionData.sessionType;
   
-  // Handle amount carefully: if it's explicitly set to undefined, it means clear it (store as null)
-  // If it's a number (including 0), store it. If it's not in sessionData, don't touch it.
   if (sessionData.hasOwnProperty('amount')) {
     updateData.amount = sessionData.amount === undefined ? null : sessionData.amount;
   }
@@ -747,6 +765,3 @@ export const signOutUser = async () => {
 };
 
 export { db, app, auth, onAuthStateChanged, Timestamp, serverTimestamp, type User };
-
-
-    
