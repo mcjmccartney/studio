@@ -16,18 +16,14 @@ import {
 } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/navigation/sidebar-nav';
 import { Button } from '@/components/ui/button';
-import { Settings, LogOut, Loader2, PanelLeft } from 'lucide-react';
+import { Settings, LogOut, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Fab } from '@/components/ui/fab';
-
-interface AppLayoutProps {
-  children: ReactNode;
-}
+import { Fab } from '@/components/ui/fab'; // FAB component
 
 const publicPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
 const noSidebarPaths = ['/login', '/behavioural-brief', '/behaviour-questionnaire'];
@@ -85,8 +81,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         !mounted && "bg-background", 
         mounted && ( 
           useSpecialBackground 
-            ? "bg-[#4f6749]" 
-            : "bg-background"
+            ? "bg-[#4f6749]" // Green background for special forms
+            : "bg-background" // Default background for login
         ),
       )}>
         {children}
@@ -95,13 +91,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
   
   const AppLayoutContent = () => {
-    const { isMobile: sidebarIsMobile } = useSidebar(); 
+    const { isMobile: sidebarIsMobile, toggleSidebar } = useSidebar(); 
 
     return (
       <>
         <Sidebar variant="sidebar" collapsible="icon" side="left">
             <SidebarHeader className="px-4 py-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
-              {/* Logo is removed */}
+              {/* Logo removed */}
             </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarNav />
@@ -138,22 +134,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Sidebar>
 
         <SidebarInset>
-           {mounted && sidebarIsMobile && user && !noSidebarPaths.includes(pathname) && (
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-              <SidebarTrigger className="md:hidden" /> 
-              <div className="flex-1">
-                {/* Page title could go here */}
-              </div>
-            </header>
-           )}
+           {/* Header with mobile sidebar trigger removed */}
           <div
             className={cn(
               "flex-1 overflow-auto",
-              !mounted && "bg-background p-6",
+              !mounted && "bg-background p-6", 
               mounted && (
                 useSpecialBackground
                   ? "bg-[#4f6749]" 
-                  : "bg-[#fafafa] p-6" 
+                  : isMobile ? "bg-[#fafafa] px-4 py-6" : "bg-[#fafafa] p-6" 
               ),
             )}
           >
@@ -161,8 +150,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </SidebarInset>
         
-        {mounted && sidebarIsMobile && user && !noSidebarPaths.includes(pathname) && (
-          <Fab /> // Removed onClick={toggleSidebar}
+        {mounted && isMobile && user && !hideMainAppLayout && (
+          <Fab />
         )}
       </>
     );
@@ -176,13 +165,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
+  // Fallback for non-authenticated public pages that might not be explicitly handled by hideMainAppLayout
   return <main className={cn(
     "flex-1 overflow-auto",
     !mounted && "bg-background", 
     mounted && (
       useSpecialBackground 
-        ? "bg-[#4f6749]"
-        : "bg-background" 
+        ? "bg-[#4f6749]" // Green background for special forms
+        : "bg-background" // Default for login or other non-authed public pages
     )
   )}>{children}</main>;
 }
